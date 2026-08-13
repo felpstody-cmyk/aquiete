@@ -1,0 +1,685 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Finalizar compra | Aquiete</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#FDF8F6">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+
+<style>
+/* ============================================================
+   Mesmos tokens da loja — ver index.html
+   ============================================================ */
+:root{
+  --bg:#FDF8F6; --surface:#FFFFFF; --sand:#FBEDE9; --sand-deep:#F5DCD6; --line:#F1DFD9;
+  --ink:#2A1613; --ink-2:#5C4340; --ink-3:#82655F; --dark:#2A1512;
+  --brand-900:#7C231E; --brand-700:#A8352F; --brand:#C8453E;
+  --brand-500:#E2685D; --brand-300:#F0A79F; --brand-200:#F8CFC9; --brand-100:#FDEBE8;
+  --accent:#C98A3E; --accent-ink:#8A5A1E; --accent-100:#FBF1E0;
+  --ok:#2F7D5B; --ok-100:#E6F2EC;
+  --logo-coral:#D4536E; --logo-ink:#3B2B29; --logo-tag:#8B6F6C;
+
+  --font-display:ui-serif,"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  --font-body:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+
+  --s1:.25rem; --s2:.5rem; --s3:.75rem; --s4:1rem; --s5:1.5rem;
+  --s6:2rem; --s7:3rem; --s8:4rem;
+  --r-sm:8px; --r-md:14px; --r-lg:22px; --r-full:999px;
+  --gutter:clamp(1rem,.7rem+1.4vw,1.75rem);
+  --ease:cubic-bezier(.22,.61,.36,1);
+  --spring:cubic-bezier(.34,1.4,.5,1);
+  --sh-1:0 1px 2px rgba(90,40,34,.05), 0 2px 8px rgba(90,40,34,.05);
+  --sh-2:0 2px 4px rgba(90,40,34,.06), 0 12px 28px -8px rgba(90,40,34,.13);
+}
+*,*::before,*::after{box-sizing:border-box}
+*{margin:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  background:var(--bg);color:var(--ink-2);font-family:var(--font-body);
+  font-size:1rem;line-height:1.6;-webkit-font-smoothing:antialiased;
+}
+h1,h2,h3{font-family:var(--font-display);color:var(--ink);font-weight:600;line-height:1.25;letter-spacing:-.02em}
+a{color:var(--brand-700);text-underline-offset:3px}
+img,svg{display:block;max-width:100%}
+:focus-visible{outline:3px solid var(--brand);outline-offset:2px;border-radius:var(--r-sm)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ---------- Header ---------- */
+.hdr{background:var(--surface);border-bottom:1px solid var(--line)}
+.hdr__in{
+  max-width:1080px;margin-inline:auto;padding:var(--s3) var(--gutter);
+  display:flex;align-items:center;justify-content:space-between;gap:var(--s4);min-height:70px;
+}
+.wordmark{--wm:1.35rem;display:inline-flex;align-items:center;gap:calc(var(--wm)*.4);text-decoration:none;line-height:1}
+.wordmark__drop{height:calc(var(--wm)*1.55);width:auto;flex:none;color:var(--logo-coral)}
+.wordmark__lock{display:flex;flex-direction:column;align-items:flex-start}
+.wordmark__name{font-family:Georgia,"Iowan Old Style",ui-serif,serif;font-size:var(--wm);font-weight:400;line-height:.9;color:var(--logo-ink)}
+.wordmark__tag{font-size:calc(var(--wm)*.32);font-weight:500;letter-spacing:.26em;text-transform:uppercase;color:var(--logo-tag);margin-top:calc(var(--wm)*.22)}
+.secure{
+  display:inline-flex;align-items:center;gap:.4rem;flex:none;
+  font-size:.8125rem;font-weight:650;color:var(--ok);
+  background:var(--ok-100);padding:.4rem .75rem;border-radius:var(--r-full);
+}
+
+/* ---------- Layout ---------- */
+.wrap{max-width:1080px;margin-inline:auto;padding:var(--s6) var(--gutter) var(--s8)}
+.grid{display:grid;gap:var(--s5)}
+@media (min-width:920px){
+  .grid{grid-template-columns:1fr 380px;gap:var(--s6);align-items:start}
+  .aside{position:sticky;top:var(--s5)}
+}
+
+/* ---------- Blocos do formulário ---------- */
+.step{
+  background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r-lg);padding:var(--s5);box-shadow:var(--sh-1);
+}
+.step+.step{margin-top:var(--s4)}
+.step__head{display:flex;align-items:center;gap:var(--s3);margin-bottom:var(--s5)}
+.step__n{
+  width:30px;height:30px;flex:none;display:grid;place-items:center;border-radius:50%;
+  background:linear-gradient(140deg,var(--brand-500),var(--brand-700));color:#fff;
+  font-family:var(--font-display);font-size:.95rem;font-weight:600;
+}
+.step__head h2{font-size:1.1875rem}
+
+/* ---------- Campos ---------- */
+.row{display:grid;gap:var(--s4)}
+.row+.row{margin-top:var(--s4)}
+@media (min-width:560px){
+  .row--2{grid-template-columns:1fr 1fr}
+  .row--cep{grid-template-columns:180px 1fr}
+  .row--num{grid-template-columns:140px 1fr}
+}
+.field{display:flex;flex-direction:column;gap:.35rem;min-width:0}
+.field label{font-size:.8125rem;font-weight:650;color:var(--ink-2)}
+.field input,.field select{
+  width:100%;padding:.8rem .9rem;
+  background:var(--bg);border:1.5px solid var(--line);border-radius:var(--r-sm);
+  font-size:1rem;color:var(--ink);
+  transition:border-color .2s var(--ease), background-color .2s;
+}
+.field input:hover{border-color:var(--brand-200)}
+.field input:focus{background:var(--surface);border-color:var(--brand);outline:none}
+.field input::placeholder{color:#B9A49F}
+.field input[aria-invalid="true"]{border-color:var(--brand);background:var(--brand-100)}
+.field small{font-size:.75rem;color:var(--ink-3);min-height:1em}
+.field small[data-err]{color:var(--brand-700);font-weight:600}
+.field input:disabled{background:var(--sand);color:var(--ink-3);cursor:not-allowed}
+
+/* ---------- Pagamento ---------- */
+.pays{display:grid;gap:var(--s3)}
+.pay{
+  position:relative;display:flex;align-items:center;gap:var(--s4);
+  padding:var(--s4);cursor:pointer;
+  background:var(--surface);border:1.5px solid var(--line);border-radius:var(--r-md);
+  transition:border-color .25s var(--ease), box-shadow .25s var(--ease), background-color .25s;
+}
+.pay:hover{border-color:var(--brand-300)}
+.pay input{position:absolute;opacity:0;width:0;height:0}
+.pay__mark{
+  width:20px;height:20px;flex:none;border-radius:50%;
+  border:2px solid var(--brand-300);display:grid;place-items:center;
+  transition:border-color .25s, background-color .25s;
+}
+.pay__mark::after{content:"";width:9px;height:9px;border-radius:50%;background:#fff;transform:scale(0);transition:transform .3s var(--spring)}
+.pay__ico{width:36px;flex:none;display:grid;place-items:center;color:var(--brand-700)}
+.pay__txt{flex:1;min-width:0}
+.pay__name{display:block;font-weight:650;color:var(--ink);font-size:.9375rem}
+.pay__desc{display:block;font-size:.75rem;color:var(--ink-3);line-height:1.4}
+.pay__tag{
+  flex:none;font-size:10px;font-weight:750;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ok);background:var(--ok-100);padding:.2rem .5rem;border-radius:var(--r-full);
+}
+.pay[data-sel]{
+  border-color:var(--brand);
+  background:linear-gradient(150deg,var(--brand-100),var(--surface));
+  box-shadow:0 8px 22px -12px rgba(200,69,62,.7);
+}
+.pay[data-sel] .pay__mark{border-color:var(--brand);background:var(--brand)}
+.pay[data-sel] .pay__mark::after{transform:scale(1)}
+
+/* Painel que abre embaixo da forma escolhida */
+.panel{display:grid;grid-template-rows:0fr;transition:grid-template-rows .35s var(--ease)}
+.panel>div{overflow:hidden}
+.panel[data-open]{grid-template-rows:1fr}
+.panel__in{padding-top:var(--s4)}
+
+/* Slot onde o SDK do gateway monta os campos de cartão */
+.slot{
+  border:2px dashed var(--brand-300);border-radius:var(--r-md);
+  background:var(--brand-100);padding:var(--s5);text-align:center;
+}
+.slot h3{font-size:.9375rem;font-family:var(--font-body);font-weight:700;color:var(--brand-700);margin-bottom:var(--s2)}
+.slot p{font-size:.8125rem;color:var(--ink-2);max-width:44ch;margin-inline:auto}
+.slot code{background:var(--surface);padding:.1rem .35rem;border-radius:4px;font-size:.75rem}
+
+/* ---------- Resumo ---------- */
+.sum{
+  background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r-lg);box-shadow:var(--sh-2);overflow:hidden;
+}
+.sum__top{
+  background:linear-gradient(100deg,var(--brand-700),var(--brand) 55%,var(--brand-500));
+  color:#fff;padding:var(--s3) var(--s5);font-size:.8125rem;font-weight:650;letter-spacing:.04em;
+}
+.sum__body{padding:var(--s5)}
+.item{display:flex;gap:var(--s4);align-items:center;padding-bottom:var(--s4);border-bottom:1px solid var(--line)}
+.item img{width:64px;height:80px;object-fit:cover;border-radius:var(--r-sm);flex:none;background:var(--sand)}
+.item__t{font-family:var(--font-display);font-size:1.0625rem;color:var(--ink);line-height:1.25}
+.item__s{font-size:.75rem;color:var(--ink-3);margin-top:.15rem}
+.item__p{margin-left:auto;font-weight:750;color:var(--ink);white-space:nowrap}
+
+.lines{display:grid;gap:.55rem;padding-block:var(--s4);border-bottom:1px solid var(--line);font-size:.9375rem}
+.lines div{display:flex;justify-content:space-between;gap:var(--s4)}
+.lines .free{color:var(--ok);font-weight:700}
+.total{display:flex;justify-content:space-between;align-items:baseline;gap:var(--s4);padding-top:var(--s4)}
+.total span{font-weight:650;color:var(--ink)}
+.total strong{font-family:var(--font-display);font-size:1.875rem;color:var(--brand-700);font-weight:600;line-height:1}
+.total__note{font-size:.75rem;color:var(--ink-3);text-align:right;margin-top:.2rem}
+
+/* ---------- Botão ---------- */
+.btn{
+  position:relative;isolation:isolate;overflow:hidden;width:100%;
+  display:inline-flex;flex-direction:column;align-items:center;justify-content:center;
+  min-height:58px;padding:var(--s3) var(--s5);margin-top:var(--s5);
+  font-size:1.0625rem;font-weight:700;line-height:1.2;
+  color:#fff;background:linear-gradient(135deg,var(--brand-500),var(--brand) 48%,var(--brand-700));
+  border:0;border-radius:var(--r-full);cursor:pointer;
+  box-shadow:0 8px 22px -6px rgba(200,69,62,.45);
+  transition:transform .22s var(--spring), box-shadow .25s var(--ease), filter .25s;
+}
+.btn::after{
+  content:"";position:absolute;inset:0;z-index:-1;
+  background:linear-gradient(105deg,transparent 34%,rgba(255,255,255,.35) 50%,transparent 66%);
+  transform:translateX(-130%);transition:transform .75s var(--ease);
+}
+.btn:hover{transform:translateY(-2px);box-shadow:0 14px 32px -8px rgba(200,69,62,.55);filter:saturate(1.08)}
+.btn:hover::after{transform:translateX(130%)}
+.btn small{font-size:.75rem;font-weight:500;opacity:.9;margin-top:2px}
+
+/* ---------- Confiança ---------- */
+.trust{list-style:none;padding:0;margin-top:var(--s5);display:grid;gap:var(--s3)}
+.trust li{display:flex;gap:var(--s3);align-items:flex-start;font-size:.8125rem;color:var(--ink-2);line-height:1.45}
+.trust svg{flex:none;color:var(--ok);margin-top:.15em}
+.origin{
+  margin-top:var(--s4);padding:var(--s3) var(--s4);
+  background:var(--brand-100);border:1px solid var(--brand-200);border-radius:var(--r-md);
+  font-size:.8125rem;font-weight:650;color:var(--brand-700);
+  display:flex;align-items:center;justify-content:center;gap:var(--s2);text-align:center;
+}
+
+.foot{text-align:center;font-size:.8125rem;color:var(--ink-3);margin-top:var(--s6)}
+.foot a{margin-inline:.4rem}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+}
+</style>
+</head>
+
+<body>
+
+<header class="hdr">
+  <div class="hdr__in">
+    <a class="wordmark" href="index.html" aria-label="Aquiete — voltar para a loja">
+      <svg class="wordmark__drop" viewBox="0 0 24 38" fill="none" aria-hidden="true">
+        <path d="M12 .6c3.6 7.6 11 17.8 11 26a11 11 0 0 1-22 0c0-8.2 7.4-18.4 11-26Z" fill="currentColor"/>
+        <ellipse cx="8.1" cy="23.6" rx="2.2" ry="3.5" fill="#fff" fill-opacity=".38" transform="rotate(-12 8.1 23.6)"/>
+      </svg>
+      <span class="wordmark__lock">
+        <span class="wordmark__name">aquiete</span>
+        <span class="wordmark__tag">Gotas Florais</span>
+      </span>
+    </a>
+    <span class="secure">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+      Compra segura
+    </span>
+  </div>
+</header>
+
+<main class="wrap">
+  <h1 class="sr">Finalizar compra</h1>
+
+  <form class="grid" id="form" novalidate>
+
+    <div>
+      <!-- ============ 1. CONTATO ============ -->
+      <section class="step">
+        <div class="step__head">
+          <span class="step__n" aria-hidden="true">1</span>
+          <h2>Seus dados</h2>
+        </div>
+
+        <div class="row row--2">
+          <div class="field">
+            <label for="nome">Nome completo</label>
+            <input id="nome" name="nome" autocomplete="name" placeholder="Como está no documento" required>
+            <small></small>
+          </div>
+          <div class="field">
+            <label for="cpf">CPF</label>
+            <input id="cpf" name="cpf" inputmode="numeric" autocomplete="off" placeholder="000.000.000-00" maxlength="14" required>
+            <small></small>
+          </div>
+        </div>
+
+        <div class="row row--2">
+          <div class="field">
+            <label for="email">E-mail</label>
+            <input id="email" name="email" type="email" autocomplete="email" placeholder="para receber o rastreio" required>
+            <small></small>
+          </div>
+          <div class="field">
+            <label for="tel">Celular</label>
+            <input id="tel" name="tel" inputmode="numeric" autocomplete="tel" placeholder="(00) 00000-0000" maxlength="15" required>
+            <small></small>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 2. ENTREGA ============ -->
+      <section class="step">
+        <div class="step__head">
+          <span class="step__n" aria-hidden="true">2</span>
+          <h2>Endereço de entrega</h2>
+        </div>
+
+        <div class="row row--cep">
+          <div class="field">
+            <label for="cep">CEP</label>
+            <input id="cep" name="cep" inputmode="numeric" autocomplete="postal-code" placeholder="00000-000" maxlength="9" required>
+            <small id="cepMsg">Preenchemos o resto pra você</small>
+          </div>
+          <div class="field">
+            <label for="rua">Rua</label>
+            <input id="rua" name="rua" autocomplete="address-line1" placeholder="preenchido pelo CEP" required>
+            <small></small>
+          </div>
+        </div>
+
+        <div class="row row--num">
+          <div class="field">
+            <label for="numero">Número</label>
+            <input id="numero" name="numero" inputmode="numeric" placeholder="123" required>
+            <small></small>
+          </div>
+          <div class="field">
+            <label for="compl">Complemento <span style="font-weight:500;color:var(--ink-3)">(opcional)</span></label>
+            <input id="compl" name="compl" autocomplete="address-line2" placeholder="apto, bloco, referência">
+            <small></small>
+          </div>
+        </div>
+
+        <div class="row row--2">
+          <div class="field">
+            <label for="bairro">Bairro</label>
+            <input id="bairro" name="bairro" placeholder="preenchido pelo CEP" required>
+            <small></small>
+          </div>
+          <div class="field">
+            <label for="cidade">Cidade / UF</label>
+            <input id="cidade" name="cidade" placeholder="preenchido pelo CEP" required>
+            <small></small>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 3. PAGAMENTO ============ -->
+      <section class="step">
+        <div class="step__head">
+          <span class="step__n" aria-hidden="true">3</span>
+          <h2>Forma de pagamento</h2>
+        </div>
+
+        <div class="pays" role="radiogroup" aria-label="Forma de pagamento">
+
+          <label class="pay" data-sel>
+            <input type="radio" name="pay" value="pix" checked>
+            <span class="pay__mark" aria-hidden="true"></span>
+            <span class="pay__ico" aria-hidden="true">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2.6 9.4 9.4-9.4 9.4L2.6 12Z"/><path d="M8.3 8.3 12 12l3.7-3.7M8.3 15.7 12 12l3.7 3.7"/></svg>
+            </span>
+            <span class="pay__txt">
+              <strong class="pay__name">Pix</strong>
+              <span class="pay__desc">Aprovação na hora e envio no mesmo dia</span>
+            </span>
+            <span class="pay__tag">Mais rápido</span>
+          </label>
+
+          <label class="pay">
+            <input type="radio" name="pay" value="card">
+            <span class="pay__mark" aria-hidden="true"></span>
+            <span class="pay__ico" aria-hidden="true">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2.5"/><path d="M2 10h20"/></svg>
+            </span>
+            <span class="pay__txt">
+              <strong class="pay__name">Cartão de crédito</strong>
+              <span class="pay__desc">Parcelado, com juros a partir da 2ª parcela</span>
+            </span>
+          </label>
+
+          <label class="pay">
+            <input type="radio" name="pay" value="boleto">
+            <span class="pay__mark" aria-hidden="true"></span>
+            <span class="pay__ico" aria-hidden="true">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M3 5v14M7 5v14M10.5 5v14M14 5v14M17.5 5v14M21 5v14"/></svg>
+            </span>
+            <span class="pay__txt">
+              <strong class="pay__name">Boleto bancário</strong>
+              <span class="pay__desc">Compensa em até 2 dias úteis</span>
+            </span>
+          </label>
+
+        </div>
+
+        <!-- Painel do cartão: aqui entra o SDK do gateway -->
+        <div class="panel" id="panelCard">
+          <div><div class="panel__in">
+            <!-- ==========================================================
+                 ⚠️ NÃO CRIE CAMPOS DE CARTÃO PRÓPRIOS AQUI.
+                 O gateway entrega os campos já tokenizados (iframe ou SDK),
+                 para que o número do cartão nunca passe pelo seu servidor.
+                 É isso que tira você do escopo pesado de PCI-DSS.
+
+                 Exemplos de montagem:
+                   Pagar.me      PagarmeCheckout.mount('#card-fields')
+                   Mercado Pago  mp.cardForm({ ... }).mount('#card-fields')
+                   Appmax        Appmax.tokenize('#card-fields')
+                 ========================================================== -->
+            <div class="slot" id="card-fields">
+              <h3>Campos seguros do gateway entram aqui</h3>
+              <p>
+                Número, validade e CVV são renderizados pelo próprio gateway em
+                <code>#card-fields</code>, já tokenizados. Nenhum dado de cartão
+                trafega pelo seu site.
+              </p>
+            </div>
+          </div></div>
+        </div>
+
+        <div class="panel" id="panelPix">
+          <div><div class="panel__in">
+            <div class="slot" style="border-style:solid;background:var(--ok-100);border-color:#B9DCCB">
+              <h3 style="color:var(--ok)">QR Code gerado após confirmar</h3>
+              <p>O gateway devolve o código Pix copia-e-cola e o QR na tela seguinte.</p>
+            </div>
+          </div></div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ============ RESUMO ============ -->
+    <aside class="aside">
+      <div class="sum">
+        <p class="sum__top">RESUMO DO PEDIDO</p>
+        <div class="sum__body">
+
+          <div class="item">
+            <img src="img/produto-420.webp" alt="" width="64" height="80" loading="lazy">
+            <div>
+              <span class="item__t" id="itemT">1 unidade</span>
+              <span class="item__s" id="itemS">Frasco de 30 ml · uso sublingual</span>
+            </div>
+            <span class="item__p" id="itemP">R$ 97,00</span>
+          </div>
+
+          <div class="lines">
+            <div><span>Subtotal</span> <span id="sub">R$ 97,00</span></div>
+            <div><span>Frete</span> <span id="frete">R$ 24,90</span></div>
+          </div>
+
+          <div class="total">
+            <span>Total</span>
+            <div style="text-align:right">
+              <strong id="total">R$ 121,90</strong>
+              <div class="total__note" id="parc">à vista no Pix</div>
+            </div>
+          </div>
+
+          <button class="btn" type="submit">
+            Finalizar compra
+            <small id="btnSub">Pagamento via Pix</small>
+          </button>
+
+          <ul class="trust">
+            <li>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <span>Dados protegidos por criptografia. Não guardamos informações de cartão.</span>
+            </li>
+            <li>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <span>Envio em até 2 dias úteis, com código de rastreio por e-mail.</span>
+            </li>
+            <li>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              <span>30 dias para devolver o frasco lacrado. <a href="termos.html#garantia">Condições</a>.</span>
+            </li>
+          </ul>
+
+          <p class="origin">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6"/><path d="M10 3v5.5L4.8 17a2.5 2.5 0 0 0 2.1 3.9h10.2A2.5 2.5 0 0 0 19.2 17L14 8.5V3"/><path d="M7 15h10"/></svg>
+            Fabricado em farmácia de manipulação
+          </p>
+        </div>
+      </div>
+
+      <p class="foot">
+        <a href="index.html">Voltar para a loja</a> ·
+        <a href="termos.html">Termos</a> ·
+        <a href="termos.html#privacidade">Privacidade</a>
+      </p>
+    </aside>
+
+  </form>
+</main>
+
+<script>
+(function(){
+  'use strict';
+  var d = document;
+  var brl = function(n){ return 'R$ ' + n.toFixed(2).replace('.', ','); };
+
+  /* ---------- Catálogo. Bater com o index.html ---------- */
+  var KITS = {
+    '1': { rotulo: '1 unidade',  preco:  97.00, frete: 24.90 },
+    '2': { rotulo: '2 unidades', preco: 169.00, frete: 0 },
+    '4': { rotulo: '4 unidades', preco: 297.00, frete: 0 }
+  };
+  var kitId = new URLSearchParams(location.search).get('kit');
+  if (!KITS[kitId]) kitId = '1';
+  var kit = KITS[kitId];
+
+  /* ---------- Resumo ---------- */
+  var el = function(id){ return d.getElementById(id); };
+  function pintarResumo(){
+    var total = kit.preco + kit.frete;
+    el('itemT').textContent  = kit.rotulo;
+    el('itemP').textContent  = brl(kit.preco);
+    el('sub').textContent    = brl(kit.preco);
+    el('frete').innerHTML    = kit.frete === 0
+      ? '<span class="free">Grátis</span>'
+      : brl(kit.frete);
+    el('total').textContent  = brl(total);
+    return total;
+  }
+  var totalAtual = pintarResumo();
+
+  /* ---------- Máscaras ---------- */
+  function mascarar(input, fn){
+    input.addEventListener('input', function(){
+      var pos = input.selectionStart, antes = input.value.length;
+      input.value = fn(input.value.replace(/\D/g, ''));
+      if (pos < antes) input.setSelectionRange(pos, pos);
+    });
+  }
+  mascarar(el('cpf'), function(v){
+    return v.slice(0,11)
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+  });
+  mascarar(el('tel'), function(v){
+    v = v.slice(0,11);
+    return v.length > 10
+      ? v.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3')
+      : v.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
+  });
+  mascarar(el('cep'), function(v){
+    return v.slice(0,8).replace(/(\d{5})(\d{0,3})/, '$1-$2').replace(/-$/, '');
+  });
+
+  /* ---------- Busca de CEP (ViaCEP — gratuito, sem chave) ---------- */
+  var cep = el('cep'), cepMsg = el('cepMsg');
+  cep.addEventListener('blur', function(){
+    var n = cep.value.replace(/\D/g, '');
+    if (n.length !== 8) return;
+    cepMsg.textContent = 'Buscando…';
+    cepMsg.removeAttribute('data-err');
+
+    fetch('https://viacep.com.br/ws/' + n + '/json/')
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        if (j.erro) throw new Error('CEP não encontrado');
+        el('rua').value    = j.logradouro || '';
+        el('bairro').value = j.bairro || '';
+        el('cidade').value = (j.localidade || '') + (j.uf ? ' / ' + j.uf : '');
+        cepMsg.textContent = 'Endereço preenchido';
+        el('numero').focus();
+      })
+      .catch(function(){
+        cepMsg.textContent = 'CEP não encontrado. Preencha à mão.';
+        cepMsg.setAttribute('data-err', '');
+      });
+  });
+
+  /* ---------- Forma de pagamento ---------- */
+  var pagos = d.querySelectorAll('.pay input[name="pay"]');
+  var painel = { card: el('panelCard'), pix: el('panelPix'), boleto: null };
+  var subs = {
+    pix:    ['Pagamento via Pix',            'à vista no Pix'],
+    card:   ['Pagamento no cartão',          'parcelado no cartão'],
+    boleto: ['Pagamento via boleto',         'à vista no boleto']
+  };
+
+  function escolher(input){
+    pagos.forEach(function(i){ i.closest('.pay').toggleAttribute('data-sel', i === input); });
+    Object.keys(painel).forEach(function(k){
+      if (painel[k]) painel[k].toggleAttribute('data-open', k === input.value);
+    });
+    el('btnSub').textContent = subs[input.value][0];
+    el('parc').textContent   = subs[input.value][1];
+  }
+  pagos.forEach(function(i){ i.addEventListener('change', function(){ escolher(i); }); });
+  escolher(d.querySelector('.pay input:checked'));
+
+  /* ---------- Validação ---------- */
+  function erro(campo, msg){
+    var s = campo.parentElement.querySelector('small');
+    if (msg) { campo.setAttribute('aria-invalid','true'); s.textContent = msg; s.setAttribute('data-err',''); }
+    else     { campo.removeAttribute('aria-invalid'); s.textContent = ''; s.removeAttribute('data-err'); }
+    return !msg;
+  }
+  function cpfValido(v){
+    v = v.replace(/\D/g,'');
+    if (v.length !== 11 || /^(\d)\1{10}$/.test(v)) return false;
+    for (var t = 9; t < 11; t++){
+      var s = 0;
+      for (var i = 0; i < t; i++) s += +v[i] * ((t + 1) - i);
+      var dig = (s * 10) % 11 % 10;
+      if (dig !== +v[t]) return false;
+    }
+    return true;
+  }
+
+  d.getElementById('form').addEventListener('submit', function(ev){
+    ev.preventDefault();
+    var ok = true;
+    ok = erro(el('nome'),   el('nome').value.trim().split(/\s+/).length < 2 ? 'Informe nome e sobrenome' : '') && ok;
+    ok = erro(el('cpf'),    cpfValido(el('cpf').value) ? '' : 'CPF inválido') && ok;
+    ok = erro(el('email'),  /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(el('email').value) ? '' : 'E-mail inválido') && ok;
+    ok = erro(el('tel'),    el('tel').value.replace(/\D/g,'').length < 10 ? 'Celular incompleto' : '') && ok;
+    ok = erro(el('cep'),    el('cep').value.replace(/\D/g,'').length === 8 ? '' : 'CEP incompleto') && ok;
+    ok = erro(el('rua'),    el('rua').value.trim() ? '' : 'Informe a rua') && ok;
+    ok = erro(el('numero'), el('numero').value.trim() ? '' : 'Informe o número') && ok;
+    ok = erro(el('bairro'), el('bairro').value.trim() ? '' : 'Informe o bairro') && ok;
+    ok = erro(el('cidade'), el('cidade').value.trim() ? '' : 'Informe a cidade') && ok;
+
+    if (!ok) {
+      d.querySelector('[aria-invalid="true"]').focus();
+      return;
+    }
+
+    enviar();
+  });
+
+  /* ---------- Envio para o backend ----------
+     Repare que o preço NÃO vai daqui. O servidor calcula pelo catálogo
+     dele — é o que impede alguém de comprar por R$ 1 pelo console.     */
+  var botao = d.querySelector('.btn'), rotuloBotao = botao.innerHTML;
+
+  function travar(travado, texto){
+    botao.disabled = travado;
+    botao.style.opacity = travado ? .65 : '';
+    botao.style.cursor  = travado ? 'wait' : '';
+    botao.innerHTML = travado ? (texto || 'Processando…') : rotuloBotao;
+  }
+
+  function enviar(){
+    travar(true);
+    fetch('/api/criar-pedido', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        kit: kitId,
+        metodo: d.querySelector('.pay input:checked').value,
+        cliente: {
+          nome: el('nome').value, cpf: el('cpf').value,
+          email: el('email').value, telefone: el('tel').value,
+          cep: el('cep').value, rua: el('rua').value,
+          numero: el('numero').value, complemento: el('compl').value,
+          bairro: el('bairro').value, cidade: el('cidade').value
+        }
+      })
+    })
+    .then(function(r){ return r.json().then(function(j){ return { ok: r.ok, j: j }; }); })
+    .then(function(res){
+      if (!res.ok || !res.j.ok) throw new Error(res.j.erro || 'Falha ao criar o pedido');
+
+      // Cartão e boleto: página do gateway. Pix: QR aqui mesmo.
+      if (res.j.redirectUrl) { location.href = res.j.redirectUrl; return; }
+      if (res.j.pix) { mostrarPix(res.j); return; }
+      throw new Error('Resposta inesperada do gateway');
+    })
+    .catch(function(e){
+      travar(false);
+      alert(e.message);
+    });
+  }
+
+  /* ---------- Pix na própria página ---------- */
+  function mostrarPix(dados){
+    var painelPix = el('panelPix');
+    painelPix.querySelector('.panel__in').innerHTML =
+      '<div class="slot" style="border-style:solid;background:var(--ok-100);border-color:#B9DCCB">'
+      + (dados.pix.qrBase64
+          ? '<img src="data:image/png;base64,' + dados.pix.qrBase64 + '" alt="QR Code do Pix" '
+            + 'width="200" height="200" style="margin:0 auto var(--s4);border-radius:8px">'
+          : '')
+      + '<h3 style="color:var(--ok)">Escaneie ou copie o código</h3>'
+      + '<textarea readonly rows="3" style="width:100%;margin-top:.75rem;padding:.6rem;'
+      + 'font-size:.75rem;border:1px solid #B9DCCB;border-radius:8px;resize:none;'
+      + 'font-family:monospace">' + dados.pix.payload + '</textarea>'
+      + '<p style="margin-top:.6rem">Pedido <strong>' + dados.referencia + '</strong>. '
+      + 'O envio sai assim que o pagamento cair.</p></div>';
+    painelPix.setAttribute('data-open','');
+    painelPix.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    travar(true, 'Aguardando pagamento');
+  }
+})();
+</script>
+</body>
+</html>

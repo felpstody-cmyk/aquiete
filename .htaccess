@@ -1,0 +1,90 @@
+# ============================================================
+#  Aquiete — configuração Apache (Hostinger)
+#  Sobe junto com os arquivos, na mesma pasta public_html.
+# ============================================================
+
+# ---------- Compressão ----------
+# HTML/CSS/JS comprimem ~75%. WebP e JPEG já são comprimidos: ficam de fora.
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/css text/javascript
+  AddOutputFilterByType DEFLATE application/javascript application/json
+  AddOutputFilterByType DEFLATE image/svg+xml
+</IfModule>
+
+# ---------- Cache do navegador ----------
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType image/webp             "access plus 1 year"
+  ExpiresByType image/jpeg             "access plus 1 year"
+  ExpiresByType image/svg+xml          "access plus 1 year"
+  ExpiresByType text/html              "access plus 0 seconds"
+</IfModule>
+
+# ============================================================
+#  SEGURANÇA
+# ============================================================
+
+<IfModule mod_headers.c>
+  # HTML sempre revalidado: sua alteração aparece na hora
+  Header set Cache-Control "no-cache, must-revalidate" "expr=%{CONTENT_TYPE} =~ m#text/html#"
+
+  # Obriga o navegador a só falar HTTPS com o domínio pelos próximos 2 anos.
+  # ATIVE SÓ DEPOIS de confirmar que o SSL está funcionando — com HSTS ligado
+  # e certificado quebrado, o site fica inacessível até o prazo expirar.
+  Header always set Strict-Transport-Security "max-age=63072000; includeSubDomains"
+
+  # Impede que golpistas embutam sua página dentro de outro site (clickjacking)
+  Header always set X-Frame-Options "DENY"
+
+  # Impede o navegador de "adivinhar" tipo de arquivo — bloqueia upload
+  # disfarçado de imagem sendo executado como script
+  Header always set X-Content-Type-Options "nosniff"
+
+  # Não vaza a URL completa da sua página para sites externos
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+
+  # Nega acesso a recursos que a página não usa
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+
+  # Só executa script que veio do seu domínio ou está inline no HTML.
+  # Script injetado de fora simplesmente não roda.
+  #
+  # ⚠️ AO INSTALAR O PIXEL DO META, acrescente em script-src:
+  #      https://connect.facebook.net
+  #    e em img-src e connect-src:
+  #      https://www.facebook.com
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://viacep.com.br; form-action 'self' https:; frame-ancestors 'none'; base-uri 'self'; upgrade-insecure-requests"
+</IfModule>
+
+# Sem listagem de diretório: /img/ não mostra o índice de arquivos
+Options -Indexes
+
+# Bloqueia arquivos que nunca devem ser servidos
+<FilesMatch "(^\.|\.(bak|config|sql|log|sh|inc|zip|md|py)$)">
+  Require all denied
+</FilesMatch>
+
+# ---------- URLs limpas ----------
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # Força HTTPS
+  RewriteCond %{HTTPS} !=on
+  RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+  # Remove .html da barra de endereço
+  RewriteCond %{THE_REQUEST} \s/+(.+?)\.html[\s?] [NC]
+  RewriteRule ^ /%1 [R=301,L]
+
+  # Serve o arquivo .html correspondente
+  RewriteCond %{REQUEST_FILENAME}.html -f
+  RewriteRule ^(.*)$ $1.html [L]
+</IfModule>
+
+# ---------- MIME ----------
+<IfModule mod_mime.c>
+  AddType image/webp .webp
+  AddType image/svg+xml .svg
+</IfModule>
+
+ErrorDocument 404 /index.html

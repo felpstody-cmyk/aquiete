@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Informações, garantia e termos | Aquiete</title>
+<meta name="description" content="Como funciona a garantia de 30 dias, informações sobre o produto, uso seguro, privacidade e termos de compra do Aquiete.">
+<meta name="theme-color" content="#FDF8F6">
+<link rel="canonical" href="https://aquieteagora.com.br/termos">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+
+<style>
+:root{
+  --bg:#FDF8F6; --surface:#FFFFFF; --sand:#FBEDE9; --line:#F1DFD9;
+  --ink:#2A1613; --ink-2:#5C4340; --ink-3:#82655F; --dark:#2A1512;
+  --brand:#C8453E; --brand-700:#A8352F; --brand-500:#E2685D;
+  --brand-200:#F8CFC9; --brand-100:#FDEBE8;
+  --calm-100:#F7EBE8; --calm:#9B6A62;
+  --accent-100:#FBF1E0; --accent-ink:#8A5A1E;
+  --logo-coral:#D4536E; --logo-ink:#3B2B29; --logo-tag:#8B6F6C;
+  --font-display:ui-serif,"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  --font-body:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --s2:.5rem; --s3:.75rem; --s4:1rem; --s5:1.5rem; --s6:2rem; --s7:3rem; --s8:4rem;
+  --r-md:14px; --r-lg:22px; --r-full:999px;
+  --gutter:clamp(1.25rem,.9rem+1.6vw,2rem);
+  --sh-1:0 1px 2px rgba(90,40,34,.05), 0 2px 8px rgba(90,40,34,.05);
+}
+*,*::before,*::after{box-sizing:border-box}
+*{margin:0}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{
+  background:var(--bg);color:var(--ink-2);font-family:var(--font-body);
+  font-size:1.0625rem;line-height:1.7;-webkit-font-smoothing:antialiased;
+}
+h1,h2,h3{font-family:var(--font-display);color:var(--ink);font-weight:600;line-height:1.25;letter-spacing:-.02em;text-wrap:balance}
+p{text-wrap:pretty}
+a{color:var(--brand-700);text-underline-offset:3px}
+:focus-visible{outline:3px solid var(--brand);outline-offset:3px;border-radius:6px}
+.wrap{width:100%;max-width:760px;margin-inline:auto;padding-inline:var(--gutter)}
+
+/* Header */
+.hdr{background:var(--surface);border-bottom:1px solid var(--line)}
+.hdr__in{display:flex;align-items:center;justify-content:space-between;gap:var(--s4);min-height:76px}
+.wordmark{--wm-name:1.5rem;display:inline-flex;align-items:center;gap:calc(var(--wm-name)*.4);text-decoration:none;line-height:1}
+.wordmark__drop{height:calc(var(--wm-name)*1.55);width:auto;flex:none;color:var(--logo-coral)}
+.wordmark__lock{display:flex;flex-direction:column;align-items:flex-start}
+.wordmark__name{font-family:Georgia,"Iowan Old Style",ui-serif,serif;font-size:var(--wm-name);font-weight:400;line-height:.9;color:var(--logo-ink)}
+.wordmark__tag{font-size:calc(var(--wm-name)*.32);font-weight:500;letter-spacing:.26em;text-transform:uppercase;color:var(--logo-tag);margin-top:calc(var(--wm-name)*.22)}
+.back{font-size:.9375rem;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:.4rem}
+
+/* Cabeçalho da página */
+.head{padding-block:var(--s8) var(--s6)}
+.head h1{font-size:clamp(2rem,1.7rem+1.5vw,2.75rem);margin-bottom:var(--s4)}
+.head .intro{font-size:1.1875rem;color:var(--ink-2)}
+.head .meta{font-size:.9375rem;color:var(--ink-3);margin-top:var(--s5)}
+
+/* Sumário */
+.toc{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);
+  padding:var(--s5);margin-block:var(--s6);box-shadow:var(--sh-1);
+}
+.toc h2{font-size:.875rem;font-family:var(--font-body);font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--ink-3);margin-bottom:var(--s3)}
+.toc ol{margin:0;padding-left:1.35rem;display:grid;gap:.35rem}
+.toc a{text-decoration:none}
+.toc a:hover{text-decoration:underline}
+
+/* Seções */
+.doc{padding-bottom:var(--s8)}
+.doc section{padding-top:var(--s7);scroll-margin-top:var(--s5)}
+.doc h2{font-size:clamp(1.375rem,1.2rem+.7vw,1.75rem);margin-bottom:var(--s4)}
+.doc h3{font-size:1.125rem;margin-block:var(--s5) var(--s2)}
+.doc p+p,.doc ul+p,.doc p+ul{margin-top:var(--s4)}
+.doc ul{padding-left:1.25rem;display:grid;gap:.5rem}
+.doc li::marker{color:var(--brand-500)}
+
+/* Caixas */
+.note{
+  background:var(--brand-100);border:1px solid var(--brand-200);
+  border-radius:var(--r-md);padding:var(--s4) var(--s5);margin-block:var(--s5);
+}
+.note--warm{background:var(--accent-100);border-color:rgba(201,138,62,.3)}
+.note--soft{background:var(--calm-100);border-color:rgba(155,106,98,.22)}
+.note p{font-size:1rem}
+.note p+p{margin-top:var(--s3)}
+.note strong{color:var(--ink)}
+
+/* Destaque da garantia */
+.hero-note{
+  background:linear-gradient(150deg,var(--surface),var(--brand-100));
+  border:1px solid var(--brand-200);border-radius:var(--r-lg);
+  padding:var(--s5) var(--s6);margin-block:var(--s5);box-shadow:var(--sh-1);
+  display:flex;gap:var(--s5);align-items:flex-start;
+}
+.hero-note svg{flex:none;color:var(--brand);margin-top:.2rem}
+.hero-note h3{margin-top:0}
+
+/* Lista com check */
+.checks{list-style:none;padding:0;display:grid;gap:var(--s3);margin-top:var(--s4)}
+.checks li{display:flex;gap:var(--s3);align-items:flex-start}
+.checks svg{flex:none;color:var(--brand);margin-top:.35rem}
+
+/* Rodapé */
+.ftr{background:var(--dark);color:#9C8480;padding-block:var(--s7) var(--s8);font-size:.9375rem}
+.ftr a{color:#D8C4C0}
+.ftr__links{display:flex;gap:var(--s5);flex-wrap:wrap;margin-top:var(--s4)}
+.ftr__cvv{margin-top:var(--s5);padding-top:var(--s5);border-top:1px solid rgba(240,167,159,.16);font-size:.875rem;color:#8E7773}
+</style>
+</head>
+
+<body>
+
+<header class="hdr">
+  <div class="wrap hdr__in">
+    <a class="wordmark" href="index.html" aria-label="Aquiete, gotas florais — página inicial">
+      <svg class="wordmark__drop" viewBox="0 0 24 38" fill="none" aria-hidden="true">
+        <path d="M12 .6c3.6 7.6 11 17.8 11 26a11 11 0 0 1-22 0c0-8.2 7.4-18.4 11-26Z" fill="currentColor"/>
+        <ellipse cx="8.1" cy="23.6" rx="2.2" ry="3.5" fill="#fff" fill-opacity=".38" transform="rotate(-12 8.1 23.6)"/>
+      </svg>
+      <span class="wordmark__lock">
+        <span class="wordmark__name">aquiete</span>
+        <span class="wordmark__tag">Gotas Florais</span>
+      </span>
+    </a>
+    <a class="back" href="index.html">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+      Voltar
+    </a>
+  </div>
+</header>
+
+<main class="wrap doc">
+
+  <div class="head">
+    <h1>Informações, garantia e termos</h1>
+    <p class="intro">
+      Preferimos que você saiba exatamente o que está levando. Nesta página explicamos
+      o que é o Aquiete, como funciona nossa garantia de 30 dias e quais são as regras
+      da sua compra — em português claro, sem letra miúda.
+    </p>
+    <p class="meta">Última atualização: 6 de agosto de 2026</p>
+  </div>
+
+  <nav class="toc" aria-label="Índice">
+    <h2>Nesta página</h2>
+    <ol>
+      <li><a href="#produto">O que é o Aquiete</a></li>
+      <li><a href="#seguranca">Uso seguro e quem deve consultar antes</a></li>
+      <li><a href="#depoimentos">Depoimentos</a></li>
+      <li><a href="#compra">Prazos, trocas e devoluções</a></li>
+      <li><a href="#privacidade">Seus dados</a></li>
+      <li><a href="#contato">Quem somos</a></li>
+      <li><a href="#experiencia">Sobre a experiência de uso</a></li>
+      <li><a href="#garantia">Nossa garantia de 30 dias</a></li>
+    </ol>
+  </nav>
+
+  <section id="produto">
+    <h2>1. O que é o Aquiete</h2>
+    <p>
+      Aquiete é um composto de cinco essências florais em base líquida, feito para uso
+      sublingual em momentos pontuais de tensão emocional. Frasco de 30 ml, cerca de 600 gotas.
+    </p>
+    <p>
+      A fórmula segue a combinação clássica desenvolvida pelo Dr. Edward Bach na década de 1930:
+      Rock Rose (<em>Helianthemum nummularium</em>), Impatiens (<em>Impatiens glandulifera</em>),
+      Clematis (<em>Clematis vitalba</em>), Star of Bethlehem (<em>Ornithogalum umbellatum</em>)
+      e Cherry Plum (<em>Prunus cerasifera</em>). A composição completa, o modo de uso e a
+      validade estão impressos no rótulo.
+    </p>
+
+    <h3>É um produto de bem-estar, não um medicamento</h3>
+    <p>
+      Essa distinção é o que torna o Aquiete o que ele é — e boa parte do motivo pelo qual
+      as pessoas procuram por ele:
+    </p>
+    <ul class="checks">
+      <li>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+        <span><strong>Não exige receita.</strong> Venda livre, sem consulta e sem prescrição.</span>
+      </li>
+      <li>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+        <span><strong>Não gera dependência.</strong> Sem benzodiazepínicos, sem tolerância, sem desmame. Você usa quando quer e para quando quiser.</span>
+      </li>
+      <li>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+        <span><strong>Sem interação medicamentosa conhecida.</strong> Pode acompanhar o que você já faz.</span>
+      </li>
+      <li>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+        <span><strong>Composição natural.</strong> Sem açúcar, corante, conservante artificial, glúten ou lactose.</span>
+      </li>
+    </ul>
+    <p>
+      Sendo um produto de bem-estar, o Aquiete não possui registro como medicamento e não se
+      destina a diagnosticar, tratar, curar ou prevenir doenças. Ele é um apoio para o momento,
+      e é assim que gostamos de apresentá-lo.
+    </p>
+  </section>
+
+  <section id="seguranca">
+    <h2>2. Uso seguro e quem deve consultar antes</h2>
+    <p>
+      O modo de uso tradicional são 4 gotas sublinguais no momento de necessidade, podendo ser
+      repetido ao longo do dia conforme sua percepção. Siga sempre a orientação impressa no
+      rótulo do seu frasco.
+    </p>
+    <p>
+      Essências florais são amplamente consideradas seguras e não têm interação farmacológica
+      conhecida com medicamentos. Ainda assim, alguns cuidados fazem sentido:
+    </p>
+    <ul>
+      <li>Confira a lista de componentes no rótulo se você tem alergia ou sensibilidade conhecida a alguma substância.</li>
+      <li>Se o seu frasco tiver conservante à base de álcool, a informação estará no rótulo — importante para quem evita álcool por qualquer motivo.</li>
+      <li><strong>Gestantes, lactantes e crianças:</strong> converse com seu médico antes de usar.</li>
+      <li>Se você faz tratamento continuado, vale avisar o profissional que te acompanha.</li>
+      <li>Guarde fora do alcance de crianças, em local seco e longe do sol direto. Não use após a validade.</li>
+    </ul>
+
+    <div class="note note--soft">
+      <p>
+        <strong>Uma palavra sincera.</strong> O Aquiete é um apoio para atravessar um momento —
+        ele acompanha o cuidado que você já faz, não toma o lugar dele. Se você faz terapia ou
+        toma medicação prescrita, siga com o seu tratamento e nunca interrompa nada por conta
+        própria. E se as crises têm sido frequentes ou intensas, procurar um profissional de
+        saúde mental é o melhor investimento que existe.
+      </p>
+      <p>
+        Se você estiver passando por um momento grave, o CVV atende de graça pelo
+        <a href="tel:188">188</a>, 24 horas por dia. Em emergência, SAMU 192.
+      </p>
+    </div>
+  </section>
+
+  <section id="depoimentos">
+    <h2>3. Depoimentos</h2>
+    <p>
+      Os depoimentos e avaliações publicados em nossos canais são reais e divulgados com
+      autorização de quem escreveu. Cada um deles conta a experiência de uma pessoa —
+      o que não significa que todo mundo vá sentir o mesmo.
+    </p>
+    <p>
+      Nossa comunicação apresenta o Aquiete como apoio de bem-estar para momentos pontuais.
+      Nenhum material nosso afirma que o produto trata, cura ou previne doenças. Se você
+      encontrar alguma comunicação em nosso nome que contrarie isso, nos avise — queremos saber.
+    </p>
+  </section>
+
+  <section id="compra">
+    <h2>4. Prazos, trocas e devoluções</h2>
+
+    <h3>Envio</h3>
+    <p>
+      Pedidos aprovados são despachados em até 2 dias úteis. O prazo de entrega varia
+      conforme a região e aparece no checkout antes de você finalizar a compra. O código de
+      rastreio é enviado por e-mail assim que o pedido é postado.
+    </p>
+
+    <h3>Devolução por arrependimento</h3>
+    <p>
+      As regras e os prazos estão explicados na
+      <a href="#garantia">seção de garantia</a>, no fim desta página.
+    </p>
+
+    <h3>Produto com defeito</h3>
+    <p>
+      Frasco danificado, volume divergente, lacre violado ou produto fora da validade:
+      entre em contato em até 30 dias do recebimento e resolvemos com substituição ou
+      reembolso, nos termos do art. 26 do CDC. Se possível, mande uma foto — agiliza tudo.
+    </p>
+  </section>
+
+  <section id="privacidade">
+    <h2>5. Seus dados</h2>
+    <p>
+      Coletamos só o necessário para processar o pedido, entregar e te atender: nome, CPF,
+      e-mail, telefone e endereço. Tudo conforme a Lei Geral de Proteção de Dados
+      (Lei nº 13.709/2018).
+    </p>
+    <p>
+      Não vendemos seus dados para ninguém. Compartilhamos apenas com quem é indispensável
+      para a compra acontecer — meio de pagamento, transportadora e plataforma de loja.
+      Você pode pedir acesso, correção ou exclusão dos seus dados quando quiser, pelo e-mail
+      de contato.
+    </p>
+    <p>
+      Usamos cookies e pixels para medir o desempenho dos nossos anúncios. Dá para desativar
+      nas configurações do seu navegador.
+    </p>
+  </section>
+
+  <section id="contato">
+    <h2>6. Quem somos</h2>
+    <p>
+      <strong>Razão social:</strong> [NOME DA EMPRESA LTDA]<br>
+      <strong>CNPJ:</strong> 00.000.000/0001-00<br>
+      <strong>Endereço:</strong> [endereço completo]<br>
+      <strong>E-mail:</strong> <a href="mailto:contato@aquieteagora.com.br">contato@aquieteagora.com.br</a><br>
+      <strong>Atendimento:</strong> [dias e horários]
+    </p>
+    <p>
+      Estes termos podem ser atualizados. A versão vigente é sempre a publicada aqui,
+      com a data de atualização no topo da página.
+    </p>
+  </section>
+
+  <section id="experiencia">
+    <h2>7. Sobre a experiência de uso</h2>
+    <p>
+      O Aquiete atua no campo do bem-estar emocional, e isso é por definição subjetivo.
+      Cada pessoa reage de um jeito, no seu tempo — assim como acontece com um chá, um banho
+      quente ou um exercício de respiração. Algumas pessoas percebem a diferença logo nos
+      primeiros minutos; outras levam mais tempo; e há quem simplesmente não sinta o que
+      esperava.
+    </p>
+    <p>
+      Por isso não prometemos, garantimos nem asseguramos nenhum resultado específico.
+      Relatos de tempo de resposta ou de sensação percebida que aparecem em nossos canais
+      são experiências individuais de quem usou, e não indicação terapêutica nem promessa
+      do que vai acontecer com você.
+    </p>
+    <p>
+      Ao comprar, você está ciente de que a percepção do efeito varia de pessoa para pessoa
+      e que uma experiência diferente da esperada não caracteriza vício ou defeito do produto,
+      já que nenhum efeito terapêutico é prometido.
+    </p>
+    <p>
+      Por isso vale começar por uma unidade. Se depois fizer sentido para você, os kits
+      continuam aqui — e as regras de devolução estão explicadas na última seção.
+    </p>
+  </section>
+
+  <section id="garantia">
+    <h2>8. Nossa garantia de 30 dias</h2>
+    <p>
+      Como a experiência é pessoal, não pedimos que você acredite antes de experimentar.
+      A gente assume o risco no seu lugar.
+    </p>
+
+    <div class="hero-note">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/></svg>
+      <div>
+        <h3>Mudou de ideia? Devolvemos o valor</h3>
+        <p>
+          Você tem <strong>30 dias</strong> a partir do recebimento para devolver o produto e
+          receber de volta o valor pago. Basta escrever para a gente com o número do pedido —
+          sem formulário e sem justificativa.
+        </p>
+        <p>
+          A condição é uma só: <strong>o frasco precisa estar lacrado, sem ter sido aberto.</strong>
+          Por ser um produto manipulado de uso sublingual, frasco aberto não pode retornar ao
+          estoque nem ser revendido.
+        </p>
+      </div>
+    </div>
+
+    <p>
+      Esse prazo de 30 dias é nosso, por conta própria — a lei não obriga ninguém a oferecer
+      isso. Ele existe para você poder comprar sem medo de errar na quantidade ou de mudar
+      de ideia depois que o pedido já saiu.
+    </p>
+
+    <h3>Seus 7 dias garantidos por lei</h3>
+    <p>
+      Independentemente da nossa política, o artigo 49 do Código de Defesa do Consumidor te dá
+      <strong>7 dias corridos</strong> a partir do recebimento para desistir de qualquer compra
+      feita pela internet, com devolução integral dos valores pagos, incluindo frete.
+    </p>
+    <p>
+      <strong>Esse direito é seu e vale mesmo que você tenha aberto o produto</strong> para
+      conhecer. Ele não depende de nós e não pode ser reduzido por nenhuma regra nossa.
+    </p>
+
+    <h3>Como funciona na prática</h3>
+    <ul>
+      <li>
+        <strong>Peça primeiro.</strong> Escreva para
+        <a href="mailto:contato@aquieteagora.com.br">contato@aquieteagora.com.br</a> com o
+        número do pedido. A gente confirma o endereço de devolução por e-mail.
+      </li>
+      <li>
+        <strong>Frete de devolução:</strong> na garantia de 30 dias, o envio de volta é por
+        conta do cliente. Guarde o comprovante de postagem.
+      </li>
+      <li>
+        <strong>Estorno:</strong> feito em até <strong>7 dias</strong> depois que o frasco
+        chegar à nossa unidade e for conferido.
+      </li>
+      <li>
+        <strong>Forma:</strong> o valor volta pelo mesmo meio usado na compra. Em cartão, o
+        prazo de aparecer na fatura depende do banco e pode levar até dois ciclos.
+      </li>
+    </ul>
+  </section>
+
+</main>
+
+<footer class="ftr">
+  <div class="wrap">
+    <p><a href="index.html">← Voltar para a página inicial</a></p>
+    <p class="ftr__links">
+      <a href="#garantia">Garantia</a>
+      <a href="#compra">Trocas e devoluções</a>
+      <a href="#privacidade">Privacidade</a>
+      <a href="mailto:contato@aquieteagora.com.br">Contato</a>
+    </p>
+    <p class="ftr__cvv">
+      Se você estiver em crise, o CVV atende gratuitamente pelo
+      <a href="tel:188">188</a>, 24 horas por dia.
+    </p>
+    <p style="margin-top:var(--s5);font-size:.8125rem;color:#7C6763">
+      © <span id="yr">2026</span> Aquiete · CNPJ 00.000.000/0001-00 · Todos os direitos reservados.
+    </p>
+  </div>
+</footer>
+
+<script>document.getElementById('yr').textContent=new Date().getFullYear()</script>
+</body>
+</html>

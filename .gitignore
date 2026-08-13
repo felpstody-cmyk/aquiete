@@ -1,0 +1,18 @@
+# Pacotes de deploy manual — desnecessários depois que o GitHub estiver ligado
+*.zip
+
+# CHAVES NUNCA ENTRAM AQUI.
+# ASAAS_API_KEY e afins ficam só nas Environment variables do Netlify.
+.env
+.env.*
+*.key
+*.pem
+
+# Lixo do sistema
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Caso um dia entrem dependências
+node_modules/
+.netlify/

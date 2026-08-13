@@ -1,0 +1,29 @@
+# ============================================================
+#  Aquiete — configuração do Netlify
+# ============================================================
+
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+# URL limpa: /termos em vez de /termos.html
+[[redirects]]
+  from = "/termos"
+  to = "/termos.html"
+  status = 200
+
+[[redirects]]
+  from = "/checkout"
+  to = "/checkout.html"
+  status = 200
+
+# ------------------------------------------------------------
+#  VARIÁVEIS DE AMBIENTE
+#  Configure em: Site configuration > Environment variables.
+#  NUNCA coloque chave de API neste arquivo — ele vai para o
+#  repositório e para o pacote publicado.
+#
+#    GATEWAY          asaas | pagarme | mercadopago
+#    ASAAS_API_KEY    chave do Asaas (começa com $aact_)
+#    ASAAS_AMBIENTE   sandbox | producao
+# ------------------------------------------------------------

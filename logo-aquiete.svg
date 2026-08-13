@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 200" width="260" height="200" role="img" aria-label="Aquiete — Gotas Florais">
+  <title>Aquiete — Gotas Florais</title>
+
+  <!-- Gota -->
+  <g transform="translate(107.5,14) scale(1.97)">
+    <path d="M12 .6c3.6 7.6 11 17.8 11 26a11 11 0 0 1-22 0c0-8.2 7.4-18.4 11-26Z" fill="#D4536E"/>
+    <ellipse cx="8.1" cy="23.6" rx="2.2" ry="3.5" fill="#fff" fill-opacity=".38" transform="rotate(-12 8.1 23.6)"/>
+  </g>
+
+  <!-- Nome -->
+  <text x="130" y="152" text-anchor="middle"
+        font-family="Georgia, 'Iowan Old Style', 'Palatino Linotype', serif"
+        font-size="52" font-weight="400" fill="#3B2B29">aquiete</text>
+
+  <!-- Tagline -->
+  <text x="132" y="180" text-anchor="middle"
+        font-family="system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif"
+        font-size="11.5" font-weight="500" letter-spacing="3.9" fill="#8B6F6C">GOTAS FLORAIS</text>
+</svg>
