@@ -16,3 +16,6 @@ desktop.ini
 # Caso um dia entrem dependências
 node_modules/
 .netlify/
+
+# Configuração local do Claude Code — pessoal, não vai para o repositório
+.claude/settings.local.json
