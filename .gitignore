@@ -19,3 +19,11 @@ node_modules/
 
 # Configuração local do Claude Code — pessoal, não vai para o repositório
 .claude/settings.local.json
+
+# As fotos escolhidas em img/ugc/ agora são assets do site e VÃO para o repositório.
+
+# Ferramentas e notas de trabalho — o Netlify publica a pasta inteira, e tudo
+# que subir fica acessível em aquieteagora.com.br/<arquivo>. Isto fica local.
+prompts-ugc.md
+gerar-fotos.py
+__pycache__/

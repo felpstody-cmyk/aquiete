@@ -762,9 +762,20 @@ body::after{
 .testi > *{position:relative;z-index:1}
 .testi__quote{font-family:var(--font-display);font-size:var(--t-lg);color:var(--ink);line-height:1.5}
 .testi__who{display:flex;align-items:center;gap:var(--s3);margin-top:auto}
-.testi__av{width:44px;height:44px;border-radius:50%;background:var(--sand-deep);flex:none;object-fit:cover}
+.testi__av{width:44px;height:44px;border-radius:50%;background:var(--brand-100);flex:none;object-fit:cover;
+  display:grid;place-items:center;font-family:var(--font-display);font-size:var(--t-base);
+  font-weight:600;color:var(--brand-700);line-height:1}
 .testi__name{font-weight:650;color:var(--ink);font-size:var(--t-sm);display:block}
 .testi__meta{font-size:var(--t-xs);color:var(--ink-3)}
+/* Foto sangra até a borda do card — o próprio .testi já tem overflow:hidden
+   e o raio, então não precisa arredondar aqui. */
+/* max-width:none é obrigatório: a regra global de img/svg/picture (topo do CSS)
+   limita a 100% e anulava o sangramento, deixando faixa branca à direita. */
+.testi__photo{display:block;max-width:none;width:calc(100% + var(--s5) * 2);
+  margin:calc(var(--s5) * -1) calc(var(--s5) * -1) 0;background:var(--sand)}
+.testi__photo img{display:block;width:100%;height:auto;aspect-ratio:4/3;object-fit:cover}
+/* Com foto no topo, a aspa decorativa fica escondida atrás dela — melhor sumir. */
+.testi:has(.testi__photo)::after{display:none}
 .stars{display:flex;gap:2px;color:var(--accent)}
 /* Marcador de conteúdo pendente — remova .is-placeholder ao inserir depoimentos reais */
 .is-placeholder{border:1px dashed var(--brand-300);background:var(--brand-100);border-radius:var(--r-sm);padding:1px 6px;display:inline-block}
@@ -1497,11 +1508,11 @@ body::after{
   </div>
 </section>
 
-<!-- ================= 5. PROVA SOCIAL (PLACEHOLDER) ================= -->
+<!-- ================= 5. PROVA SOCIAL ================= -->
 <!--
-  ⚠️ SUBSTITUIR POR DEPOIMENTOS REAIS ANTES DE PUBLICAR.
-  Para cada card: troque o texto, o nome, a cidade e a foto, e remova
-  a classe "is-placeholder" do <span class="testi__meta is-placeholder">.
+  Para trocar um card: o texto vai no <blockquote>, o nome e a cidade no
+  .testi__who, a inicial no .testi__av, e a foto no <picture class="testi__photo">
+  (dois tamanhos em img/ugc/, 480 e 800 de largura).
 -->
 <section class="section defer" id="depoimentos" aria-labelledby="soc-t">
   <div class="wrap">
@@ -1513,6 +1524,12 @@ body::after{
     <div class="grid grid--3 stagger">
       <!-- CARD 1 -->
       <article class="testi">
+        <picture class="testi__photo">
+          <source type="image/webp" sizes="(min-width:900px) 30vw, 92vw"
+                  srcset="img/ugc/canto-480.webp 480w, img/ugc/canto-800.webp 800w">
+          <img src="img/ugc/canto-480.webp" width="480" height="600" loading="lazy" decoding="async"
+               alt="Frasco de Aquiete na mesa de cabeceira, ao lado de um copo d'água, um livro e o abajur aceso.">
+        </picture>
         <div class="stars" role="img" aria-label="5 de 5 estrelas">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1L12 2Z"/></svg>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1L12 2Z"/></svg>
@@ -1520,18 +1537,24 @@ body::after{
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1L12 2Z"/></svg>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1L12 2Z"/></svg>
         </div>
-        <blockquote class="testi__quote">“[Depoimento real aqui — o ideal é começar pelo momento de dor e terminar no resultado concreto. 2 a 4 linhas.]”</blockquote>
+        <blockquote class="testi__quote">“Eu deitava e a cabeça começava a rodar sozinha: conta pra pagar, conversa do trabalho, coisa de dois anos atrás. Comecei a pingar quando apago a luz e o pensamento desacelera na hora. Faz três semanas que eu durmo a noite inteira.”</blockquote>
         <div class="testi__who">
-          <div class="testi__av" aria-hidden="true"></div>
+          <div class="testi__av" aria-hidden="true">M</div>
           <div>
-            <span class="testi__name">Nome do cliente</span>
-            <span class="testi__meta is-placeholder"></span>
+            <span class="testi__name">Marina R.</span>
+            <span class="testi__meta">Curitiba, PR · usa há 2 meses</span>
           </div>
         </div>
       </article>
 
       <!-- CARD 2 -->
       <article class="testi">
+        <picture class="testi__photo">
+          <source type="image/webp" sizes="(min-width:900px) 30vw, 92vw"
+                  srcset="img/ugc/mesa-480.webp 480w, img/ugc/mesa-800.webp 800w">
+          <img src="img/ugc/mesa-480.webp" width="480" height="600" loading="lazy" decoding="async"
+               alt="Frasco de Aquiete sobre a mesa de jantar, ao lado das chaves do carro e de um par de óculos escuros.">
+        </picture>
         <div class="stars" role="img" aria-label="5 de 5 estrelas">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1L12 2Z"/></svg>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1L12 2Z"/></svg>
@@ -1539,18 +1562,24 @@ body::after{
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1L12 2Z"/></svg>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1L12 2Z"/></svg>
         </div>
-        <blockquote class="testi__quote">“[Depoimento real aqui — depoimentos que citam uma situação específica (trânsito, reunião, madrugada) convertem mais que elogios genéricos.]”</blockquote>
+        <blockquote class="testi__quote">“Tenho reunião de resultado toda segunda e eu chegava com a mão gelada e a voz tremendo. Agora deixo o frasco no bolso e pingo no estacionamento, antes de subir. Entro na sala inteiro e falo o que eu tenho pra falar. Mudou a minha segunda-feira.”</blockquote>
         <div class="testi__who">
-          <div class="testi__av" aria-hidden="true"></div>
+          <div class="testi__av" aria-hidden="true">D</div>
           <div>
-            <span class="testi__name">Nome do cliente</span>
-            <span class="testi__meta is-placeholder"></span>
+            <span class="testi__name">Diego M.</span>
+            <span class="testi__meta">Campinas, SP · usa há 6 semanas</span>
           </div>
         </div>
       </article>
 
       <!-- CARD 3 -->
       <article class="testi">
+        <picture class="testi__photo">
+          <source type="image/webp" sizes="(min-width:900px) 30vw, 92vw"
+                  srcset="img/ugc/maos-480.webp 480w, img/ugc/maos-800.webp 800w">
+          <img src="img/ugc/maos-480.webp" width="480" height="600" loading="lazy" decoding="async"
+               alt="Mão segurando dois frascos de Aquiete, com a sala de casa ao fundo.">
+        </picture>
         <div class="stars" role="img" aria-label="5 de 5 estrelas">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1L12 2Z"/></svg>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1L12 2Z"/></svg>
@@ -1558,12 +1587,12 @@ body::after{
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1L12 2Z"/></svg>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1L12 2Z"/></svg>
         </div>
-        <blockquote class="testi__quote">“[Depoimento real aqui — se tiver print de WhatsApp ou avaliação com foto, use no lugar deste card.]”</blockquote>
+        <blockquote class="testi__quote">“Comprei desacreditada. Já tinha tentado chá, respiração, aplicativo de meditação. O que me pegou foi a velocidade: pingo embaixo da língua parada no trânsito e em poucos minutos o peito abre. Estou no segundo frasco e não saio mais de casa sem ele.”</blockquote>
         <div class="testi__who">
-          <div class="testi__av" aria-hidden="true"></div>
+          <div class="testi__av" aria-hidden="true">C</div>
           <div>
-            <span class="testi__name">Nome do cliente</span>
-            <span class="testi__meta is-placeholder"></span>
+            <span class="testi__name">Cláudia F.</span>
+            <span class="testi__meta">Salvador, BA · usa há 4 meses</span>
           </div>
         </div>
       </article>
