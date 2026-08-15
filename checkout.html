@@ -727,7 +727,14 @@ img,svg{display:block;max-width:100%}
       if (!res.ok || !res.j.ok) throw new Error(res.j.erro || 'Falha ao criar o pedido');
 
       // Cartão e boleto: página do gateway. Pix: QR aqui mesmo.
-      if (res.j.redirectUrl) { location.href = res.j.redirectUrl; return; }
+      // Só navega para https. Um "javascript:" vindo do gateway executaria
+      // script na página de pagamento se fosse aceito aqui.
+      if (res.j.redirectUrl) {
+        if (!/^https:\/\//i.test(String(res.j.redirectUrl))) {
+          throw new Error('Endereço de pagamento inválido. Tente outro método.');
+        }
+        location.href = res.j.redirectUrl; return;
+      }
       if (res.j.pix) { mostrarPix(res.j); return; }
       throw new Error('Resposta inesperada do gateway');
     })
@@ -738,20 +745,52 @@ img,svg{display:block;max-width:100%}
   }
 
   /* ---------- Pix na própria página ---------- */
+  /* Monta o painel com a API do DOM em vez de innerHTML.
+     O QR e o payload vêm do gateway; interpolar isso em HTML seria dar a
+     um terceiro a chance de injetar script na página de pagamento — o pior
+     lugar possível para isso acontecer. */
   function mostrarPix(dados){
     var painelPix = el('panelPix');
-    painelPix.querySelector('.panel__in').innerHTML =
-      '<div class="slot" style="border-style:solid;background:var(--ok-100);border-color:#B9DCCB">'
-      + (dados.pix.qrBase64
-          ? '<img src="data:image/png;base64,' + dados.pix.qrBase64 + '" alt="QR Code do Pix" '
-            + 'width="200" height="200" style="margin:0 auto var(--s4);border-radius:8px">'
-          : '')
-      + '<h3 style="color:var(--ok)">Escaneie ou copie o código</h3>'
-      + '<textarea readonly rows="3" style="width:100%;margin-top:.75rem;padding:.6rem;'
-      + 'font-size:.75rem;border:1px solid #B9DCCB;border-radius:8px;resize:none;'
-      + 'font-family:monospace">' + dados.pix.payload + '</textarea>'
-      + '<p style="margin-top:.6rem">Pedido <strong>' + dados.referencia + '</strong>. '
-      + 'O envio sai assim que o pagamento cair.</p></div>';
+    var alvo = painelPix.querySelector('.panel__in');
+    var pix = dados.pix || {};
+
+    var caixa = d.createElement('div');
+    caixa.className = 'slot';
+    caixa.style.cssText = 'border-style:solid;background:var(--ok-100);border-color:#B9DCCB';
+
+    // Só aceita base64 de verdade: qualquer outro caractere sai fora.
+    var b64 = String(pix.qrBase64 || '');
+    if (b64 && /^[A-Za-z0-9+/=\s]+$/.test(b64)) {
+      var img = d.createElement('img');
+      img.src = 'data:image/png;base64,' + b64.replace(/\s/g, '');
+      img.alt = 'QR Code do Pix';
+      img.width = 200; img.height = 200;
+      img.style.cssText = 'margin:0 auto var(--s4);border-radius:8px';
+      caixa.appendChild(img);
+    }
+
+    var h = d.createElement('h3');
+    h.style.color = 'var(--ok)';
+    h.textContent = 'Escaneie ou copie o código';
+    caixa.appendChild(h);
+
+    var ta = d.createElement('textarea');
+    ta.readOnly = true; ta.rows = 3;
+    ta.style.cssText = 'width:100%;margin-top:.75rem;padding:.6rem;font-size:.75rem;'
+      + 'border:1px solid #B9DCCB;border-radius:8px;resize:none;font-family:monospace';
+    ta.value = String(pix.payload || '');
+    caixa.appendChild(ta);
+
+    var p = d.createElement('p');
+    p.style.marginTop = '.6rem';
+    p.appendChild(d.createTextNode('Pedido '));
+    var ref = d.createElement('strong');
+    ref.textContent = String(dados.referencia || '');
+    p.appendChild(ref);
+    p.appendChild(d.createTextNode('. O envio sai assim que o pagamento cair.'));
+    caixa.appendChild(p);
+
+    alvo.replaceChildren(caixa);
     painelPix.setAttribute('data-open','');
     painelPix.scrollIntoView({ behavior: 'smooth', block: 'center' });
     travar(true, 'Aguardando pagamento');

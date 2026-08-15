@@ -24,12 +24,17 @@ export const CUPONS = {
   PRIMEIRA10: { percentual: 0.10, rotulo: '10% na primeira compra', ativo: true },
 }
 
-/** Devolve o cupom válido ou null. Código inválido nunca derruba o pedido. */
+/**
+ * Devolve o cupom válido ou null. Código inválido nunca derruba o pedido.
+ *
+ * Object.hasOwn é obrigatório: sem ele, um código como "constructor" ou
+ * "toString" acharia uma propriedade herdada do prototype em vez de um cupom.
+ */
 export function acharCupom(codigo) {
   const chave = String(codigo ?? '').trim().toUpperCase()
-  if (!chave) return null
+  if (!chave || !Object.hasOwn(CUPONS, chave)) return null
   const cupom = CUPONS[chave]
-  return cupom?.ativo ? { codigo: chave, ...cupom } : null
+  return cupom.ativo ? { codigo: chave, ...cupom } : null
 }
 
 /** Monta o pedido a partir do id do kit. Lança se o kit não existir. */
