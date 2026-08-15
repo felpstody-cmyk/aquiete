@@ -1023,6 +1023,79 @@ body::after{
 @media (min-width:900px){ .dock{display:none} }
 
 /* ============================================================
+   COOKIES + CUPOM
+   Canto esquerdo no desktop (o .fab mora no direito) e, no mobile,
+   acima do .dock para nunca cobrir o botão de compra.
+   ============================================================ */
+.consent{
+  position:fixed;z-index:52;
+  left:var(--gutter);right:var(--gutter);
+  bottom:calc(5.5rem + env(safe-area-inset-bottom));
+  background:var(--surface);border:1px solid var(--brand-200);
+  border-radius:var(--r-lg);padding:var(--s5);
+  box-shadow:0 18px 40px -12px rgba(90,40,34,.28);
+  opacity:0;transform:translateY(16px) scale(.96);pointer-events:none;
+  transition:opacity .4s var(--ease),transform .5s var(--spring);
+}
+.consent[data-show]{opacity:1;transform:none;pointer-events:auto}
+@media (min-width:900px){
+  .consent{left:clamp(1rem,2.5vw,2rem);right:auto;width:300px;
+    bottom:clamp(1rem,2.5vw,2rem)}
+}
+.consent__step{position:relative}
+.consent__x{
+  position:absolute;top:-.5rem;right:-.5rem;width:30px;height:30px;
+  display:grid;place-items:center;border:0;border-radius:50%;
+  background:none;color:var(--ink-3);cursor:pointer;transition:background .2s,color .2s;
+}
+.consent__x:hover{background:var(--sand);color:var(--ink)}
+.consent__eyebrow{
+  font-size:var(--t-xs);font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--brand);margin:0;
+}
+.consent__t{font-family:var(--font-display);font-size:1.25rem;color:var(--ink);
+  line-height:1.2;margin:.25rem 0 .5rem}
+.consent__d{font-size:var(--t-sm);color:var(--ink-2);margin-bottom:var(--s4)}
+.consent__acts{display:flex;gap:.5rem}
+.consent__bt{
+  flex:1;padding:.6rem .9rem;border:1px solid var(--brand);border-radius:var(--r-md);
+  background:var(--brand);color:#fff;font:inherit;font-size:var(--t-sm);font-weight:700;
+  cursor:pointer;transition:background .2s,border-color .2s,color .2s;
+}
+.consent__bt:hover{background:var(--brand-700);border-color:var(--brand-700)}
+.consent__bt--ghost{background:none;color:var(--ink-2);border-color:var(--line)}
+.consent__bt--ghost:hover{background:var(--sand);color:var(--ink);border-color:var(--line)}
+.consent__link{
+  display:inline-block;margin-top:var(--s3);
+  font-size:var(--t-xs);color:var(--ink-3);text-underline-offset:2px;
+}
+.consent__code{
+  width:100%;display:flex;align-items:center;justify-content:space-between;gap:var(--s3);
+  margin-top:var(--s4);padding:.6rem .85rem;
+  border:1px dashed var(--brand-300);border-radius:var(--r-md);
+  background:var(--brand-100);font:inherit;cursor:pointer;text-align:left;
+  transition:background .2s,border-color .2s;
+}
+.consent__code:hover{background:var(--brand-200);border-color:var(--brand)}
+.consent__code-v{font-weight:700;letter-spacing:.06em;color:var(--brand-900)}
+.consent__code-a{font-size:var(--t-xs);color:var(--brand-700);font-weight:600;white-space:nowrap}
+.consent__form{display:flex;gap:.5rem;margin-top:.6rem}
+.consent__form input{
+  flex:1;min-width:0;padding:.6rem .75rem;font:inherit;font-size:var(--t-sm);
+  border:1px solid var(--line);border-radius:var(--r-md);
+  background:var(--bg);color:var(--ink);
+}
+.consent__form input:focus{outline:2px solid var(--brand-300);outline-offset:1px;border-color:var(--brand-300)}
+.consent__form .consent__bt{flex:none}
+.consent__msg{font-size:var(--t-xs);color:var(--brand-700);font-weight:600;margin-top:.4rem;min-height:1.1em}
+.consent__cta{
+  display:block;margin-top:.5rem;text-align:center;
+  font-size:var(--t-sm);font-weight:700;color:var(--brand-700);
+  text-decoration:none;padding:.45rem;border-radius:var(--r-md);
+}
+.consent__cta:hover{background:var(--sand);text-decoration:underline}
+
+/* ============================================================
    MOTION — revelação ao rolar (degrada sem JS)
    ============================================================ */
 .js .reveal{opacity:0;transform:translateY(22px)}
@@ -1895,6 +1968,56 @@ body::after{
   </a>
 </div>
 
+<!-- ================= COOKIES + CUPOM =================
+  Um bloco, dois passos: a pessoa decide sobre os cookies e o cupom
+  aparece no lugar, como agradecimento. O desconto continua sendo
+  calculado no servidor (netlify/functions/_lib/catalogo.mjs).
+
+  O formulário escondido logo abaixo existe para o Netlify detectar o
+  form no deploy; o envio de verdade é por fetch.
+-->
+<form name="cupom" data-netlify="true" netlify-honeypot="bot-field" hidden>
+  <input type="email" name="email"><input type="text" name="cupom">
+  <input type="text" name="cookies"><input type="text" name="origem">
+  <input type="text" name="bot-field">
+</form>
+
+<aside class="consent" id="consent" hidden aria-live="polite">
+
+  <div class="consent__step" data-step="cookies">
+    <p class="consent__t">Este site usa cookies</p>
+    <p class="consent__d">
+      Servem para entender como as pessoas navegam e melhorar a loja.
+      Você escolhe — e pode mudar de ideia quando quiser.
+    </p>
+    <div class="consent__acts">
+      <button class="consent__bt consent__bt--ghost" type="button" id="ckNao">Só o necessário</button>
+      <button class="consent__bt" type="button" id="ckSim">Aceitar</button>
+    </div>
+    <a class="consent__link" href="termos.html#privacidade">Como usamos seus dados</a>
+  </div>
+
+  <div class="consent__step" data-step="cupom" hidden>
+    <button class="consent__x" type="button" id="ckX" aria-label="Fechar">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+    <p class="consent__eyebrow">Presente de boas-vindas</p>
+    <p class="consent__t">10% na primeira compra</p>
+    <button class="consent__code" type="button" id="ckCode">
+      <span class="consent__code-v">PRIMEIRA10</span>
+      <span class="consent__code-a" id="ckCopy">copiar</span>
+    </button>
+    <form class="consent__form" id="ckForm" novalidate>
+      <input id="ckMail" type="email" name="email" autocomplete="email"
+             placeholder="seu@email.com" aria-label="Seu e-mail para guardar o cupom">
+      <button class="consent__bt" type="submit">Guardar</button>
+    </form>
+    <p class="consent__msg" id="ckMsg" role="status"></p>
+    <a class="consent__cta" href="#oferta" id="ckCta" data-cta="promo">Ver os kits</a>
+  </div>
+
+</aside>
+
 <!-- ================= DADOS ESTRUTURADOS (SEO) ================= -->
 <script type="application/ld+json">
 {
@@ -2068,12 +2191,162 @@ body::after{
   pad(); addEventListener('resize',pad,{passive:true});
   d.body.style.paddingBottom='var(--dock-h)';
 
-  /* 10. Hook de tracking — conecte ao seu pixel
-  d.querySelectorAll('[data-cta]').forEach(function(a){
-    a.addEventListener('click',function(){
-      // fbq('track','InitiateCheckout'); gtag('event','begin_checkout');
+  /* 10. Cookies + cupom.
+     Passo 1 pergunta sobre cookies; qualquer resposta revela o cupom no
+     mesmo bloco. O e-mail é opcional e vai para o Netlify Forms. */
+  (function(){
+    var CODIGO = 'PRIMEIRA10';
+    var caixa = d.getElementById('consent');
+    if (!caixa) return;
+
+    var guardar = function(k,v){ try { localStorage.setItem(k,v); } catch(e){} };
+    var ler     = function(k){ try { return localStorage.getItem(k); } catch(e){ return null; } };
+
+    var passo = function(nome){ return caixa.querySelector('[data-step="' + nome + '"]'); };
+    var jaDecidiu = ler('aq_cookies');
+
+    // Fechou o cupom uma vez: não aparece mais, decidido ou não.
+    if (ler('aq_promo_visto')) return;
+
+    function abrir(){
+      // Quem já respondeu sobre cookies vai direto para o cupom.
+      if (jaDecidiu) { passo('cookies').hidden = true; passo('cupom').hidden = false; }
+      caixa.hidden = false;
+      requestAnimationFrame(function(){
+        requestAnimationFrame(function(){ caixa.setAttribute('data-show',''); });
+      });
+    }
+    function fechar(){
+      caixa.removeAttribute('data-show');
+      guardar('aq_promo_visto','1');
+      setTimeout(function(){ caixa.hidden = true; }, 450);
+    }
+
+    function responder(valor){
+      guardar('aq_cookies', valor);
+      jaDecidiu = valor;
+      passo('cookies').hidden = true;
+      passo('cupom').hidden = false;
+      guardar('aq_cupom', CODIGO);
+      // Avisa o bloco 11 para carregar (ou não) os rastreadores na hora,
+      // sem precisar recarregar a página.
+      dispatchEvent(new CustomEvent('aq:consentimento', { detail: valor }));
+    }
+
+    d.getElementById('ckSim').addEventListener('click', function(){ responder('aceito'); });
+    d.getElementById('ckNao').addEventListener('click', function(){ responder('essencial'); });
+    d.getElementById('ckX').addEventListener('click', fechar);
+    d.getElementById('ckCta').addEventListener('click', function(){
+      guardar('aq_cupom', CODIGO); fechar();
     });
-  }); */
+
+    d.getElementById('ckCode').addEventListener('click', function(){
+      guardar('aq_cupom', CODIGO);
+      var aviso = d.getElementById('ckCopy');
+      var pronto = function(){
+        aviso.textContent = 'copiado!';
+        setTimeout(function(){ aviso.textContent = 'copiar'; }, 2200);
+      };
+      if (navigator.clipboard) navigator.clipboard.writeText(CODIGO).then(pronto, pronto);
+      else pronto();
+    });
+
+    d.getElementById('ckForm').addEventListener('submit', function(ev){
+      ev.preventDefault();
+      var campo = d.getElementById('ckMail');
+      var msg   = d.getElementById('ckMsg');
+      var email = campo.value.trim();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(email)) {
+        msg.textContent = 'Confere o e-mail?'; campo.focus(); return;
+      }
+      msg.textContent = 'Guardando…';
+      fetch('/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          'form-name': 'cupom',
+          email: email,
+          cupom: CODIGO,
+          cookies: jaDecidiu || 'nao respondeu',
+          origem: location.pathname + location.search
+        }).toString()
+      }).then(function(){
+        msg.textContent = 'Pronto. Cupom guardado.';
+        campo.disabled = true;
+        guardar('aq_email', email);
+      }).catch(function(){
+        // O código já está no navegador; falha de rede não pode travar a compra.
+        msg.textContent = 'Não deu para guardar, mas o cupom já é seu.';
+      });
+    });
+
+    // Cookies aparecem cedo — mas não no primeiro instante, para não
+    // atrapalhar o carregamento nem receber a pessoa com um aviso na cara.
+    setTimeout(abrir, jaDecidiu ? 8000 : 2500);
+  })();
+
+  /* 11. Meta Pixel e Google Analytics.
+     ============================================================
+     PARA LIGAR: preencha os dois IDs abaixo. Vazio = não carrega nada.
+       META_PIXEL_ID  só números, ex.: '1234567890123456'
+       GA_ID          começa com G-, ex.: 'G-AB12CD34EF'
+     Os mesmos IDs precisam ser repetidos no checkout.html.
+     ============================================================
+     Nada dispara sem a pessoa ter clicado em "Aceitar" no aviso de
+     cookies. "Só o necessário" não carrega rastreador nenhum. */
+  (function(){
+    var META_PIXEL_ID = '';
+    var GA_ID         = '';
+
+    var carregado = false;
+
+    function aceitou(){
+      try { return localStorage.getItem('aq_cookies') === 'aceito'; } catch(e){ return false; }
+    }
+
+    function script(src){
+      var s = d.createElement('script'); s.async = true; s.src = src;
+      d.head.appendChild(s); return s;
+    }
+
+    function carregar(){
+      if (carregado || !aceitou()) return;
+      carregado = true;
+
+      if (META_PIXEL_ID) {
+        /* eslint-disable */
+        !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+        n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+        n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+        t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}
+        (window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+        /* eslint-enable */
+        fbq('init', META_PIXEL_ID);
+        fbq('track', 'PageView');
+        fbq('track', 'ViewContent', { content_name: 'Aquiete 30ml', content_type: 'product' });
+      }
+
+      if (GA_ID) {
+        script('https://www.googletagmanager.com/gtag/js?id=' + GA_ID);
+        window.dataLayer = window.dataLayer || [];
+        window.gtag = function(){ dataLayer.push(arguments); };
+        gtag('js', new Date());
+        gtag('config', GA_ID);
+      }
+    }
+
+    /* Cliques nos CTAs: só contam se o rastreador estiver carregado. */
+    d.querySelectorAll('[data-cta]').forEach(function(a){
+      a.addEventListener('click', function(){
+        if (!carregado) return;
+        if (window.fbq)  fbq('track', 'InitiateCheckout');
+        if (window.gtag) gtag('event', 'begin_checkout', { origem: a.dataset.cta });
+      });
+    });
+
+    carregar();                                   // visitante que já aceitou antes
+    addEventListener('aq:consentimento', carregar); // ou que acabou de aceitar
+  })();
 })();
 </script>
 

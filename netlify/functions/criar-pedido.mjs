@@ -31,7 +31,7 @@ export default async (req) => {
     const corpo = await req.json()
 
     // Ordem importa: valida antes de gastar chamada de API
-    const pedido = montarPedido(corpo.kit, corpo.metodo)
+    const pedido = montarPedido(corpo.kit, corpo.metodo, corpo.cupom)
     const cliente = validarCliente(corpo.cliente)
     const referencia = gerarReferencia()
 

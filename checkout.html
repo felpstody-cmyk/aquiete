@@ -178,6 +178,22 @@ img,svg{display:block;max-width:100%}
 .lines{display:grid;gap:.55rem;padding-block:var(--s4);border-bottom:1px solid var(--line);font-size:.9375rem}
 .lines div{display:flex;justify-content:space-between;gap:var(--s4)}
 .lines .free{color:var(--ok);font-weight:700}
+/* Cupom */
+.cupom{margin-top:var(--s4)}
+.cupom__lb{display:block;font-size:.8125rem;font-weight:600;color:var(--ink-2);margin-bottom:.35rem}
+.cupom__row{display:flex;gap:.5rem}
+.cupom__row input{flex:1;min-width:0;text-transform:uppercase}
+.cupom__row button{
+  flex:none;padding-inline:var(--s4);border:1px solid var(--line);border-radius:var(--r-md);
+  background:var(--sand);color:var(--ink);font:inherit;font-size:.9375rem;font-weight:600;
+  cursor:pointer;transition:background .2s,border-color .2s;
+}
+.cupom__row button:hover{background:var(--brand-100);border-color:var(--brand-200)}
+.cupom__msg{font-size:.8125rem;margin-top:.4rem;min-height:1.2em}
+.cupom__msg[data-ok="1"]{color:var(--brand-700);font-weight:600}
+.cupom__msg[data-ok="0"]{color:var(--ink-3)}
+.lines #linhaDesc span:last-child{color:var(--brand-700);font-weight:600}
+
 .total{display:flex;justify-content:space-between;align-items:baseline;gap:var(--s4);padding-top:var(--s4)}
 .total span{font-weight:650;color:var(--ink)}
 .total strong{font-family:var(--font-display);font-size:1.875rem;color:var(--brand-700);font-weight:600;line-height:1}
@@ -430,8 +446,20 @@ img,svg{display:block;max-width:100%}
             <span class="item__p" id="itemP">R$ 97,00</span>
           </div>
 
+          <div class="cupom">
+            <label class="cupom__lb" for="cupom">Cupom de desconto</label>
+            <div class="cupom__row">
+              <input id="cupom" name="cupom" type="text" autocomplete="off"
+                     spellcheck="false" placeholder="Digite o código"
+                     aria-describedby="cupomMsg">
+              <button type="button" id="cupomBt">Aplicar</button>
+            </div>
+            <p class="cupom__msg" id="cupomMsg" role="status" aria-live="polite"></p>
+          </div>
+
           <div class="lines">
             <div><span>Subtotal</span> <span id="sub">R$ 97,00</span></div>
+            <div id="linhaDesc" hidden><span>Desconto</span> <span id="desc">— R$ 0,00</span></div>
             <div><span>Frete</span> <span id="frete">R$ 24,90</span></div>
           </div>
 
@@ -496,20 +524,65 @@ img,svg{display:block;max-width:100%}
   if (!KITS[kitId]) kitId = '1';
   var kit = KITS[kitId];
 
+  /* ---------- Cupons ----------
+     Espelho do que existe em netlify/functions/_lib/catalogo.mjs. Serve só
+     para mostrar o valor na tela: quem decide o desconto é o servidor. */
+  var CUPONS = {
+    PRIMEIRA10: { percentual: 0.10, rotulo: '10% de desconto aplicado' }
+  };
+  var cupomAtivo = null;
+
   /* ---------- Resumo ---------- */
   var el = function(id){ return d.getElementById(id); };
   function pintarResumo(){
-    var total = kit.preco + kit.frete;
+    var desconto = cupomAtivo ? +(kit.preco * cupomAtivo.percentual).toFixed(2) : 0;
+    var total = kit.preco - desconto + kit.frete;
+
     el('itemT').textContent  = kit.rotulo;
     el('itemP').textContent  = brl(kit.preco);
     el('sub').textContent    = brl(kit.preco);
     el('frete').innerHTML    = kit.frete === 0
       ? '<span class="free">Grátis</span>'
       : brl(kit.frete);
+    el('linhaDesc').hidden   = !desconto;
+    el('desc').textContent   = '— ' + brl(desconto);
     el('total').textContent  = brl(total);
     return total;
   }
   var totalAtual = pintarResumo();
+
+  /* ---------- Aplicar cupom ---------- */
+  function aplicarCupom(codigo, silencioso){
+    var chave = String(codigo || '').trim().toUpperCase();
+    var msg = el('cupomMsg');
+    if (!chave) { msg.textContent = ''; msg.removeAttribute('data-ok'); return; }
+
+    if (CUPONS[chave]) {
+      cupomAtivo = { codigo: chave, percentual: CUPONS[chave].percentual };
+      msg.textContent = CUPONS[chave].rotulo;
+      msg.setAttribute('data-ok', '1');
+      el('cupom').value = chave;
+    } else {
+      cupomAtivo = null;
+      // No preenchimento automático não acusa erro: o código pode ser antigo.
+      msg.textContent = silencioso ? '' : 'Cupom não encontrado ou expirado.';
+      msg.setAttribute('data-ok', '0');
+    }
+    totalAtual = pintarResumo();
+  }
+
+  el('cupomBt').addEventListener('click', function(){
+    aplicarCupom(el('cupom').value, false);
+  });
+  el('cupom').addEventListener('keydown', function(ev){
+    if (ev.key === 'Enter') { ev.preventDefault(); aplicarCupom(el('cupom').value, false); }
+  });
+
+  // Código guardado pelo aviso da página inicial, ou vindo por ?cupom= no link.
+  var cupomDaUrl = new URLSearchParams(location.search).get('cupom');
+  var cupomSalvo = null;
+  try { cupomSalvo = localStorage.getItem('aq_cupom'); } catch (e) {}
+  if (cupomDaUrl || cupomSalvo) aplicarCupom(cupomDaUrl || cupomSalvo, true);
 
   /* ---------- Máscaras ---------- */
   function mascarar(input, fn){
@@ -638,6 +711,7 @@ img,svg{display:block;max-width:100%}
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         kit: kitId,
+        cupom: cupomAtivo ? cupomAtivo.codigo : null,
         metodo: d.querySelector('.pay input:checked').value,
         cliente: {
           nome: el('nome').value, cpf: el('cpf').value,

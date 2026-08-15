@@ -13,19 +13,44 @@ export const KITS = {
 
 export const METODOS = new Set(['pix', 'card', 'boleto'])
 
+/**
+ * Cupons. O desconto incide só sobre o produto, nunca sobre o frete —
+ * frete é custo real, desconto em cima dele sai do seu bolso duas vezes.
+ *
+ * Para desativar um cupom, troque `ativo` para false em vez de apagar:
+ * assim os pedidos antigos continuam explicáveis.
+ */
+export const CUPONS = {
+  PRIMEIRA10: { percentual: 0.10, rotulo: '10% na primeira compra', ativo: true },
+}
+
+/** Devolve o cupom válido ou null. Código inválido nunca derruba o pedido. */
+export function acharCupom(codigo) {
+  const chave = String(codigo ?? '').trim().toUpperCase()
+  if (!chave) return null
+  const cupom = CUPONS[chave]
+  return cupom?.ativo ? { codigo: chave, ...cupom } : null
+}
+
 /** Monta o pedido a partir do id do kit. Lança se o kit não existir. */
-export function montarPedido(kitId, metodo) {
+export function montarPedido(kitId, metodo, codigoCupom) {
   const kit = KITS[String(kitId)]
   if (!kit) throw new ErroDeEntrada(`Kit inválido: ${kitId}`)
   if (!METODOS.has(metodo)) throw new ErroDeEntrada(`Método inválido: ${metodo}`)
+
+  const cupom = acharCupom(codigoCupom)
+  const centavos = (v) => Number(v.toFixed(2))
+  const desconto = cupom ? centavos(kit.preco * cupom.percentual) : 0
 
   return {
     kitId: String(kitId),
     metodo,
     descricao: `Aquiete — ${kit.rotulo}`,
     subtotal: kit.preco,
+    cupom: cupom?.codigo ?? null,
+    desconto,
     frete: kit.frete,
-    total: Number((kit.preco + kit.frete).toFixed(2)),
+    total: centavos(kit.preco - desconto + kit.frete),
   }
 }
 
