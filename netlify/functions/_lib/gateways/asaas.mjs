@@ -91,10 +91,24 @@ export async function criarCobranca({ pedido, cliente, referencia }) {
     }),
   })
 
-  // Pix: buscamos o QR para exibir sem tirar o cliente da página
+  // Pix: buscamos o QR para exibir sem tirar o cliente da página.
+  // Uma segunda tentativa cobre o caso de a chave Pix da conta ainda estar
+  // sendo provisionada — sem QR o cliente vê erro e abandona a compra.
   let pix = null
   if (pedido.metodo === 'pix') {
-    const qr = await chamar(`/payments/${cobranca.id}/pixQrCode`)
+    let qr = null
+    for (let tentativa = 1; tentativa <= 3; tentativa++) {
+      try {
+        qr = await chamar(`/payments/${cobranca.id}/pixQrCode`)
+        if (qr?.encodedImage) break
+      } catch (e) {
+        if (tentativa === 3) throw e
+      }
+      await new Promise((r) => setTimeout(r, 700 * tentativa))
+    }
+    if (!qr?.encodedImage) {
+      throw new ErroDeGateway('Não foi possível gerar o QR do Pix. Tente outro método.')
+    }
     pix = { payload: qr.payload, qrBase64: qr.encodedImage }
   }
 
