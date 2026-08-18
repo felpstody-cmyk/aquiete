@@ -70,6 +70,11 @@ async function acharOuCriarCliente(cliente) {
   return novo.id
 }
 
+/** Usada pelo webhook: o evento traz só o id do cliente, não os dados. */
+export async function buscarCliente(id) {
+  return chamar(`/customers/${encodeURIComponent(id)}`)
+}
+
 function vencimento(diasAFrente) {
   const d = new Date(Date.now() + diasAFrente * 86400000)
   return d.toISOString().slice(0, 10)
