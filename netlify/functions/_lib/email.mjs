@@ -79,17 +79,7 @@ export function htmlConfirmacao({ nome, referencia, descricao, total }) {
       <tr><td style="padding:8px 0;color:#82655F">Total pago</td>
           <td style="padding:8px 0;text-align:right;color:#A8352F;font-size:18px"><strong>${brl(total)}</strong></td></tr>
     </table>
-    <div style="background:#FDEBE8;border:1px solid #F8CFC9;border-radius:14px;padding:16px;margin:20px 0">
-      <p style="margin:0;font-size:14px">
-        <strong style="color:#2A1613">Como usar:</strong> 4 gotas embaixo da língua,
-        segure alguns segundos antes de engolir. Pode repetir quantas vezes precisar
-        ao longo do dia.
-      </p>
-    </div>
-    <p style="margin:16px 0 0;font-size:13px;color:#82655F">
-      Você tem 30 dias de garantia. As condições estão em
-      <a href="https://aquieteagora.com.br/termos#garantia" style="color:#A8352F">aquieteagora.com.br/termos</a>.
-    </p>`)
+`)
 }
 
 /** Aviso interno de venda. */
