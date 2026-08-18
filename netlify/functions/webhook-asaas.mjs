@@ -14,6 +14,8 @@
  * várias vezes por causa de um problema que não é dele.
  */
 
+import { timingSafeEqual } from 'node:crypto'
+
 import { buscarCliente } from './_lib/gateways/asaas.mjs'
 import { enviar, htmlConfirmacao, htmlVenda } from './_lib/email.mjs'
 import { enviarCompra } from './_lib/meta-capi.mjs'
@@ -27,6 +29,13 @@ const json = (dados, status = 200) =>
 /** Só estes significam dinheiro na conta. */
 const PAGOS = new Set(['PAYMENT_RECEIVED', 'PAYMENT_CONFIRMED'])
 
+/** Comparação em tempo constante: `===` vaza o tamanho do prefixo certo. */
+function mesmoToken(recebido, esperado) {
+  const a = Buffer.from(String(recebido ?? ''))
+  const b = Buffer.from(esperado)
+  return a.length === b.length && timingSafeEqual(a, b)
+}
+
 /** "Aquiete — 2 unidades" -> 2 */
 function unidadesDe(descricao) {
   const n = /(\d+)\s*unidade/i.exec(String(descricao ?? ''))
@@ -36,10 +45,19 @@ function unidadesDe(descricao) {
 export default async (req) => {
   if (req.method !== 'POST') return json({ erro: 'Use POST' }, 405)
 
-  // Autenticidade: sem isso, qualquer um posta um "pagamento aprovado"
-  // e dispara e-mail de confirmação e evento de compra falso.
+  // Autenticidade. Sem isso qualquer um posta um "pagamento aprovado" e
+  // dispara e-mail de confirmação e conversão falsa no Meta.
+  //
+  // Falha FECHADA de propósito: se o token não estiver configurado, o
+  // webhook recusa tudo. Processar evento não autenticado é pior do que
+  // não processar — melhor o pagamento esperar do que a loja acreditar
+  // numa venda que não existiu.
   const esperado = process.env.ASAAS_WEBHOOK_TOKEN
-  if (esperado && req.headers.get('asaas-access-token') !== esperado) {
+  if (!esperado) {
+    console.error('[webhook] ASAAS_WEBHOOK_TOKEN não configurado — recusando')
+    return json({ erro: 'webhook não configurado' }, 503)
+  }
+  if (!mesmoToken(req.headers.get('asaas-access-token'), esperado)) {
     console.warn('[webhook] token inválido')
     return json({ erro: 'não autorizado' }, 401)
   }
