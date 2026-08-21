@@ -99,3 +99,46 @@ export function htmlVenda({ referencia, descricao, total, cliente }) {
     </table>
     <p style="margin:20px 0 0;font-size:13px;color:#82655F">Despachar em até 2 dias úteis.</p>`)
 }
+
+/** Cobranca gerada e ainda nao paga: Pix ou boleto. */
+export function htmlAguardando({ nome, referencia, descricao, total, metodo, payload, link }) {
+  const primeiro = esc(String(nome || '').split(' ')[0] || 'Olá')
+  const ehPix = metodo === 'pix'
+
+  const codigo = ehPix && payload ? `
+    <p style="margin:20px 0 8px;font-size:13px;color:#82655F">Pix copia e cola:</p>
+    <div style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;line-height:1.5;
+                color:#2A1613;background:#FBEDE9;border:1px dashed #F0A79F;border-radius:12px;
+                padding:12px;word-break:break-all">${esc(payload)}</div>` : ''
+
+  const botao = link ? `
+    <table role="presentation" style="margin:22px auto 0"><tr><td style="border-radius:999px;background:#C8453E">
+      <a href="${esc(link)}" style="display:inline-block;padding:13px 28px;color:#fff;
+         text-decoration:none;font-weight:700;font-size:15px">
+        ${ehPix ? 'Abrir e pagar' : 'Ver o boleto'}
+      </a>
+    </td></tr></table>` : ''
+
+  return MOLDURA(`
+    <h1 style="font-family:Georgia,serif;font-size:22px;color:#2A1613;margin:0 0 16px;font-weight:normal">
+      ${primeiro}, ${ehPix ? 'seu Pix está pronto' : 'seu boleto está pronto'}.
+    </h1>
+    <p style="margin:0 0 16px">
+      Guardamos seu pedido. ${ehPix
+        ? 'Assim que o pagamento cair, avisamos por aqui e preparamos o envio.'
+        : 'O boleto leva até 3 dias úteis para compensar depois do pagamento.'}
+    </p>
+    <table style="width:100%;border-collapse:collapse;margin:20px 0;font-size:14px">
+      <tr><td style="padding:8px 0;border-bottom:1px solid #F1DFD9;color:#82655F">Pedido</td>
+          <td style="padding:8px 0;border-bottom:1px solid #F1DFD9;text-align:right;color:#2A1613"><strong>${esc(referencia)}</strong></td></tr>
+      <tr><td style="padding:8px 0;border-bottom:1px solid #F1DFD9;color:#82655F">Item</td>
+          <td style="padding:8px 0;border-bottom:1px solid #F1DFD9;text-align:right;color:#2A1613">${esc(descricao)}</td></tr>
+      <tr><td style="padding:8px 0;color:#82655F">Total</td>
+          <td style="padding:8px 0;text-align:right;color:#A8352F;font-size:18px"><strong>${brl(total)}</strong></td></tr>
+    </table>
+    ${codigo}
+    ${botao}
+    <p style="margin:22px 0 0;font-size:12px;color:#82655F;text-align:center">
+      Já pagou? Pode ignorar este e-mail.
+    </p>`)
+}

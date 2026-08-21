@@ -9,6 +9,7 @@
 
 import { montarPedido, validarCliente, ErroDeEntrada } from './_lib/catalogo.mjs'
 import { obterGateway, ErroDeGateway } from './_lib/gateways/index.mjs'
+import { enviar, htmlAguardando } from './_lib/email.mjs'
 
 const json = (dados, status = 200) =>
   new Response(JSON.stringify(dados), {
@@ -37,6 +38,32 @@ export default async (req) => {
 
     const gateway = obterGateway()
     const cobranca = await gateway.criarCobranca({ pedido, cliente, referencia })
+
+    // Manda o codigo por e-mail para quem vai pagar depois. Sem isto, quem
+    // fecha a pagina do Pix perde a cobranca e precisa refazer o pedido.
+    // Cartao nao entra: ali a pessoa ja e levada para a tela de pagamento.
+    if (pedido.metodo !== 'card') {
+      try {
+        await enviar({
+          para: cliente.email,
+          assunto: pedido.metodo === 'pix'
+            ? `Seu Pix do pedido ${referencia}`
+            : `Seu boleto do pedido ${referencia}`,
+          html: htmlAguardando({
+            nome: cliente.nome,
+            referencia,
+            descricao: pedido.descricao,
+            total: pedido.total,
+            metodo: pedido.metodo,
+            payload: cobranca.pix?.payload || null,
+            link: cobranca.redirectUrl || cobranca.invoiceUrl || null,
+          }),
+        })
+      } catch (e) {
+        // Falha de e-mail nunca derruba um pedido que ja foi criado.
+        console.error('[criar-pedido] e-mail de cobranca falhou:', e.message)
+      }
+    }
 
     return json({
       ok: true,

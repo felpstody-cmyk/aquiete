@@ -129,6 +129,9 @@ export async function criarCobranca({ pedido, cliente, referencia }) {
     redirectUrl: pedido.metodo === 'pix'
       ? null
       : (cobranca.bankSlipUrl || cobranca.invoiceUrl || null),
+    // Sempre devolvido: o e-mail de "Pix gerado" usa isto como plano B
+    // para quem fechou a pagina antes de pagar.
+    invoiceUrl: cobranca.invoiceUrl || null,
     pix,
   }
 }
