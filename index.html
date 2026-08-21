@@ -117,7 +117,7 @@
   /* --- Motion --- */
   --ease: cubic-bezier(.22,.61,.36,1);
   --spring: cubic-bezier(.34,1.4,.5,1);
-  --dur: .55s;
+  --dur: .7s;
 }
 
 /* ============================================================
@@ -168,21 +168,6 @@ body::after{
 }
 .skip:focus{top:var(--s4)}
 .sr{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
-
-/* ============================================================
-   BARRA DE PROGRESSO DE SCROLL (CSS puro, sem JS)
-   ============================================================ */
-.progress{display:none}
-@supports (animation-timeline: scroll()){
-  .progress{
-    display:block;position:fixed;top:0;left:0;z-index:60;
-    height:3px;width:100%;transform-origin:0 50%;transform:scaleX(0);
-    background:linear-gradient(90deg,var(--brand-500),var(--brand) 60%,var(--brand-900));
-    animation:progress linear both;
-    animation-timeline:scroll(root);
-  }
-  @keyframes progress{to{transform:scaleX(1)}}
-}
 
 /* ============================================================
    LAYOUT
@@ -1098,11 +1083,11 @@ body::after{
 /* ============================================================
    MOTION — revelação ao rolar (degrada sem JS)
    ============================================================ */
-.js .reveal{opacity:0;transform:translateY(22px)}
+.js .reveal{opacity:0;transform:translateY(14px)}
 .js .reveal[data-in]{opacity:1;transform:none;transition:opacity var(--dur) var(--ease),transform var(--dur) var(--ease)}
 
 /* Entrada escalonada de grids */
-.js .stagger>*{opacity:0;transform:translateY(18px)}
+.js .stagger>*{opacity:0;transform:translateY(12px)}
 .js .stagger[data-in]>*{opacity:1;transform:none;transition:opacity .55s var(--ease),transform .55s var(--ease)}
 .js .stagger[data-in]>*:nth-child(1){transition-delay:.04s}
 .js .stagger[data-in]>*:nth-child(2){transition-delay:.10s}
@@ -1169,7 +1154,7 @@ body::after{
   }
 }
 .secnav a{
-  display:flex;flex-direction:row-reverse;align-items:center;gap:.6rem;
+  display:flex;flex-direction:row-reverse;align-items:center;gap:.85rem;
   text-decoration:none;padding:.15rem 0;
 }
 .secnav__dot{
@@ -1185,8 +1170,31 @@ body::after{
   opacity:0;transform:translateX(8px);
   transition:opacity .3s var(--ease), transform .3s var(--ease);
 }
+/* ------------------------------------------------------------
+   A GOTA DA NAVEGACAO
+   Um fio liga os pontos e a gota pinga de secao em secao conforme
+   a pessoa desce. Substitui a barra de progresso do topo: um
+   indicador so, no mesmo lugar onde ja estavam os pontos.
+   ------------------------------------------------------------ */
+.secnav{position:relative}
+.secnav__gota{
+  position:absolute;left:0;top:0;width:11px;height:14px;
+  border-radius:50% 50% 50% 50% / 66% 66% 34% 34%;
+  background:linear-gradient(155deg,var(--brand-300),var(--brand) 52%,var(--brand-900));
+  box-shadow:0 0 12px 2px rgba(200,69,62,.45);
+  z-index:2;transform-origin:50% 50%;
+  pointer-events:none;opacity:0;
+  will-change:top,transform,opacity;
+}
+/* brilho de vidro: e o que faz ler como gota, nao como bolinha */
+.secnav__gota::after{
+  content:"";position:absolute;left:26%;top:30%;width:3px;height:5px;
+  border-radius:50%;background:rgba(255,255,255,.75);rotate:-14deg;
+}
 .secnav a:hover .secnav__dot{background:var(--brand-500);transform:scale(1.3)}
-.secnav a[data-on] .secnav__dot{background:var(--brand);transform:scale(1.55)}
+/* Quem marca a secao ativa e a gota. O ponto embaixo dela fica quieto —
+   com os dois destacados, viravam dois marcadores no mesmo ponto. */
+.secnav a[data-on] .secnav__dot{background:var(--brand-200);transform:scale(1)}
 .secnav a:hover .secnav__txt,
 .secnav a:focus-visible .secnav__txt,
 .secnav a[data-on] .secnav__txt{opacity:1;transform:none}
@@ -1205,10 +1213,10 @@ body::after{
 
 <body>
 <a class="skip" href="#main">Pular para o conteúdo</a>
-<div class="progress" aria-hidden="true"></div>
 
 <!-- Pontos de navegação — some junto com o realce se data-focus sair -->
 <nav class="secnav" aria-label="Seções da página">
+  <span class="secnav__gota" aria-hidden="true"></span>
   <a href="#o-momento"><span class="secnav__txt">O momento</span><span class="secnav__dot"></span></a>
   <a href="#como-funciona"><span class="secnav__txt">Como funciona</span><span class="secnav__dot"></span></a>
   <a href="#beneficios"><span class="secnav__txt">Benefícios</span><span class="secnav__dot"></span></a>
@@ -2150,14 +2158,128 @@ body::after{
     d.querySelectorAll('.secnav a').forEach(function(a){
       dots[a.getAttribute('href').slice(1)]=a;
     });
+    /* A gota pinga de um ponto ao outro. Movimento de gota real: ela
+       estica ao se soltar, acelera na queda, achata no impacto e volta
+       ao formato. Por isso e animacao com quadros, e nao um transition
+       de topo — deslizar parece bolinha, nao gota. */
+    var nav = d.querySelector('.secnav');
+    var gota = d.querySelector('.secnav__gota'), iAtual = null, correndo = null;
+    var links = Array.prototype.slice.call(d.querySelectorAll('.secnav a'));
+
+    /* Mede o retangulo da bolinha em relacao a nav. offsetTop dependia de
+       quem e o offsetParent e de como o flex distribuiu as larguras — com
+       o rotulo entrando e saindo, a conta saia errada e a gota caia ao
+       lado. Medindo o retangulo, ela pousa exatamente na bolinha. */
+    function centroDe(link){
+      var ponto = link.querySelector('.secnav__dot');
+      var rp = ponto.getBoundingClientRect();
+      var rn = nav.getBoundingClientRect();
+      return {
+        y: rp.top  - rn.top  + rp.height / 2 - gota.offsetHeight / 2,
+        x: rp.left - rn.left + rp.width  / 2 - gota.offsetWidth  / 2
+      };
+    }
+
+    /* Percorre bolinha por bolinha ate a ativa, em vez de saltar direto.
+       Cada trecho tem o mesmo ciclo de uma gota real: estica ao se
+       soltar, desvia de lado na queda, achata ao encostar e assenta.
+       O desvio alterna os lados, o que da o balanco diagonal — queda em
+       linha reta parece elevador, nao gota. */
+    function pingarPara(link){
+      if (!gota || !link) return;
+      var iDestino = links.indexOf(link);
+      if (iDestino < 0) return;
+
+      var pos = centroDe(link);
+      gota.style.left = pos.x + 'px';
+
+      // Primeira vez: aparece na bolinha de cima e desce em cascata ate a
+      // secao ativa. Nascer ja no destino era o que fazia parecer que ela
+      // caia do nada.
+      if (iAtual === null){
+        var berco = centroDe(links[0]);
+        gota.style.top = berco.y + 'px';
+        gota.style.opacity = '1';
+        gota.animate([{opacity:0,transform:'scale(.3)'},{opacity:1,transform:'scale(1)'}],
+                     {duration:300,easing:'cubic-bezier(.34,1.4,.5,1)',fill:'forwards'});
+        iAtual = 0;
+        if (iDestino === 0) return;
+        // deixa o surgimento acontecer antes de comecar a descer
+        setTimeout(function(){ pingarPara(link); }, 320);
+        return;
+      }
+      if (iDestino === iAtual) return;
+      if (correndo) correndo.cancel();
+
+      // As bolinhas pelas quais ela vai passar, na ordem.
+      var passo = iDestino > iAtual ? 1 : -1, paradas = [], i;
+      for (i = iAtual + passo; ; i += passo){
+        paradas.push(centroDe(links[i]));
+        if (i === iDestino) break;
+      }
+
+      var quadros = [], n = paradas.length;
+      var origem = centroDe(links[iAtual]).y;
+      quadros.push({ offset:0, top: origem + 'px', transform:'translateX(0) scaleY(1) scaleX(1)' });
+
+      var deOnde = origem;
+      for (i = 0; i < n; i++){
+        var ate = paradas[i].y;
+        var base = i / n, fatia = 1 / n;
+        // Desvio pequeno e sempre de volta ao zero: e o que curva a queda
+        // sem tirar a gota de cima da coluna de bolinhas.
+        var lado = (i % 2 ? -1 : 1) * 2;
+
+        quadros.push({ offset: base + fatia * 0.28,
+          top: (deOnde + (ate - deOnde) * 0.26) + 'px',
+          transform: 'translateX(' + lado + 'px) scaleY(1.32) scaleX(.84)',
+          easing: 'cubic-bezier(.33,0,.5,.9)' });          // solta e alonga
+
+        quadros.push({ offset: base + fatia * 0.70,
+          top: (deOnde + (ate - deOnde) * 0.82) + 'px',
+          transform: 'translateX(' + (lado * 0.35) + 'px) scaleY(1.16) scaleX(.92)',
+          easing: 'cubic-bezier(.35,0,.35,1)' });          // desce voltando ao eixo
+
+        quadros.push({ offset: base + fatia * 0.90,
+          top: ate + 'px',
+          transform: 'translateX(0) scaleY(.86) scaleX(1.14)',
+          easing: 'cubic-bezier(.3,0,.35,1)' });           // encosta e cede
+
+        quadros.push({ offset: base + fatia,
+          top: ate + 'px',
+          transform: 'translateX(0) scaleY(1) scaleX(1)' });// assenta centrada
+
+        deOnde = ate;
+      }
+
+      // Mais tempo por trecho: o que estava rapido demais lia como salto,
+      // nao como escorrer.
+      correndo = gota.animate(quadros, { duration: Math.min(1900, 430 * n), fill:'forwards' });
+      iAtual = iDestino;
+    }
+
     var focusIO=new IntersectionObserver(function(es){
       es.forEach(function(e){
         var on=e.isIntersecting, dot=dots[e.target.id];
         e.target.toggleAttribute('data-active',on);
         if(dot) dot.toggleAttribute('data-on',on);
       });
+      // Depois de aplicar todas as marcas, a gota vai para a que ficou ativa.
+      var ativo = d.querySelector('.secnav a[data-on]');
+      if (ativo) pingarPara(ativo);
     },{rootMargin:'-45% 0px -45% 0px',threshold:0});
     d.querySelectorAll('main .section').forEach(function(s){focusIO.observe(s)});
+
+    // A nav e centrada por transform; se a janela mudar de altura, o
+    // ponto de destino muda junto.
+    addEventListener('resize', function(){
+      var ativo = d.querySelector('.secnav a[data-on]');
+      if (ativo && iAtual !== null){
+        var c = centroDe(ativo);
+        gota.style.top = c.y + 'px';
+        gota.style.left = c.x + 'px';
+      }
+    }, {passive:true});
   }
 
   /* 7. Kits: a escolha define o link do botão e o texto do parcelamento */

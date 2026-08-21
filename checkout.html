@@ -88,6 +88,58 @@ img,svg{display:block;max-width:100%}
 }
 .step__head h2{font-size:1.1875rem}
 
+/* ---------- A gota entre as etapas ----------
+   O fio liga o circulo de uma etapa ao da proxima, e a gota escorre por
+   ele quando a etapa entra na tela. Alinhado ao centro do circulo:
+   padding do card (--s5) + metade dos 30px do circulo.
+   Fica atras do conteudo e nao recebe clique — aqui a pessoa esta
+   digitando cartao, a animacao acompanha, nao disputa a atencao. */
+.step{position:relative}
+.step+.step::before{
+  content:"";position:absolute;pointer-events:none;
+  left:calc(var(--s5) + 14px);top:calc(var(--s4) * -1);
+  width:2px;height:var(--s4);background:var(--line);
+}
+/* A gota e um elemento de verdade, nao um ::after: assim o JS anima com
+   os mesmos quadros da loja, sem depender de animation-timeline. */
+.step__gota{
+  position:absolute;pointer-events:none;z-index:2;opacity:0;
+  left:calc(var(--s5) + 10px);top:calc(var(--s4) * -1 - 12px);
+  width:10px;height:13px;
+  border-radius:50% 50% 50% 50% / 66% 66% 34% 34%;
+  background:linear-gradient(155deg,var(--brand-300),var(--brand) 52%,var(--brand-900));
+  box-shadow:0 0 10px 2px rgba(200,69,62,.4);
+  transform-origin:50% 50%;
+  will-change:transform,opacity;
+}
+/* Etapa ainda nao liberada some por completo. Fica travada pelo JS, nao
+   pelo HTML: sem JavaScript o formulario inteiro aparece de uma vez e
+   continua funcionando. */
+.step[data-travada]{display:none}
+.step[data-abrindo]{animation:etapa-entra .5s var(--ease) both}
+@keyframes etapa-entra{
+  from{opacity:0;transform:translateY(14px)}
+  to{opacity:1;transform:none}
+}
+/* O "Continuar" e secundario: quem tem que gritar e o botao de comprar. */
+.btn--seguir{
+  min-height:50px;font-size:1rem;
+  background:var(--sand);color:var(--brand-700);
+  box-shadow:none;border:1.5px solid var(--brand-200);
+}
+.btn--seguir:hover{
+  background:var(--brand-100);border-color:var(--brand-300);
+  box-shadow:0 6px 16px -8px rgba(200,69,62,.4);filter:none;
+}
+.btn--seguir::after{display:none}
+/* Botao de compra so acende quando a ultima etapa abre. */
+.btn[data-esperando]{
+  opacity:.4;filter:grayscale(.5);cursor:not-allowed;pointer-events:none;
+}
+.step__gota::after{
+  content:"";position:absolute;left:26%;top:30%;width:3px;height:4px;
+  border-radius:50%;background:rgba(255,255,255,.7);rotate:-14deg;
+}
 /* ---------- Campos ---------- */
 .row{display:grid;gap:var(--s4)}
 .row+.row{margin-top:var(--s4)}
@@ -298,10 +350,15 @@ img,svg{display:block;max-width:100%}
             <small></small>
           </div>
         </div>
+      
+        <button class="btn btn--seguir" type="button" data-seguir hidden>
+          Continuar
+        </button>
       </section>
 
       <!-- ============ 2. ENTREGA ============ -->
       <section class="step">
+        <span class="step__gota" aria-hidden="true"></span>
         <div class="step__head">
           <span class="step__n" aria-hidden="true">2</span>
           <h2>Endereço de entrega</h2>
@@ -345,10 +402,15 @@ img,svg{display:block;max-width:100%}
             <small></small>
           </div>
         </div>
+      
+        <button class="btn btn--seguir" type="button" data-seguir hidden>
+          Continuar
+        </button>
       </section>
 
       <!-- ============ 3. PAGAMENTO ============ -->
       <section class="step">
+        <span class="step__gota" aria-hidden="true"></span>
         <div class="step__head">
           <span class="step__n" aria-hidden="true">3</span>
           <h2>Forma de pagamento</h2>
@@ -584,6 +646,97 @@ img,svg{display:block;max-width:100%}
   try { cupomSalvo = localStorage.getItem('aq_cupom'); } catch (e) {}
   if (cupomDaUrl || cupomSalvo) aplicarCupom(cupomDaUrl || cupomSalvo, true);
 
+  /* ---------- Etapas progressivas ----------
+     A etapa 1 abre sozinha; as outras so aparecem quando a anterior esta
+     preenchida. Trava pelo JS e nao pelo HTML: sem JavaScript o
+     formulario inteiro aparece e continua funcionando.
+     A gota cai no momento em que a etapa nova abre — e o que liga o fim
+     de uma etapa ao comeco da proxima. */
+  (function(){
+    var etapas = Array.prototype.slice.call(d.querySelectorAll('.step'));
+    if (etapas.length < 3) return;
+
+    var botaoCompra = d.querySelector('button.btn[type="submit"]');
+
+    // Estado inicial: 2 e 3 fechadas, botoes de seguir a mostra.
+    etapas[1].setAttribute('data-travada','');
+    etapas[2].setAttribute('data-travada','');
+    d.querySelectorAll('[data-seguir]').forEach(function(b){ b.hidden = false; });
+    if (botaoCompra) botaoCompra.setAttribute('data-esperando','');
+
+    function pingar(g){
+      if (!g) return;
+      g.style.opacity = '1';
+      g.animate([
+        { offset:0,   transform:'translate(0,0) scaleY(1) scaleX(1)',          opacity:0 },
+        { offset:.18, transform:'translate(2px,6px) scaleY(1.35) scaleX(.82)',  opacity:1,
+          easing:'cubic-bezier(.33,0,.5,.9)' },
+        { offset:.68, transform:'translate(1px,20px) scaleY(1.16) scaleX(.92)', opacity:1,
+          easing:'cubic-bezier(.35,0,.35,1)' },
+        { offset:.88, transform:'translate(0,26px) scaleY(.86) scaleX(1.14)',   opacity:1,
+          easing:'cubic-bezier(.3,0,.35,1)' },
+        { offset:1,   transform:'translate(0,26px) scaleY(1) scaleX(1)',        opacity:0 }
+      ], { duration:900, fill:'forwards' });
+    }
+
+    function abrir(i){
+      var etapa = etapas[i];
+      if (!etapa || !etapa.hasAttribute('data-travada')) return;
+      etapa.removeAttribute('data-travada');
+      etapa.setAttribute('data-abrindo','');
+      pingar(etapa.querySelector('.step__gota'));
+
+      // Rola ate a etapa nova sem colar no topo da tela.
+      var y = etapa.getBoundingClientRect().top + scrollY - 90;
+      scrollTo({ top:y, behavior:'smooth' });
+
+      // O primeiro campo recebe o foco depois da entrada, para nao
+      // brigar com a rolagem.
+      setTimeout(function(){
+        var campo = etapa.querySelector('input:not([type=radio]), select');
+        if (campo) campo.focus({ preventScroll:true });
+      }, 620);
+
+      if (i === 2 && botaoCompra) botaoCompra.removeAttribute('data-esperando');
+    }
+
+    // Cada etapa valida so os campos dela.
+    var checagens = [
+      function(){
+        var ok = true;
+        ok = erro(el('nome'),  el('nome').value.trim().split(/\s+/).length < 2 ? 'Informe nome e sobrenome' : '') && ok;
+        ok = erro(el('cpf'),   cpfValido(el('cpf').value) ? '' : 'CPF inválido') && ok;
+        ok = erro(el('email'), /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(el('email').value) ? '' : 'E-mail inválido') && ok;
+        ok = erro(el('tel'),   el('tel').value.replace(/\D/g,'').length < 10 ? 'Celular incompleto' : '') && ok;
+        return ok;
+      },
+      function(){
+        var ok = true;
+        ok = erro(el('cep'),    el('cep').value.replace(/\D/g,'').length === 8 ? '' : 'CEP incompleto') && ok;
+        ok = erro(el('rua'),    el('rua').value.trim() ? '' : 'Informe a rua') && ok;
+        ok = erro(el('numero'), el('numero').value.trim() ? '' : 'Informe o número') && ok;
+        ok = erro(el('bairro'), el('bairro').value.trim() ? '' : 'Informe o bairro') && ok;
+        ok = erro(el('cidade'), el('cidade').value.trim() ? '' : 'Informe a cidade') && ok;
+        return ok;
+      }
+    ];
+
+    etapas.forEach(function(etapa, i){
+      var bt = etapa.querySelector('[data-seguir]');
+      if (!bt) return;
+      bt.addEventListener('click', function(){
+        if (!checagens[i]()) {
+          var ruim = etapa.querySelector('[aria-invalid="true"]');
+          if (ruim) ruim.focus();
+          return;
+        }
+        bt.disabled = true;
+        bt.style.opacity = '.5';
+        abrir(i + 1);
+      });
+    });
+  })();
+
   /* ---------- Máscaras ---------- */
   function mascarar(input, fn){
     input.addEventListener('input', function(){
@@ -695,7 +848,9 @@ img,svg{display:block;max-width:100%}
   /* ---------- Envio para o backend ----------
      Repare que o preço NÃO vai daqui. O servidor calcula pelo catálogo
      dele — é o que impede alguém de comprar por R$ 1 pelo console.     */
-  var botao = d.querySelector('.btn'), rotuloBotao = botao.innerHTML;
+  // [type=submit] e obrigatorio: os botoes "Continuar" tambem sao .btn
+  // e vem antes no documento, entao um seletor generico pegaria o errado.
+  var botao = d.querySelector('button.btn[type="submit"]'), rotuloBotao = botao.innerHTML;
 
   function travar(travado, texto){
     botao.disabled = travado;
