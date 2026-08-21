@@ -26,8 +26,21 @@ const json = (dados, status = 200) =>
     headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
   })
 
-/** Só estes significam dinheiro na conta. */
-const PAGOS = new Set(['PAYMENT_RECEIVED', 'PAYMENT_CONFIRMED'])
+/**
+ * CONFIRMED e RECEIVED sao dois estagios do MESMO pagamento: confirmado
+ * e "o cliente pagou", recebido e "o dinheiro esta disponivel". Tratar
+ * os dois como pago mandaria dois e-mails do mesmo pedido.
+ *
+ * A regra abaixo garante exatamente um por pedido, sem precisar guardar
+ * estado em lugar nenhum:
+ *   cartao  -> vale o CONFIRMED, que chega na hora da compra
+ *              (o RECEIVED do cartao so vem no repasse, semanas depois)
+ *   demais  -> vale o RECEIVED, que no Pix e imediato
+ */
+function ehAVezDesteEvento(evento, tipoCobranca) {
+  const cartao = String(tipoCobranca ?? '').toUpperCase().includes('CREDIT_CARD')
+  return cartao ? evento === 'PAYMENT_CONFIRMED' : evento === 'PAYMENT_RECEIVED'
+}
 
 /** Comparação em tempo constante: `===` vaza o tamanho do prefixo certo. */
 function mesmoToken(recebido, esperado) {
@@ -69,8 +82,8 @@ export default async (req) => {
   const pgto = corpo?.payment
   if (!evento || !pgto) return json({ ok: true, ignorado: 'sem evento' })
 
-  if (!PAGOS.has(evento)) {
-    console.log('[webhook] ignorado:', evento, pgto.id)
+  if (!ehAVezDesteEvento(evento, pgto.billingType)) {
+    console.log('[webhook] ignorado:', evento, pgto.billingType, pgto.id)
     return json({ ok: true, ignorado: evento })
   }
 
