@@ -22,6 +22,12 @@ export const METODOS = new Set(['pix', 'card', 'boleto'])
  */
 export const CUPONS = {
   PRIMEIRA10: { percentual: 0.10, rotulo: '10% na primeira compra', ativo: true },
+
+  // TEMPORARIO — so para o teste de compra real do dono.
+  // Zera o produto; o frete continua sendo cobrado porque e custo real,
+  // entao o kit de 1 fecha em R$ 24,90.
+  // DESLIGAR (ativo: false) assim que o teste terminar.
+  TESTEAQ0821: { percentual: 1.00, rotulo: 'Pedido de teste', ativo: true },
 }
 
 /**

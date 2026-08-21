@@ -6,6 +6,16 @@
   publish = "."
   functions = "netlify/functions"
 
+# O codigo das funcoes NAO pode ser lido pela web.
+# Com publish = ".", a pasta netlify/ tambem virava conteudo estatico:
+# qualquer um baixava catalogo.mjs e via a tabela de precos e os cupons.
+# Precisa vir antes das outras regras, e com force.
+[[redirects]]
+  from = "/netlify/*"
+  to = "/404.html"
+  status = 404
+  force = true
+
 # URL limpa: /termos em vez de /termos.html
 [[redirects]]
   from = "/termos"
