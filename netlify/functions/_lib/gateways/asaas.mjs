@@ -64,7 +64,10 @@ async function acharOuCriarCliente(cliente) {
       addressNumber: cliente.numero,
       complement: cliente.complemento || null,
       province: cliente.bairro,
-      notificationDisabled: false,
+      // O Asaas manda e-mail e SMS proprios ("Cobranca criada", lembrete de
+      // vencimento, convite de agenda) com a marca dele. Quem fala com o
+      // cliente e a Aquiete, pelo e-mail que a gente controla.
+      notificationDisabled: true,
     }),
   })
   return novo.id
