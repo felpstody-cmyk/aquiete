@@ -930,6 +930,19 @@ img,svg{display:block;max-width:100%}
     h.textContent = 'Escaneie ou copie o código';
     caixa.appendChild(h);
 
+    /* O banco mostra a razao social do MEI, nao "Aquiete". Sem avisar antes,
+       o cliente ve um nome que nao reconhece na hora de confirmar e desiste —
+       ou paga e contesta depois. */
+    var quem = d.createElement('p');
+    quem.style.cssText = 'margin-top:.5rem;font-size:.8125rem;color:var(--ink-3);line-height:1.4';
+    quem.appendChild(d.createTextNode('No app do banco o recebedor aparece como '));
+    var rz = d.createElement('strong');
+    rz.style.color = 'var(--ink-2)';
+    rz.textContent = '68.601.075 Felipe Strauss Toderati';
+    quem.appendChild(rz);
+    quem.appendChild(d.createTextNode(' — é a razão social da Aquiete.'));
+    caixa.appendChild(quem);
+
     var ta = d.createElement('textarea');
     ta.readOnly = true; ta.rows = 3;
     ta.style.cssText = 'width:100%;margin-top:.75rem;padding:.6rem;font-size:.75rem;'
@@ -952,6 +965,11 @@ img,svg{display:block;max-width:100%}
     travar(true, 'Aguardando pagamento');
   }
 })();
+</script>
+<script>
+/* Contador proprio de checkouts iniciados. Nao usa cookie, nao identifica ninguem —
+   so soma 1 no dia. Se a funcao estiver fora do ar, a pagina nem percebe. */
+try { fetch('/api/visita?t=checkout', { method:'GET', keepalive:true }).catch(function(){}); } catch(e){}
 </script>
 </body>
 </html>
