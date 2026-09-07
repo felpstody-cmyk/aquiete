@@ -2477,5 +2477,10 @@ body::after{
 /* padding-bottom só no mobile, onde o dock existe */
 @media (min-width:900px){ body{padding-bottom:0!important} }
 </style>
+<script>
+/* Contador proprio de visitas. Nao usa cookie, nao identifica ninguem —
+   so soma 1 no dia. Se a funcao estiver fora do ar, a pagina nem percebe. */
+try { fetch('/api/visita', { method:'GET', keepalive:true }).catch(function(){}); } catch(e){}
+</script>
 </body>
 </html>
