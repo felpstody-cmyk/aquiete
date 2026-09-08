@@ -8,9 +8,9 @@
 
 let getStore = null
 
-async function loja() {
+async function loja(nome = 'metricas') {
   if (!getStore) ({ getStore } = await import('@netlify/blobs'))
-  return getStore('metricas')
+  return getStore(nome)
 }
 
 /** Soma 1 na chave do dia. Ex.: "visita:2026-09-06". */
@@ -34,5 +34,70 @@ export async function lerContadores() {
       })
     )
   } catch { /* sem métricas é melhor que erro 500 */ }
+  return saida
+}
+
+/* ---------------- Presença ao vivo ---------------- */
+
+/** Marca "ainda no site" — pinga a cada ~25s enquanto a aba está aberta. */
+export async function marcarAtivo(sid, geo) {
+  try {
+    const store = await loja('ativos')
+    await store.setJSON(sid, { em: Date.now(), cidade: geo?.cidade || '', uf: geo?.uf || '' })
+  } catch { /* silêncio proposital */ }
+}
+
+/** Quem bateu presença nos últimos 90s. Aproveita a leitura pra limpar quem já saiu. */
+export async function lerAtivos() {
+  const agora = Date.now()
+  const saida = []
+  try {
+    const store = await loja('ativos')
+    const { blobs } = await store.list()
+    await Promise.all(blobs.map(async (b) => {
+      const d = await store.get(b.key, { type: 'json' }).catch(() => null)
+      if (!d) return
+      if (agora - d.em <= 90_000) saida.push({ cidade: d.cidade, uf: d.uf })
+      else store.delete(b.key).catch(() => {})
+    }))
+  } catch { /* sem dados é melhor que erro 500 */ }
+  return saida
+}
+
+/* ---------------- Carrinho abandonado ---------------- */
+
+/** Guarda quem começou a digitar no checkout. E-mail como chave: escrever de novo só atualiza. */
+export async function salvarCarrinho(email, dados) {
+  try {
+    const store = await loja('carrinhos')
+    await store.setJSON(email, dados)
+  } catch { /* silêncio proposital */ }
+}
+
+/** Some da lista quando o pedido sai de verdade — não é mais "abandonado". */
+export async function removerCarrinho(email) {
+  try {
+    const store = await loja('carrinhos')
+    await store.delete(String(email ?? '').trim().toLowerCase())
+  } catch { /* silêncio proposital */ }
+}
+
+/** Quem digitou os dados e sumiu sem finalizar — pra chamar de volta. */
+export async function lerCarrinhosAbandonados() {
+  const agora = Date.now()
+  const saida = []
+  try {
+    const store = await loja('carrinhos')
+    const { blobs } = await store.list()
+    await Promise.all(blobs.map(async (b) => {
+      const d = await store.get(b.key, { type: 'json' }).catch(() => null)
+      if (!d) return
+      const minutos = (agora - d.em) / 60_000
+      // pessoa ainda digitando não conta como abandonada; lixo de mais
+      // de uma semana é limpo em vez de acumular pra sempre
+      if (minutos > 7 * 24 * 60) { store.delete(b.key).catch(() => {}); return }
+      if (minutos >= 10) saida.push(Object.assign({ email: b.key }, d))
+    }))
+  } catch { /* sem dados é melhor que erro 500 */ }
   return saida
 }

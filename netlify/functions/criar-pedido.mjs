@@ -10,6 +10,7 @@
 import { montarPedido, validarCliente, ErroDeEntrada } from './_lib/catalogo.mjs'
 import { obterGateway, ErroDeGateway } from './_lib/gateways/index.mjs'
 import { enviar, htmlAguardando } from './_lib/email.mjs'
+import { removerCarrinho } from './_lib/metricas.mjs'
 
 const json = (dados, status = 200) =>
   new Response(JSON.stringify(dados), {
@@ -38,6 +39,9 @@ export default async (req) => {
 
     const gateway = obterGateway()
     const cobranca = await gateway.criarCobranca({ pedido, cliente, referencia })
+
+    // Chegou até aqui: não é mais "abandonado", é um pedido de verdade.
+    removerCarrinho(cliente.email).catch(() => {})
 
     // Manda o codigo por e-mail para quem vai pagar depois. Sem isto, quem
     // fecha a pagina do Pix perde a cobranca e precisa refazer o pedido.

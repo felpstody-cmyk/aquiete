@@ -2481,6 +2481,17 @@ body::after{
 /* Contador proprio de visitas. Nao usa cookie, nao identifica ninguem —
    so soma 1 no dia. Se a funcao estiver fora do ar, a pagina nem percebe. */
 try { fetch('/api/visita', { method:'GET', keepalive:true }).catch(function(){}); } catch(e){}
+
+/* Sinal de vida pro painel "pessoas ativas agora". Um id aleatorio por
+   aba (nao identifica ninguem), repetido a cada 25s so enquanto a aba
+   fica aberta. */
+try {
+  var aqSid = sessionStorage.getItem('aq_sid');
+  if (!aqSid) { aqSid = Math.random().toString(36).slice(2) + Date.now().toString(36); sessionStorage.setItem('aq_sid', aqSid); }
+  var aqBater = function(){ fetch('/api/ativo?sid=' + aqSid, { method:'GET', keepalive:true }).catch(function(){}); };
+  aqBater();
+  setInterval(aqBater, 25000);
+} catch(e){}
 </script>
 </body>
 </html>
