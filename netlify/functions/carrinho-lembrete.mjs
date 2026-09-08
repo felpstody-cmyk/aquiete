@@ -1,14 +1,19 @@
 /**
  * Roda de hora em hora, agendada pelo Netlify (não tem URL pública).
  *
- * Manda o e-mail de recuperação pra quem abandonou o carrinho há pelo
- * menos 2 horas e ainda não recebeu esse e-mail. Um por carrinho —
- * marcado no Blobs (carrinhosPendentesDeEmail / marcarEmailCarrinho em
- * _lib/metricas.mjs), sem isso reenviaria a cada hora.
+ * Sequência de 3 toques (2h / 1 dia / 3 dias) — cada carrinho avança uma
+ * etapa por vez e a sequência para sozinha depois do terceiro e-mail.
+ * Nunca fica mandando pra sempre.
  */
 
 import { carrinhosPendentesDeEmail, marcarEmailCarrinho } from './_lib/metricas.mjs'
 import { enviar, htmlRecuperarCarrinho } from './_lib/email.mjs'
+
+const ASSUNTOS = [
+  'Ainda dá tempo — seu pedido te espera',
+  'Seu carrinho ainda está aberto',
+  'Última vez que avisamos sobre esse pedido',
+]
 
 export default async () => {
   let enviados = 0
@@ -20,10 +25,10 @@ export default async () => {
       try {
         await enviar({
           para: c.email,
-          assunto: 'Ainda dá tempo — seu pedido te espera',
-          html: htmlRecuperarCarrinho({ nome: c.nome, kit: c.kit }),
+          assunto: ASSUNTOS[Math.min(c.etapa, ASSUNTOS.length - 1)],
+          html: htmlRecuperarCarrinho({ nome: c.nome, kit: c.kit, etapa: c.etapa }),
         })
-        await marcarEmailCarrinho(c.email)
+        await marcarEmailCarrinho(c.email, c.etapa)
         enviados++
       } catch (e) {
         console.error('[carrinho-lembrete] falhou para', c.email, e.message)

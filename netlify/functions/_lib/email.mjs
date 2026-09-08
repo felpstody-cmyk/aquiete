@@ -183,20 +183,38 @@ export function htmlLembretePix({ nome, referencia, descricao, total, payload, l
     </p>`)
 }
 
-/** Carrinho abandonado há pelo menos 2h — um empurrãozinho pra voltar. */
-export function htmlRecuperarCarrinho({ nome, kit }) {
+/**
+ * Carrinho abandonado — 3 toques (2h / 1 dia / 3 dias), cada um mais
+ * direto que o anterior. Depois do terceiro, a sequência para sozinha.
+ */
+export function htmlRecuperarCarrinho({ nome, kit, etapa }) {
   const primeiro = esc(String(nome || '').split(' ')[0] || 'Olá')
   const link = kit
     ? `https://aquieteagora.com.br/checkout.html?kit=${encodeURIComponent(kit)}&cupom=PRIMEIRA10`
     : 'https://aquieteagora.com.br/'
 
+  const textos = [
+    {
+      titulo: `${primeiro}, seu pedido ficou te esperando.`,
+      corpo: 'Você chegou a começar e não finalizou. Seus dados continuam salvos — é só voltar e concluir.',
+    },
+    {
+      titulo: `${primeiro}, ainda dá tempo.`,
+      corpo: 'Seu carrinho continua aberto. Se bateu alguma dúvida, é só responder este e-mail que a gente ajuda.',
+    },
+    {
+      titulo: `${primeiro}, essa é a última vez que mandamos isso.`,
+      corpo: 'Depois de hoje não vamos mais te lembrar desse carrinho. Se ainda quiser, o desconto continua valendo.',
+    },
+  ]
+  const t = textos[Math.min(etapa, textos.length - 1)]
+
   return MOLDURA(`
     <h1 style="font-family:Georgia,serif;font-size:22px;color:#2A1613;margin:0 0 16px;font-weight:normal">
-      ${primeiro}, seu pedido ficou te esperando.
+      ${t.titulo}
     </h1>
     <p style="margin:0 0 16px">
-      Você chegou a começar e não finalizou. Seus dados continuam salvos — é só voltar
-      e concluir. Separamos <strong style="color:#2A1613">10% de desconto</strong> pra essa primeira compra.
+      ${t.corpo} Separamos <strong style="color:#2A1613">10% de desconto</strong> pra essa primeira compra.
     </p>
     <table role="presentation" style="margin:22px auto 0"><tr><td style="border-radius:999px;background:#C8453E">
       <a href="${esc(link)}" style="display:inline-block;padding:13px 28px;color:#fff;

@@ -77,7 +77,17 @@ export async function salvarCarrinho(email, dados) {
   } catch { /* silêncio proposital */ }
 }
 
-/** Carrinhos com pelo menos 2h de abandono que ainda não receberam o e-mail de recuperação. */
+/**
+ * Sequência de lembrete: vai espaçando e para sozinha — não fica mandando
+ * pra sempre. 3 toques: 2h, 1 dia, 3 dias. Depois disso, silêncio.
+ */
+export const ETAPAS_CARRINHO = [
+  { horasDesde: 2 },
+  { horasDesde: 24 },
+  { horasDesde: 72 },
+]
+
+/** Carrinhos na hora certa do próximo toque da sequência (e ainda não esgotaram os 3). */
 export async function carrinhosPendentesDeEmail() {
   const agora = Date.now()
   const saida = []
@@ -86,23 +96,25 @@ export async function carrinhosPendentesDeEmail() {
     const { blobs } = await store.list()
     await Promise.all(blobs.map(async (b) => {
       const d = await store.get(b.key, { type: 'json' }).catch(() => null)
-      if (!d || d.emailEnviado) return
-      const minutos = (agora - d.em) / 60_000
-      if (minutos >= 120 && minutos <= 7 * 24 * 60) {
-        saida.push({ email: b.key, nome: d.nome, kit: d.kit })
-      }
+      if (!d) return
+      const etapa = d.etapa || 0
+      if (etapa >= ETAPAS_CARRINHO.length) return
+      const horasDesde = (agora - d.em) / 3_600_000
+      if (horasDesde < ETAPAS_CARRINHO[etapa].horasDesde) return
+      if (horasDesde > 7 * 24) return
+      saida.push({ email: b.key, nome: d.nome, kit: d.kit, etapa })
     }))
   } catch { /* sem carrinho pra lembrar é melhor que erro 500 */ }
   return saida
 }
 
-/** Marca que o e-mail de recuperação já foi mandado — não repete. */
-export async function marcarEmailCarrinho(email) {
+/** Avança pro próximo toque da sequência (ou fecha, se era o último). */
+export async function marcarEmailCarrinho(email, etapa) {
   try {
     const store = await loja('carrinhos')
     const atual = await store.get(email, { type: 'json' }).catch(() => null)
     if (!atual) return
-    await store.setJSON(email, Object.assign({}, atual, { emailEnviado: Date.now() }))
+    await store.setJSON(email, Object.assign({}, atual, { etapa: etapa + 1, ultimoEmail: Date.now() }))
   } catch { /* silêncio proposital */ }
 }
 
