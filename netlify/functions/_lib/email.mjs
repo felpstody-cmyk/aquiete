@@ -142,3 +142,69 @@ export function htmlAguardando({ nome, referencia, descricao, total, metodo, pay
       Já pagou? Pode ignorar este e-mail.
     </p>`)
 }
+
+/** Pix gerado há um tempo e ainda não pago — lembrete automático. */
+export function htmlLembretePix({ nome, referencia, descricao, total, payload, link }) {
+  const primeiro = esc(String(nome || '').split(' ')[0] || 'Olá')
+
+  const codigo = payload ? `
+    <p style="margin:20px 0 8px;font-size:13px;color:#82655F">Pix copia e cola:</p>
+    <div style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;line-height:1.5;
+                color:#2A1613;background:#FBEDE9;border:1px dashed #F0A79F;border-radius:12px;
+                padding:12px;word-break:break-all">${esc(payload)}</div>` : ''
+
+  const botao = link ? `
+    <table role="presentation" style="margin:22px auto 0"><tr><td style="border-radius:999px;background:#C8453E">
+      <a href="${esc(link)}" style="display:inline-block;padding:13px 28px;color:#fff;
+         text-decoration:none;font-weight:700;font-size:15px">
+        Abrir e pagar
+      </a>
+    </td></tr></table>` : ''
+
+  return MOLDURA(`
+    <h1 style="font-family:Georgia,serif;font-size:22px;color:#2A1613;margin:0 0 16px;font-weight:normal">
+      ${primeiro}, seu Pix ainda não caiu.
+    </h1>
+    <p style="margin:0 0 16px">
+      Seu pedido continua reservado, mas o código expira em breve. Se ainda quiser, é só pagar por aqui.
+    </p>
+    <table style="width:100%;border-collapse:collapse;margin:20px 0;font-size:14px">
+      <tr><td style="padding:8px 0;border-bottom:1px solid #F1DFD9;color:#82655F">Pedido</td>
+          <td style="padding:8px 0;border-bottom:1px solid #F1DFD9;text-align:right;color:#2A1613"><strong>${esc(referencia)}</strong></td></tr>
+      <tr><td style="padding:8px 0;border-bottom:1px solid #F1DFD9;color:#82655F">Item</td>
+          <td style="padding:8px 0;border-bottom:1px solid #F1DFD9;text-align:right;color:#2A1613">${esc(descricao)}</td></tr>
+      <tr><td style="padding:8px 0;color:#82655F">Total</td>
+          <td style="padding:8px 0;text-align:right;color:#A8352F;font-size:18px"><strong>${brl(total)}</strong></td></tr>
+    </table>
+    ${codigo}
+    ${botao}
+    <p style="margin:22px 0 0;font-size:12px;color:#82655F;text-align:center">
+      Já pagou? Pode ignorar este e-mail.
+    </p>`)
+}
+
+/** Código dos Correios colado no sistema — vai direto pro cliente. */
+export function htmlRastreio({ nome, referencia, rastreio }) {
+  const primeiro = esc(String(nome || '').split(' ')[0] || 'Olá')
+  const linkRastreio = `https://rastreamento.correios.com.br/app/index.php?objetos=${encodeURIComponent(rastreio)}`
+
+  return MOLDURA(`
+    <h1 style="font-family:Georgia,serif;font-size:22px;color:#2A1613;margin:0 0 16px;font-weight:normal">
+      ${primeiro}, seu pedido saiu para envio.
+    </h1>
+    <p style="margin:0 0 16px">
+      Já está com os Correios a caminho do seu endereço.
+    </p>
+    <table style="width:100%;border-collapse:collapse;margin:20px 0;font-size:14px">
+      <tr><td style="padding:8px 0;border-bottom:1px solid #F1DFD9;color:#82655F">Pedido</td>
+          <td style="padding:8px 0;border-bottom:1px solid #F1DFD9;text-align:right;color:#2A1613"><strong>${esc(referencia)}</strong></td></tr>
+      <tr><td style="padding:8px 0;color:#82655F">Código de rastreio</td>
+          <td style="padding:8px 0;text-align:right;color:#2A1613"><strong>${esc(rastreio)}</strong></td></tr>
+    </table>
+    <table role="presentation" style="margin:22px auto 0"><tr><td style="border-radius:999px;background:#C8453E">
+      <a href="${esc(linkRastreio)}" style="display:inline-block;padding:13px 28px;color:#fff;
+         text-decoration:none;font-weight:700;font-size:15px">
+        Rastrear pedido
+      </a>
+    </td></tr></table>`)
+}
