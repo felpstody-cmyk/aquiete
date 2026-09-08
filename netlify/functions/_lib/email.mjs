@@ -183,6 +183,32 @@ export function htmlLembretePix({ nome, referencia, descricao, total, payload, l
     </p>`)
 }
 
+/** Carrinho abandonado há pelo menos 2h — um empurrãozinho pra voltar. */
+export function htmlRecuperarCarrinho({ nome, kit }) {
+  const primeiro = esc(String(nome || '').split(' ')[0] || 'Olá')
+  const link = kit
+    ? `https://aquieteagora.com.br/checkout.html?kit=${encodeURIComponent(kit)}&cupom=PRIMEIRA10`
+    : 'https://aquieteagora.com.br/'
+
+  return MOLDURA(`
+    <h1 style="font-family:Georgia,serif;font-size:22px;color:#2A1613;margin:0 0 16px;font-weight:normal">
+      ${primeiro}, seu pedido ficou te esperando.
+    </h1>
+    <p style="margin:0 0 16px">
+      Você chegou a começar e não finalizou. Seus dados continuam salvos — é só voltar
+      e concluir. Separamos <strong style="color:#2A1613">10% de desconto</strong> pra essa primeira compra.
+    </p>
+    <table role="presentation" style="margin:22px auto 0"><tr><td style="border-radius:999px;background:#C8453E">
+      <a href="${esc(link)}" style="display:inline-block;padding:13px 28px;color:#fff;
+         text-decoration:none;font-weight:700;font-size:15px">
+        Voltar e finalizar
+      </a>
+    </td></tr></table>
+    <p style="margin:22px 0 0;font-size:12px;color:#82655F;text-align:center">
+      Já comprou? Pode ignorar este e-mail.
+    </p>`)
+}
+
 /** Código dos Correios colado no sistema — vai direto pro cliente. */
 export function htmlRastreio({ nome, referencia, rastreio }) {
   const primeiro = esc(String(nome || '').split(' ')[0] || 'Olá')

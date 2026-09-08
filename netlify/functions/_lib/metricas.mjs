@@ -70,7 +70,39 @@ export async function lerAtivos() {
 export async function salvarCarrinho(email, dados) {
   try {
     const store = await loja('carrinhos')
-    await store.setJSON(email, dados)
+    // Mescla em vez de sobrescrever: se já mandamos o e-mail de recuperação,
+    // continuar digitando não pode apagar essa marca.
+    const atual = await store.get(email, { type: 'json' }).catch(() => null)
+    await store.setJSON(email, Object.assign({}, atual, dados))
+  } catch { /* silêncio proposital */ }
+}
+
+/** Carrinhos com pelo menos 2h de abandono que ainda não receberam o e-mail de recuperação. */
+export async function carrinhosPendentesDeEmail() {
+  const agora = Date.now()
+  const saida = []
+  try {
+    const store = await loja('carrinhos')
+    const { blobs } = await store.list()
+    await Promise.all(blobs.map(async (b) => {
+      const d = await store.get(b.key, { type: 'json' }).catch(() => null)
+      if (!d || d.emailEnviado) return
+      const minutos = (agora - d.em) / 60_000
+      if (minutos >= 120 && minutos <= 7 * 24 * 60) {
+        saida.push({ email: b.key, nome: d.nome, kit: d.kit })
+      }
+    }))
+  } catch { /* sem carrinho pra lembrar é melhor que erro 500 */ }
+  return saida
+}
+
+/** Marca que o e-mail de recuperação já foi mandado — não repete. */
+export async function marcarEmailCarrinho(email) {
+  try {
+    const store = await loja('carrinhos')
+    const atual = await store.get(email, { type: 'json' }).catch(() => null)
+    if (!atual) return
+    await store.setJSON(email, Object.assign({}, atual, { emailEnviado: Date.now() }))
   } catch { /* silêncio proposital */ }
 }
 
