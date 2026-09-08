@@ -6,9 +6,9 @@
  */
 
 export const KITS = {
-  '1': { rotulo: '1 unidade',  unidades: 1, preco:  97.00, frete: 24.90 },
-  '2': { rotulo: '2 unidades', unidades: 2, preco: 169.00, frete: 0 },
-  '4': { rotulo: '4 unidades', unidades: 4, preco: 297.00, frete: 0 },
+  '1': { rotulo: '1 unidade',  unidades: 1, preco:  84.90, frete: 24.90 },
+  '2': { rotulo: '2 unidades', unidades: 2, preco: 149.90, frete: 0 },
+  '4': { rotulo: '4 unidades', unidades: 4, preco: 259.90, frete: 0 },
 }
 
 export const METODOS = new Set(['pix', 'card', 'boleto'])
@@ -23,11 +23,8 @@ export const METODOS = new Set(['pix', 'card', 'boleto'])
 export const CUPONS = {
   PRIMEIRA10: { percentual: 0.10, rotulo: '10% na primeira compra', ativo: true },
 
-  // TEMPORARIO — so para o teste de compra real do dono.
-  // Zera o produto; o frete continua sendo cobrado porque e custo real,
-  // entao o kit de 1 fecha em R$ 24,90.
-  // DESLIGAR (ativo: false) assim que o teste terminar.
-  TESTEAQ0821: { percentual: 1.00, rotulo: 'Pedido de teste', ativo: true },
+  // Desligado — era so para o teste de compra real do dono.
+  TESTEAQ0821: { percentual: 1.00, rotulo: 'Pedido de teste', ativo: false },
 }
 
 /**
