@@ -28,7 +28,7 @@ const BASES = {
   producao: 'https://api.asaas.com/v3',
 }
 
-function config() {
+function credenciais() {
   const chave = process.env.ASAAS_API_KEY
   if (!chave) throw new Error('ASAAS_API_KEY não configurada')
   const base = BASES[(process.env.ASAAS_AMBIENTE || 'sandbox').toLowerCase()] || BASES.sandbox
@@ -36,7 +36,7 @@ function config() {
 }
 
 async function asaas(caminho) {
-  const { chave, base } = config()
+  const { chave, base } = credenciais()
   const r = await fetch(base + caminho, {
     headers: { 'Content-Type': 'application/json', access_token: chave },
   })
