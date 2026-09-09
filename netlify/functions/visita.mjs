@@ -22,7 +22,7 @@ export default async (req) => {
   if (tipo === 'visita') {
     const geo = geoDe(req)
     if (geo?.cidade && geo?.uf) {
-      await contar(`cidade:${dia}:${geo.cidade}|${geo.uf}`)
+      await contar(`cidade:${dia}:${geo.cidade}|${geo.uf}|${geo.pais || '??'}`)
     }
     const origem = origemDe(url)
     if (origem) await contar(`origem:${dia}:${origem}`)

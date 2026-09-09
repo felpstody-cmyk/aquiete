@@ -43,7 +43,7 @@ export async function lerContadores() {
 export async function marcarAtivo(sid, geo) {
   try {
     const store = await loja('ativos')
-    await store.setJSON(sid, { em: Date.now(), cidade: geo?.cidade || '', uf: geo?.uf || '' })
+    await store.setJSON(sid, { em: Date.now(), cidade: geo?.cidade || '', uf: geo?.uf || '', pais: geo?.pais || '' })
   } catch { /* silêncio proposital */ }
 }
 
@@ -57,7 +57,7 @@ export async function lerAtivos() {
     await Promise.all(blobs.map(async (b) => {
       const d = await store.get(b.key, { type: 'json' }).catch(() => null)
       if (!d) return
-      if (agora - d.em <= 90_000) saida.push({ cidade: d.cidade, uf: d.uf })
+      if (agora - d.em <= 90_000) saida.push({ cidade: d.cidade, uf: d.uf, pais: d.pais || '' })
       else store.delete(b.key).catch(() => {})
     }))
   } catch { /* sem dados é melhor que erro 500 */ }

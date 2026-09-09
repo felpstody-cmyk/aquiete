@@ -20,7 +20,7 @@ export async function registrarEvento(sid, pagina, dados, geo) {
     const atual = (await store.get(sid, { type: 'json' }).catch(() => null)) || { paginas: {} }
     const pag = atual.paginas[pagina] || {}
     atual.paginas[pagina] = Object.assign({}, pag, dados, { atualizado: Date.now() })
-    if (geo?.cidade && geo?.uf) { atual.cidade = geo.cidade; atual.uf = geo.uf }
+    if (geo?.cidade && geo?.uf) { atual.cidade = geo.cidade; atual.uf = geo.uf; atual.pais = geo.pais || '' }
     await store.setJSON(sid, atual)
   } catch { /* nunca derruba a página */ }
 }
@@ -65,7 +65,7 @@ export async function lerComportamento() {
       })
 
       sessoes.push({
-        sid: b.key, cidade: r.cidade || '', uf: r.uf || '',
+        sid: b.key, cidade: r.cidade || '', uf: r.uf || '', pais: r.pais || '',
         paginas: r.paginas, ultimaAtividade: maisRecente,
       })
     }))
