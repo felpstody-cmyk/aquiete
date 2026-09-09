@@ -6,13 +6,19 @@
 
 export const NTFY_TOPIC = 'ToderatiAquieteAgora'
 
+const ICONE = 'https://aquieteagora.com.br/img/icon-notificacao.png'
+
 /** Base de tudo: manda um push pro celular via ntfy.sh. Nunca lança erro. */
 export async function push(texto, titulo) {
   try {
     await fetch(`https://ntfy.sh/${NTFY_TOPIC}`, {
       method: 'POST',
       body: texto,
-      headers: { 'Title': encodeURIComponent(titulo || 'Aquiete'), 'Tags': 'moneybag' },
+      headers: {
+        'Title': encodeURIComponent(titulo || 'Aquiete'),
+        'Tags': 'moneybag',
+        'Icon': ICONE,
+      },
     })
   } catch { /* notificação nunca pode derrubar quem chamou */ }
 }
