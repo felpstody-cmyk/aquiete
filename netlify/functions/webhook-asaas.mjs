@@ -19,6 +19,7 @@ import { timingSafeEqual } from 'node:crypto'
 import { buscarCliente } from './_lib/gateways/asaas.mjs'
 import { enviar, htmlConfirmacao, htmlVenda } from './_lib/email.mjs'
 import { enviarCompra } from './_lib/meta-capi.mjs'
+import { notificarVenda } from './_lib/notificar.mjs'
 
 const json = (dados, status = 200) =>
   new Response(JSON.stringify(dados), {
@@ -150,6 +151,9 @@ export default async (req) => {
       resultados.meta = { enviado: false, erro: e.message }
     }
   }
+
+  // O "toc toc" no celular. Sem cliente ainda manda, só troca o nome por generico.
+  notificarVenda({ nome: cliente?.nome, total, billingType: pgto.billingType }).catch(() => {})
 
   return json({ ok: true, referencia, ...resultados })
 }
