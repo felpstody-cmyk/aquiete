@@ -15,3 +15,7 @@
 # HTML sempre revalidado: sua alteração aparece na hora
 /*.html
   Cache-Control: public, max-age=0, must-revalidate
+
+# Painel administrativo: nunca indexar, mesmo que alguém link errado.
+/painel-aq7x2k.html
+  X-Robots-Tag: noindex, nofollow
