@@ -1033,6 +1033,7 @@ function agruparPorPeriodo(m, prefixo){
  * separar visita real de bot estrangeiro. */
 var UF_BR = { AC:1,AL:1,AP:1,AM:1,BA:1,CE:1,DF:1,ES:1,GO:1,MA:1,MT:1,MS:1,MG:1,PA:1,PB:1,PR:1,PE:1,PI:1,RJ:1,RN:1,RS:1,RO:1,RR:1,SC:1,SP:1,SE:1,TO:1 };
 
+var limiteCidadesBR = 8, limiteCidadesFora = 8;
 function renderCidades(){
   var itens = agruparPorPeriodo(remotos.metricas || {}, 'cidade');
   var alvo = el('cidadesLista');
@@ -1047,22 +1048,38 @@ function renderCidades(){
     var item = { cidade: partes[0]||'—', uf: partes[1]||'', pais: pais, n: c.n };
     (pais === 'BR' ? br : fora).push(item);
   });
-  function linha(it){
-    return '<div style="display:flex;justify-content:space-between;gap:8px">' +
-      '<span>' + esc(it.cidade) + (it.uf ? '/' + esc(it.uf) : '') + '</span><b>' + it.n + '</b></div>';
+  var totalBR = br.reduce(function(s,x){ return s+x.n; }, 0);
+  var totalFora = fora.reduce(function(s,x){ return s+x.n; }, 0);
+
+  function coluna(titulo, nota, lista, limite, marca, cor){
+    var html = '<div style="flex:1;min-width:170px">' +
+      '<div style="font-weight:600;font-size:11.5px;color:var(--ink-3);margin-bottom:4px">' + titulo +
+      (nota ? ' <span style="font-weight:400">' + nota + '</span>' : '') + '</div>';
+    if (!lista.length) return html + '<div style="color:var(--ink-3)">Nenhuma ainda.</div></div>';
+    html += lista.slice(0, limite).map(function(it){
+      return '<div style="display:flex;justify-content:space-between;gap:8px' + (cor ? ';color:'+cor : '') + '">' +
+        '<span>' + esc(it.cidade) + (it.uf ? '/' + esc(it.uf) : '') +
+        (marca === 'fora' && it.pais ? ' (' + esc(it.pais) + ')' : '') + '</span><b>' + it.n + '</b></div>';
+    }).join('');
+    var restam = lista.length - limite;
+    if (restam > 0) {
+      html += '<button class="lnk" data-maiscidade="' + marca + '" style="padding:4px 0;margin-top:2px">' +
+        'Ver mais (' + restam + ')</button>';
+    }
+    return html + '</div>';
   }
-  var partes = [];
-  partes.push('<div style="font-weight:600;font-size:11.5px;color:var(--ink-3);margin-bottom:2px">Brasil</div>');
-  partes.push(br.length ? br.slice(0,15).map(linha).join('') : '<div style="color:var(--ink-3)">Nenhuma ainda.</div>');
-  if (fora.length) {
-    var totalFora = fora.reduce(function(s,f){ return s+f.n; }, 0);
-    partes.push('<div style="font-weight:600;font-size:11.5px;color:var(--ink-3);margin:10px 0 2px">Fora do Brasil <span style="font-weight:400">(provável bot/scanner — ' + totalFora + ')</span></div>');
-    partes.push(fora.slice(0,10).map(function(it){
-      return '<div style="display:flex;justify-content:space-between;gap:8px;color:var(--ink-2)">' +
-        '<span>' + esc(it.cidade) + (it.uf ? '/' + esc(it.uf) : '') + (it.pais ? ' ('+esc(it.pais)+')' : '') + '</span><b>' + it.n + '</b></div>';
-    }).join(''));
-  }
-  alvo.innerHTML = partes.join('');
+
+  alvo.innerHTML = '<div style="display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start">' +
+    coluna('Brasil', '(' + totalBR + ')', br, limiteCidadesBR, 'br', '') +
+    coluna('Bots / fora', '(' + totalFora + ')', fora, limiteCidadesFora, 'fora', 'var(--ink-3)') +
+    '</div>';
+
+  Array.prototype.forEach.call(alvo.querySelectorAll('[data-maiscidade]'), function(b){
+    b.onclick = function(){
+      if (b.dataset.maiscidade === 'br') limiteCidadesBR += 10; else limiteCidadesFora += 10;
+      renderCidades();
+    };
+  });
 }
 
 function renderOrigens(){
