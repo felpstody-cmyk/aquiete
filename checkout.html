@@ -967,21 +967,32 @@ img,svg{display:block;max-width:100%}
 })();
 </script>
 <script>
+/* Modo teste: mesma flag do site principal — se o navegador ja abriu o
+   site com ?semrastreio=1 uma vez, para de contar aqui tambem. */
+try {
+  if (new URLSearchParams(location.search).get('semrastreio') === '1') {
+    localStorage.setItem('aq_teste', '1');
+  }
+} catch(e){}
+function aqEmTeste(){
+  try { return localStorage.getItem('aq_teste') === '1'; } catch(e){ return false; }
+}
+
 /* Contador proprio de checkouts iniciados. Nao usa cookie, nao identifica ninguem —
    so soma 1 no dia. Se a funcao estiver fora do ar, a pagina nem percebe. */
-try { fetch('/api/visita?t=checkout', { method:'GET', keepalive:true }).catch(function(){}); } catch(e){}
+try { if (!aqEmTeste()) { fetch('/api/visita?t=checkout', { method:'GET', keepalive:true }).catch(function(){}); } } catch(e){}
 
 /* Sinal de vida pro painel "pessoas ativas agora". */
-try {
+try { if (!aqEmTeste()) {
   var aqSid = sessionStorage.getItem('aq_sid');
   if (!aqSid) { aqSid = Math.random().toString(36).slice(2) + Date.now().toString(36); sessionStorage.setItem('aq_sid', aqSid); }
   var aqBater = function(){ fetch('/api/ativo?sid=' + aqSid, { method:'GET', keepalive:true }).catch(function(){}); };
   aqBater();
   setInterval(aqBater, 25000);
-} catch(e){}
+} } catch(e){}
 
 /* Ate onde a pessoa rolou o checkout e quanto tempo ficou. */
-try {
+try { if (!aqEmTeste()) {
   var aqInicio = Date.now();
   var aqScrollMax = 0;
   function aqScrollPct(){
@@ -1008,7 +1019,7 @@ try {
     if (document.visibilityState === 'hidden') aqMandarEvento();
   });
   window.addEventListener('pagehide', aqMandarEvento);
-} catch(e){}
+} } catch(e){}
 
 /* Carrinho abandonado: se a pessoa digitou nome/e-mail e sumiu sem
    finalizar, guarda pra você poder chamar de volta. So manda quando o

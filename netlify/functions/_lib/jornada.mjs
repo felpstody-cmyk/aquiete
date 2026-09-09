@@ -25,6 +25,14 @@ export async function registrarEvento(sid, pagina, dados, geo) {
   } catch { /* nunca derruba a página */ }
 }
 
+/** Apaga o registro de uma sessão — usado quando é teste do próprio dono. */
+export async function apagarSessao(sid) {
+  try {
+    const store = await loja()
+    await store.delete(sid)
+  } catch { /* nunca derruba a página */ }
+}
+
 /**
  * Devolve o resumo agregado por página (scroll médio e tempo médio) e a
  * lista de sessões individuais, mais recente primeiro, pra ver pessoa por
@@ -57,7 +65,7 @@ export async function lerComportamento() {
       })
 
       sessoes.push({
-        cidade: r.cidade || '', uf: r.uf || '',
+        sid: b.key, cidade: r.cidade || '', uf: r.uf || '',
         paginas: r.paginas, ultimaAtividade: maisRecente,
       })
     }))

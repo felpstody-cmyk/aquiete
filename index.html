@@ -2544,12 +2544,25 @@ body::after{
 @media (min-width:900px){ body{padding-bottom:0!important} }
 </style>
 <script>
+/* Modo teste: abrindo o site uma vez com ?semrastreio=1, esse navegador
+   para de contar visita/pessoa ativa/comportamento pra sempre (fica salvo
+   no localStorage). Usar quando o proprio dono for testar o site, pra nao
+   inflar as metricas reais. */
+try {
+  if (new URLSearchParams(location.search).get('semrastreio') === '1') {
+    localStorage.setItem('aq_teste', '1');
+  }
+} catch(e){}
+function aqEmTeste(){
+  try { return localStorage.getItem('aq_teste') === '1'; } catch(e){ return false; }
+}
+
 /* Contador proprio de visitas. Nao usa cookie, nao identifica ninguem —
    so soma 1 no dia. Se a funcao estiver fora do ar, a pagina nem percebe.
    Manda tambem de onde a pessoa veio (utm/fbclid/document.referrer) pra
    saber se foi anuncio, organico ou direto — o cabecalho HTTP Referer da
    propria chamada fetch seria a pagina atual, entao precisa ir explicito. */
-try {
+try { if (!aqEmTeste()) {
   var aqOrigemQs = new URLSearchParams();
   var aqParamsUrl = new URLSearchParams(window.location.search);
   ['utm_source','utm_medium','utm_campaign','fbclid','gclid'].forEach(function(k){
@@ -2558,22 +2571,22 @@ try {
   if (document.referrer) aqOrigemQs.set('ref', document.referrer);
   var aqOrigemStr = aqOrigemQs.toString();
   fetch('/api/visita' + (aqOrigemStr ? '?' + aqOrigemStr : ''), { method:'GET', keepalive:true }).catch(function(){});
-} catch(e){}
+} } catch(e){}
 
 /* Sinal de vida pro painel "pessoas ativas agora". Um id aleatorio por
    aba (nao identifica ninguem), repetido a cada 25s so enquanto a aba
    fica aberta. */
-try {
+try { if (!aqEmTeste()) {
   var aqSid = sessionStorage.getItem('aq_sid');
   if (!aqSid) { aqSid = Math.random().toString(36).slice(2) + Date.now().toString(36); sessionStorage.setItem('aq_sid', aqSid); }
   var aqBater = function(){ fetch('/api/ativo?sid=' + aqSid, { method:'GET', keepalive:true }).catch(function(){}); };
   aqBater();
   setInterval(aqBater, 25000);
-} catch(e){}
+} } catch(e){}
 
 /* Ate onde a pessoa rolou a pagina e quanto tempo ficou. Manda so quando
    ela sai ou troca de aba — nao fica batendo toda hora. */
-try {
+try { if (!aqEmTeste()) {
   var aqInicio = Date.now();
   var aqScrollMax = 0;
   function aqScrollPct(){
@@ -2612,7 +2625,7 @@ try {
     if (document.visibilityState === 'hidden') aqMandarEvento();
   });
   window.addEventListener('pagehide', aqMandarEvento);
-} catch(e){}
+} } catch(e){}
 </script>
 </body>
 </html>
