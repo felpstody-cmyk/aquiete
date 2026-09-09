@@ -2586,12 +2586,24 @@ try {
     var p = aqScrollPct();
     if (p > aqScrollMax) aqScrollMax = p;
   }, { passive: true });
+
+  /* Em quais botões (data-cta) a pessoa clicou — pra saber se ela chegou
+     a tentar ir pra oferta, mesmo sem sair da página (o link é #oferta). */
+  var aqCliques = [];
+  document.querySelectorAll('[data-cta]').forEach(function(a){
+    a.addEventListener('click', function(){
+      var nome = a.dataset.cta;
+      if (nome && aqCliques.indexOf(nome) === -1) aqCliques.push(nome);
+    });
+  });
+
   function aqMandarEvento(){
     var sid = sessionStorage.getItem('aq_sid');
     if (!sid) return;
     var payload = JSON.stringify({
       sid: sid, pagina: 'index', scrollMax: aqScrollMax,
-      segundos: Math.round((Date.now() - aqInicio) / 1000)
+      segundos: Math.round((Date.now() - aqInicio) / 1000),
+      cliques: aqCliques
     });
     if (navigator.sendBeacon) navigator.sendBeacon('/api/evento', payload);
     else fetch('/api/evento', { method:'POST', body:payload, keepalive:true }).catch(function(){});

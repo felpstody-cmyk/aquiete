@@ -1,7 +1,7 @@
 /**
- * Comportamento de navegação por sessão: até onde rolou a página e
- * quanto tempo ficou nela. Mesma sessão (sid) do "ativo agora" — sem
- * cookie, sem dado pessoal.
+ * Comportamento de navegação por sessão: até onde rolou a página, quanto
+ * tempo ficou e em quais botões (data-cta) clicou. Mesma sessão (sid) do
+ * "ativo agora" — sem cookie, sem dado pessoal.
  */
 
 let getStore = null
@@ -11,24 +11,29 @@ async function loja() {
   return getStore('jornada')
 }
 
-/** Atualiza o registro da sessão numa página (scroll máximo e/ou segundos). */
-export async function registrarEvento(sid, pagina, dados) {
+/** Atualiza o registro da sessão numa página (scroll máximo, segundos e/ou
+ *  cliques). `geo`, quando vem, fica gravado uma vez no topo da sessão —
+ *  não muda de página pra página. */
+export async function registrarEvento(sid, pagina, dados, geo) {
   try {
     const store = await loja()
     const atual = (await store.get(sid, { type: 'json' }).catch(() => null)) || { paginas: {} }
     const pag = atual.paginas[pagina] || {}
     atual.paginas[pagina] = Object.assign({}, pag, dados, { atualizado: Date.now() })
+    if (geo?.cidade && geo?.uf) { atual.cidade = geo.cidade; atual.uf = geo.uf }
     await store.setJSON(sid, atual)
   } catch { /* nunca derruba a página */ }
 }
 
 /**
- * Resumo agregado por página: scroll médio e tempo médio. Aproveita a
- * leitura pra limpar sessões com mais de 30 dias (sem isso acumula
- * pra sempre).
+ * Devolve o resumo agregado por página (scroll médio e tempo médio) e a
+ * lista de sessões individuais, mais recente primeiro, pra ver pessoa por
+ * pessoa até onde foi e o que clicou. Aproveita a leitura pra limpar
+ * sessões com mais de 30 dias (sem isso acumula pra sempre).
  */
 export async function lerComportamento() {
   const somas = {}
+  const sessoes = []
   try {
     const store = await loja()
     const { blobs } = await store.list()
@@ -50,16 +55,22 @@ export async function lerComportamento() {
         somas[pagina].somaSegundos += Number(d.segundos) || 0
         somas[pagina].amostras += 1
       })
+
+      sessoes.push({
+        cidade: r.cidade || '', uf: r.uf || '',
+        paginas: r.paginas, ultimaAtividade: maisRecente,
+      })
     }))
   } catch { /* sem dado é melhor que erro 500 */ }
 
-  const saida = {}
+  const porPagina = {}
   Object.entries(somas).forEach(([pagina, s]) => {
-    saida[pagina] = {
+    porPagina[pagina] = {
       mediaScroll: s.amostras ? Math.round(s.somaScroll / s.amostras) : 0,
       mediaSegundos: s.amostras ? Math.round(s.somaSegundos / s.amostras) : 0,
       amostras: s.amostras,
     }
   })
-  return saida
+  sessoes.sort((a, b) => b.ultimaAtividade - a.ultimaAtividade)
+  return { porPagina, sessoes: sessoes.slice(0, 200) }
 }
