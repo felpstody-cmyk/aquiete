@@ -980,6 +980,36 @@ try {
   setInterval(aqBater, 25000);
 } catch(e){}
 
+/* Ate onde a pessoa rolou o checkout e quanto tempo ficou. */
+try {
+  var aqInicio = Date.now();
+  var aqScrollMax = 0;
+  function aqScrollPct(){
+    var h = document.documentElement;
+    var altura = h.scrollHeight - h.clientHeight;
+    if (altura <= 0) return 100;
+    return Math.min(100, Math.round((window.scrollY / altura) * 100));
+  }
+  window.addEventListener('scroll', function(){
+    var p = aqScrollPct();
+    if (p > aqScrollMax) aqScrollMax = p;
+  }, { passive: true });
+  function aqMandarEvento(){
+    var sid = sessionStorage.getItem('aq_sid');
+    if (!sid) return;
+    var payload = JSON.stringify({
+      sid: sid, pagina: 'checkout', scrollMax: aqScrollMax,
+      segundos: Math.round((Date.now() - aqInicio) / 1000)
+    });
+    if (navigator.sendBeacon) navigator.sendBeacon('/api/evento', payload);
+    else fetch('/api/evento', { method:'POST', body:payload, keepalive:true }).catch(function(){});
+  }
+  document.addEventListener('visibilitychange', function(){
+    if (document.visibilityState === 'hidden') aqMandarEvento();
+  });
+  window.addEventListener('pagehide', aqMandarEvento);
+} catch(e){}
+
 /* Carrinho abandonado: se a pessoa digitou nome/e-mail e sumiu sem
    finalizar, guarda pra você poder chamar de volta. So manda quando o
    e-mail parece valido — sem isso nao da pra reidentificar ninguem. */

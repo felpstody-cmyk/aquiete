@@ -10,6 +10,7 @@
  */
 
 import { lerContadores, lerAtivos, lerCarrinhosAbandonados } from './_lib/metricas.mjs'
+import { lerComportamento } from './_lib/jornada.mjs'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -87,12 +88,13 @@ export default async (req) => {
   if (req.headers.get('x-admin-token') !== esperado) return json({ erro: 'Token inválido' }, 401)
 
   try {
-    const [cobrancas, clientes, metricas, ativos, abandonados] = await Promise.all([
+    const [cobrancas, clientes, metricas, ativos, abandonados, comportamento] = await Promise.all([
       tudo('/payments'),
       tudo('/customers'),
       lerContadores(),
       lerAtivos(),
       lerCarrinhosAbandonados(),
+      lerComportamento(),
     ])
 
     const porId = new Map(clientes.map((c) => [c.id, c]))
@@ -132,6 +134,7 @@ export default async (req) => {
       metricas,
       ativos,
       abandonados,
+      comportamento,
     })
   } catch (e) {
     return json({ erro: String(e.message || e) }, 502)
