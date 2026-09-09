@@ -778,6 +778,13 @@ body::after{
   }
   #depoimentos .grid::-webkit-scrollbar{display:none}
   #depoimentos .testi{flex:0 0 82%; scroll-snap-align:center}
+  /* Foto mais baixa e depoimento cortado em 4 linhas — card comprido de sobra
+     no mobile, e no carrossel a pessoa só passa pro lado mesmo. */
+  #depoimentos .testi__photo img{aspect-ratio:3/2}
+  #depoimentos .testi__quote{
+    display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:4;
+    overflow:hidden;
+  }
 }
 /* Marcador de conteúdo pendente — remova .is-placeholder ao inserir depoimentos reais */
 .is-placeholder{border:1px dashed var(--brand-300);background:var(--brand-100);border-radius:var(--r-sm);padding:1px 6px;display:inline-block}
