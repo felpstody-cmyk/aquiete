@@ -765,6 +765,20 @@ body::after{
 /* Com foto no topo, a aspa decorativa fica escondida atrás dela — melhor sumir. */
 .testi:has(.testi__photo)::after{display:none}
 .stars{display:flex;gap:2px;color:var(--accent)}
+
+/* No celular, 5 depoimentos empilhados verticalmente ficam um scroll enorme —
+   vira carrossel horizontal com scroll-snap, sem precisar de JS. Some sozinho
+   a partir de 900px, onde a grade de 3 colunas já dá conta. */
+@media (max-width:899px){
+  #depoimentos .grid{
+    display:flex; overflow-x:auto; scroll-snap-type:x mandatory;
+    -webkit-overflow-scrolling:touch; scrollbar-width:none;
+    margin-inline:calc(var(--gutter) * -1); padding-inline:var(--gutter);
+    padding-bottom:var(--s3);
+  }
+  #depoimentos .grid::-webkit-scrollbar{display:none}
+  #depoimentos .testi{flex:0 0 82%; scroll-snap-align:center}
+}
 /* Marcador de conteúdo pendente — remova .is-placeholder ao inserir depoimentos reais */
 .is-placeholder{border:1px dashed var(--brand-300);background:var(--brand-100);border-radius:var(--r-sm);padding:1px 6px;display:inline-block}
 .is-placeholder::before{
