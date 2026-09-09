@@ -18,29 +18,39 @@ export async function push(texto, titulo) {
 }
 
 const METODO_TXT = { PIX: 'Pix', CREDIT_CARD: 'Cartão', BOLETO: 'Boleto' }
+const METODO_EMOJI = { PIX: '⚡', CREDIT_CARD: '💳', BOLETO: '🧾' }
 
-const MENSAGENS = [
-  (n, v, m) => `🚗💨 Rumo à Mercedes! ${n} acabou de pagar ${v} no ${m}`,
-  (n, v, m) => `🍔👑 Pagou o burguão hoje! ${v} de ${n} (${m})`,
-  (n, v, m) => `💰🤑 CAIU GRANA! ${n} mandou ${v} no ${m}`,
-  (n, v, m) => `🔥 Vendeu de novo, cabuloso! ${v} de ${n} via ${m}`,
-  (n, v, m) => `🐍 Menor do ódio vendeu de novo! ${v} de ${n} no ${m}`,
-  (n, v, m) => `🥂 Aquiete bombando! ${n} fechou ${v} no ${m}`,
-  (n, v, m) => `🚀 To the moon! ${v} de ${n} via ${m}`,
-  (n, v, m) => `🏆 Boa demais! ${n} confiou e pagou ${v} no ${m}`,
-  (n, v, m) => `🍾 Mais ${v} na conta, cortesia de ${n} (${m})`,
-  (n, v, m) => `😎💵 Entrou grana: ${n} — ${v} (${m})`,
-  (n, v, m) => `🤑📈 Gráfico só sobe: ${n} pagou ${v} no ${m}`,
-  (n, v, m) => `👑 Realeza gastando: ${n} — ${v} via ${m}`,
+/** Só o gancho engraçado — nome, valor e método vêm sempre nas linhas fixas embaixo. */
+const GANCHOS = [
+  '🚗💨 Rumo à Mercedes!',
+  '🍔👑 Pagou o burguão hoje!',
+  '💰🤑 CAIU GRANA!',
+  '🔥😤 Vendeu de novo, cabuloso!',
+  '🐍💅 Menor do ódio vendeu de novo!',
+  '🥂✨ Aquiete bombando!',
+  '🚀🌕 To the moon!',
+  '🏆🎯 Boa demais!',
+  '🍾🎊 Bora comemorar!',
+  '😎💸 Entrou grana!',
+  '📈🤑 Gráfico só sobe!',
+  '👑💎 Realeza gastando!',
 ]
 
 /** Manda o "toc toc" de venda no celular. Nunca lança erro pra fora. */
 export async function notificarVenda({ nome, total, billingType }) {
   const valor = 'R$ ' + Number(total).toFixed(2).replace('.', ',')
   const metodo = METODO_TXT[String(billingType ?? '').toUpperCase()] || 'algum método aí'
+  const metodoEmoji = METODO_EMOJI[String(billingType ?? '').toUpperCase()] || '💰'
   const primeiro = String(nome ?? '').trim().split(' ')[0] || 'Alguém'
-  const monta = MENSAGENS[Math.floor(Math.random() * MENSAGENS.length)]
-  await push(monta(primeiro, valor, metodo), 'Aquiete — venda confirmada 💸')
+  const gancho = GANCHOS[Math.floor(Math.random() * GANCHOS.length)]
+
+  const texto = [
+    gancho,
+    '👤 ' + primeiro,
+    '💰 ' + valor + '  ' + metodoEmoji + ' ' + metodo,
+  ].join('\n')
+
+  await push(texto, 'Aquiete — venda confirmada 💸')
 }
 
 const brl = (v) => 'R$ ' + Number(v).toFixed(2).replace('.', ',')
