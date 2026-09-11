@@ -590,11 +590,15 @@ function pct(n){ return (Number(n)||0).toLocaleString('pt-BR',{maximumFractionDi
 // Fuso de Brasília de propósito: toISOString() vira o dia à meia-noite UTC,
 // que é 21h em Brasília — três horas de visita de noite já contavam pro dia
 // seguinte, e por isso quem tinha entrado ontem à noite "sumia" do "Hoje".
-function hoje(){
-  var partes = new Intl.DateTimeFormat('en-CA', { timeZone:'America/Sao_Paulo', year:'numeric', month:'2-digit', day:'2-digit' }).formatToParts(new Date());
+/** Mesma conta de hoje(), mas pra um timestamp qualquer (epoch ms) — usado
+ *  pra saber em que dia (Brasília) uma sessão de comportamento ou um
+ *  carrinho abandonado caiu, e poder filtrar pelo período selecionado. */
+function diaDeTs(ts){
+  var partes = new Intl.DateTimeFormat('en-CA', { timeZone:'America/Sao_Paulo', year:'numeric', month:'2-digit', day:'2-digit' }).formatToParts(new Date(Number(ts)||0));
   var p = {}; partes.forEach(function(x){ p[x.type] = x.value; });
   return p.year+'-'+p.month+'-'+p.day;
 }
+function hoje(){ return diaDeTs(Date.now()); }
 function mesAtual(){ return hoje().slice(0,7); }
 function somarDias(dataISO, n){
   var d = new Date(dataISO + 'T00:00:00');
@@ -833,18 +837,35 @@ function segParaTexto(segundos){
 }
 function renderComportamento(){
   var c = remotos.comportamento || { porPagina:{}, sessoes:[] };
-  var porPagina = c.porPagina || {};
-  var chavesPag = Object.keys(porPagina);
+  // O servidor guarda sessão de comportamento por até 30 dias corridos (não
+  // por "tipo:dia" como visita/checkout), então sem filtrar aqui o período
+  // "Hoje" mostrava sessão de semanas atrás junto — daí o "190 a mais" no
+  // Ver mais que não batia com as 72 visitas do dia. Filtra pelo mesmo
+  // período selecionado no topo, e recalcula os resumos por página só com
+  // o que sobrou (em vez do agregado de 30 dias que o servidor manda).
+  var sessoes = (c.sessoes || []).filter(function(s){ return noPeriodo(diaDeTs(s.ultimaAtividade)); });
+
+  var somas = {};
+  sessoes.forEach(function(s){
+    Object.keys(s.paginas || {}).forEach(function(p){
+      if (!somas[p]) somas[p] = { somaScroll:0, somaSegundos:0, amostras:0 };
+      somas[p].somaScroll += Number(s.paginas[p].scrollMax) || 0;
+      somas[p].somaSegundos += Number(s.paginas[p].segundos) || 0;
+      somas[p].amostras += 1;
+    });
+  });
+  var chavesPag = Object.keys(somas);
   el('comportamentoResumo').innerHTML = chavesPag.length
     ? chavesPag.map(function(p){
-        var d = porPagina[p];
-        return '<div><b>'+esc(PAGINA_NOME[p]||p)+'</b> — rolagem média <b>'+d.mediaScroll+'%</b>, ' +
-          'tempo médio <b>'+segParaTexto(d.mediaSegundos)+'</b> <span style="color:var(--ink-3)">(' +
-          d.amostras+' amostra'+(d.amostras===1?'':'s')+')</span></div>';
+        var s = somas[p];
+        var mediaScroll = s.amostras ? Math.round(s.somaScroll/s.amostras) : 0;
+        var mediaSegundos = s.amostras ? Math.round(s.somaSegundos/s.amostras) : 0;
+        return '<div><b>'+esc(PAGINA_NOME[p]||p)+'</b> — rolagem média <b>'+mediaScroll+'%</b>, ' +
+          'tempo médio <b>'+segParaTexto(mediaSegundos)+'</b> <span style="color:var(--ink-3)">(' +
+          s.amostras+' amostra'+(s.amostras===1?'':'s')+')</span></div>';
       }).join('')
     : '';
 
-  var sessoes = c.sessoes || [];
   el('tbComportamento').innerHTML = sessoes.length
     ? '<thead><tr><th>Quando</th><th>Cidade</th><th>Páginas</th><th class="num">Rolagem máx.</th>' +
       '<th class="num">Tempo</th><th>Clicou em</th><th></th></tr></thead><tbody>' +
@@ -1011,8 +1032,11 @@ function renderAoVivo(){
   linhas.push('<div><b>'+visitasPer+'</b> visita'+(visitasPer===1?'':'s')+' '+rotuloPer+'</div>');
   linhas.push('<div><b>'+checkoutsPer+'</b> checkout'+(checkoutsPer===1?'':'s')+' iniciado'+(checkoutsPer===1?'':'s')+' '+rotuloPer+'</div>');
   linhas.push('<div><b>'+carrinhosPer+'</b> carrinho'+(carrinhosPer===1?'':'s')+' novo'+(carrinhosPer===1?'':'s')+' '+rotuloPer+'</div>');
-  var abandonadosN = (remotos.abandonados||[]).length;
-  linhas.push('<div><b>'+abandonadosN+'</b> carrinho'+(abandonadosN===1?'':'s')+' abandonado'+(abandonadosN===1?'':'s')+'</div>');
+  // Carrinho abandonado tem timestamp próprio (quando a pessoa começou a
+  // digitar), não uma chave "tipo:dia" — sem filtrar por diaDeTs(a.em) aqui,
+  // um carrinho de outro dia continuava contando dentro de "Hoje".
+  var abandonadosN = (remotos.abandonados||[]).filter(function(a){ return noPeriodo(diaDeTs(a.em)); }).length;
+  linhas.push('<div><b>'+abandonadosN+'</b> carrinho'+(abandonadosN===1?'':'s')+' abandonado'+(abandonadosN===1?'':'s')+' '+rotuloPer+'</div>');
   if (chaves.length) {
     linhas.push('<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line)">Navegando agora:</div>');
     chaves.sort(function(a,b){ return porUf[b].ultima-porUf[a].ultima; }).forEach(function(uf){
