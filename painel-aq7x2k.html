@@ -587,8 +587,15 @@ cfg = Object.assign({ custo:19, p1:97, p2:169, p4:297, frete:24.90, meta:0, min:
 var el = function(i){ return document.getElementById(i); };
 function brl(n){ return (Number(n)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
 function pct(n){ return (Number(n)||0).toLocaleString('pt-BR',{maximumFractionDigits:1}) + '%'; }
-function hoje(){ return new Date().toISOString().slice(0,10); }
-function mesAtual(){ return new Date().toISOString().slice(0,7); }
+// Fuso de Brasília de propósito: toISOString() vira o dia à meia-noite UTC,
+// que é 21h em Brasília — três horas de visita de noite já contavam pro dia
+// seguinte, e por isso quem tinha entrado ontem à noite "sumia" do "Hoje".
+function hoje(){
+  var partes = new Intl.DateTimeFormat('en-CA', { timeZone:'America/Sao_Paulo', year:'numeric', month:'2-digit', day:'2-digit' }).formatToParts(new Date());
+  var p = {}; partes.forEach(function(x){ p[x.type] = x.value; });
+  return p.year+'-'+p.month+'-'+p.day;
+}
+function mesAtual(){ return hoje().slice(0,7); }
 function somarDias(dataISO, n){
   var d = new Date(dataISO + 'T00:00:00');
   d.setDate(d.getDate() + n);
@@ -606,8 +613,11 @@ function dataBR(d){ if(!d) return '—'; var p=String(d).split('-'); return p[2]
 function dataHoraBR(ts){ if(!ts) return '—'; var d=new Date(Number(ts)); return d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR').slice(0,5); }
 function chave(s){ return String(s||'').trim().toLowerCase(); }
 
-var periodoModo = 'mes';
-var periodo = inicioFimMes(mesAtual());
+// Abre em "Hoje" de propósito: visitas, checkouts, carrinhos e a lista de
+// cidades (Brasil e bots) são pra acompanhar o dia correndo, não pra
+// acumular o mês inteiro na tela assim que o painel abre.
+var periodoModo = 'hoje';
+var periodo = { inicio: hoje(), fim: hoje() };
 function noPeriodo(d){
   if (!periodo) return true;
   var s = String(d||'').slice(0,10);
@@ -658,7 +668,7 @@ el('btnPerHoje').onclick = function(){ aplicarPeriodo('hoje'); };
 el('btnPerOntem').onclick = function(){ aplicarPeriodo('ontem'); };
 el('btnPer7').onclick = function(){ aplicarPeriodo('7dias'); };
 el('btnPerMes').onclick = function(){ aplicarPeriodo('mes'); };
-el('btnPerMes').classList.add('on');
+el('btnPerHoje').classList.add('on');
 el('btnTudo').onclick = function(){ aplicarPeriodo('tudo'); };
 
 /* ================= sincronização ================= */
@@ -971,12 +981,16 @@ function renderAoVivo(){
   ativosBR.forEach(function(a){
     var uf = String(a.uf||'').toUpperCase();
     if (!UF_POS[uf]) return;
-    if (!porUf[uf]) porUf[uf] = { n:0, cidades:{} };
+    if (!porUf[uf]) porUf[uf] = { n:0, cidades:{}, ultima:0 };
     porUf[uf].n++;
     if (a.cidade) porUf[uf].cidades[a.cidade] = 1;
+    if (a.em && a.em > porUf[uf].ultima) porUf[uf].ultima = a.em;
   });
 
-  var chaves = Object.keys(porUf);
+  // Ordenado do mais antigo pro mais recente: no SVG, quem é desenhado por
+  // último fica visualmente por cima — assim a bolinha de quem chegou agora
+  // nunca fica escondida atrás de um estado com mais gente.
+  var chaves = Object.keys(porUf).sort(function(a,b){ return porUf[a].ultima-porUf[b].ultima; });
   el('mapaPontos').innerHTML = chaves.map(function(uf){
     var pos = UF_POS[uf];
     var cidades = Object.keys(porUf[uf].cidades).join(', ') || uf;
@@ -992,14 +1006,16 @@ function renderAoVivo(){
     : 'no mês';
   var visitasPer = somaMetrica('visita');
   var checkoutsPer = somaMetrica('checkout');
+  var carrinhosPer = somaMetrica('carrinho');
   var linhas = [];
   linhas.push('<div><b>'+visitasPer+'</b> visita'+(visitasPer===1?'':'s')+' '+rotuloPer+'</div>');
   linhas.push('<div><b>'+checkoutsPer+'</b> checkout'+(checkoutsPer===1?'':'s')+' iniciado'+(checkoutsPer===1?'':'s')+' '+rotuloPer+'</div>');
+  linhas.push('<div><b>'+carrinhosPer+'</b> carrinho'+(carrinhosPer===1?'':'s')+' novo'+(carrinhosPer===1?'':'s')+' '+rotuloPer+'</div>');
   var abandonadosN = (remotos.abandonados||[]).length;
   linhas.push('<div><b>'+abandonadosN+'</b> carrinho'+(abandonadosN===1?'':'s')+' abandonado'+(abandonadosN===1?'':'s')+'</div>');
   if (chaves.length) {
     linhas.push('<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line)">Navegando agora:</div>');
-    chaves.sort(function(a,b){ return porUf[b].n-porUf[a].n; }).forEach(function(uf){
+    chaves.sort(function(a,b){ return porUf[b].ultima-porUf[a].ultima; }).forEach(function(uf){
       var cidades = Object.keys(porUf[uf].cidades).join(', ') || uf;
       linhas.push('<div><b>'+porUf[uf].n+'</b> em ' + esc(cidades) + ' (' + uf + ')</div>');
     });
@@ -1028,6 +1044,22 @@ function agruparPorPeriodo(m, prefixo){
     .sort(function(a,b){ return b.n - a.n; });
 }
 
+/** Mesma ideia da função acima, mas devolve o horário MAIS RECENTE por
+ *  "resto" em vez de somar — usado pra saber quem apareceu por último. */
+function maisRecentePorPeriodo(m, prefixo){
+  var re = new RegExp('^' + prefixo + ':(\\d{4}-\\d{2}-\\d{2}):(.+)$');
+  var porResto = {};
+  Object.keys(m).forEach(function(chave){
+    var mm = re.exec(chave);
+    if (!mm) return;
+    if (!noPeriodo(mm[1])) return;
+    var ts = Number(m[chave]) || 0;
+    if (!ts) return;
+    if (!porResto[mm[2]] || ts > porResto[mm[2]]) porResto[mm[2]] = ts;
+  });
+  return porResto;
+}
+
 /* UFs válidas do Brasil — usado só como fallback pra registros antigos
  * (gravados antes do país entrar na chave), onde a sigla ainda ajuda a
  * separar visita real de bot estrangeiro. */
@@ -1041,6 +1073,14 @@ function renderCidades(){
     alvo.innerHTML = '<div style="color:var(--ink-3)">Sem visitas com cidade identificada no período.</div>';
     return;
   }
+  // Quem apareceu por último vai pro topo — não quem tem mais visitas.
+  // Assim toda cidade/pessoa nova já cai visível, sem precisar catar no "Ver mais".
+  var ultimaVista = maisRecentePorPeriodo(remotos.metricas || {}, 'ultimaCidade');
+  itens.sort(function(a,b){
+    var ua = ultimaVista[a.resto] || 0, ub = ultimaVista[b.resto] || 0;
+    if (ub !== ua) return ub - ua;
+    return b.n - a.n;
+  });
   var br = [], fora = [];
   itens.forEach(function(c){
     var partes = c.resto.split('|');

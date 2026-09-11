@@ -13,12 +13,43 @@ async function loja(nome = 'metricas') {
   return getStore(nome)
 }
 
+/**
+ * Data de "hoje" no fuso de Brasília, formato AAAA-MM-DD.
+ *
+ * De propósito NÃO usa `new Date().toISOString().slice(0,10)`: isso vira
+ * o dia à meia-noite UTC, que é 21h em Brasília — três horas de visita
+ * de noite (21h-meia-noite) já contavam pro dia seguinte. Toda chave
+ * "tipo:dia" do sistema (visita, checkout, cidade, origem, carrinho)
+ * precisa vir daqui pra virar o dia junto com o relógio de Brasília.
+ */
+export function diaBR(quando) {
+  const partes = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(quando || new Date())
+  const p = {}
+  partes.forEach((x) => { p[x.type] = x.value })
+  return `${p.year}-${p.month}-${p.day}`
+}
+
 /** Soma 1 na chave do dia. Ex.: "visita:2026-09-06". */
 export async function contar(chave) {
   try {
     const store = await loja()
     const atual = Number(await store.get(chave)) || 0
     await store.set(chave, String(atual + 1))
+  } catch { /* silêncio proposital */ }
+}
+
+/**
+ * Grava o horário atual na chave, sem somar — diferente de `contar()`.
+ * Usado pra saber a ÚLTIMA vez que algo aconteceu (ex.: última visita de
+ * uma cidade), pra poder ordenar "quem apareceu agora" primeiro no painel,
+ * já que o contador sozinho só diz quantidade, não quando foi a mais recente.
+ */
+export async function marcar(chave) {
+  try {
+    const store = await loja()
+    await store.set(chave, String(Date.now()))
   } catch { /* silêncio proposital */ }
 }
 
@@ -57,7 +88,7 @@ export async function lerAtivos() {
     await Promise.all(blobs.map(async (b) => {
       const d = await store.get(b.key, { type: 'json' }).catch(() => null)
       if (!d) return
-      if (agora - d.em <= 90_000) saida.push({ cidade: d.cidade, uf: d.uf, pais: d.pais || '' })
+      if (agora - d.em <= 90_000) saida.push({ cidade: d.cidade, uf: d.uf, pais: d.pais || '', em: d.em })
       else store.delete(b.key).catch(() => {})
     }))
   } catch { /* sem dados é melhor que erro 500 */ }
@@ -74,6 +105,10 @@ export async function salvarCarrinho(email, dados) {
     // continuar digitando não pode apagar essa marca.
     const atual = await store.get(email, { type: 'json' }).catch(() => null)
     await store.setJSON(email, Object.assign({}, atual, dados))
+    // Só conta como "carrinho novo" na primeira vez que esse e-mail aparece —
+    // os próximos toques (continuar digitando, blur de outro campo) não
+    // podem inflar a métrica do dia.
+    if (!atual) await contar(`carrinho:${diaBR()}`)
   } catch { /* silêncio proposital */ }
 }
 

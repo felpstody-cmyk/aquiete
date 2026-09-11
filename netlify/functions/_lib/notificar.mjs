@@ -8,6 +8,21 @@ export const NTFY_TOPIC = 'ToderatiAquieteAgora'
 
 const ICONE = 'https://aquieteagora.com.br/img/icon-notificacao.png'
 
+/**
+ * O ntfy só garante header sem bugar com RFC 2047 (o mesmo padrão que
+ * e-mail usa pra acento em "Assunto") — `encodeURIComponent` NÃO é
+ * decodificado por ele, e o título aparecia literalmente como
+ * "Aquiete%20%E2%80%94..." (o que no fim virava aquele nome com número e
+ * símbolo estranho no celular). Isso aqui empacota o texto do jeito que o
+ * ntfy espera: =?UTF-8?B?<base64>?=
+ */
+function tituloNtfy(titulo) {
+  const bytes = new TextEncoder().encode(titulo)
+  let binario = ''
+  bytes.forEach((b) => { binario += String.fromCharCode(b) })
+  return `=?UTF-8?B?${btoa(binario)}?=`
+}
+
 /** Base de tudo: manda um push pro celular via ntfy.sh. Nunca lança erro. */
 export async function push(texto, titulo) {
   try {
@@ -15,7 +30,7 @@ export async function push(texto, titulo) {
       method: 'POST',
       body: texto,
       headers: {
-        'Title': encodeURIComponent(titulo || 'Aquiete'),
+        'Title': tituloNtfy(titulo || 'Aquiete'),
         'Tags': 'moneybag',
         'Icon': ICONE,
       },
@@ -62,7 +77,7 @@ export async function notificarVenda({ nome, total, billingType }) {
 const brl = (v) => 'R$ ' + Number(v).toFixed(2).replace('.', ',')
 
 /** Resumo de "como tá o dia", com o tom variando conforme o movimento. */
-export async function notificarResumo({ vendas, total, visitas, checkouts, abandonados }) {
+export async function notificarResumo({ vendas, total, visitas, checkouts, carrinhos, abandonados, online }) {
   const linhas = []
   if (vendas === 0 && visitas === 0) {
     linhas.push('😴 Site quietinho até agora, ninguém passou por aqui ainda.')
@@ -76,8 +91,14 @@ export async function notificarResumo({ vendas, total, visitas, checkouts, aband
     linhas.push('🚀🚀 ' + vendas + ' VENDAS hoje, ' + brl(total) + '! Bora que hoje é dia de Mercedes.')
   }
   linhas.push('📈 ' + visitas + ' visita' + (visitas===1?'':'s') + ' · ' + checkouts + ' checkout' + (checkouts===1?'':'s') + ' iniciado' + (checkouts===1?'':'s'))
+  if (carrinhos > 0) {
+    linhas.push('🛒 ' + carrinhos + ' carrinho' + (carrinhos===1?'':'s') + ' novo' + (carrinhos===1?'':'s') + ' hoje')
+  }
   if (abandonados > 0) {
     linhas.push('😬 ' + abandonados + ' carrinho' + (abandonados===1?'':'s') + ' abandonado' + (abandonados===1?'':'s') + ' esperando um zap seu.')
+  }
+  if (online > 0) {
+    linhas.push('🟢 ' + online + ' pessoa' + (online===1?'':'s') + ' no site AGORA')
   }
   await push(linhas.join('\n'), 'Aquiete — como tá o dia 📊')
 }
