@@ -534,7 +534,8 @@ td.sel,th.sel{width:34px;padding-right:0}
 
 /* ================= armazenamento ================= */
 var K = { ped:'aquiete.pedidos', rem:'aquiete.remoto', desp:'aquiete.despesas',
-          est:'aquiete.estoque', cfg:'aquiete.config', sinc:'aquiete.sinc', sta:'aquiete.status' };
+          est:'aquiete.estoque', cfg:'aquiete.config', sinc:'aquiete.sinc', sta:'aquiete.status',
+          locEm:'aquiete.estadoLocalEm' };
 function ler(k,p){ try{ var v=localStorage.getItem(k); return v?JSON.parse(v):p; }catch(e){ return p; } }
 /* Despesas, estoque, pedidos manuais, status manual e config sobem sozinhos
  * pra nuvem (endpoint /api/admin-estado) sempre que mudam, pra funcionar
@@ -542,10 +543,23 @@ function ler(k,p){ try{ var v=localStorage.getItem(k); return v?JSON.parse(v):p;
 var CHAVES_NUVEM = {};
 CHAVES_NUVEM[K.ped]=1; CHAVES_NUVEM[K.sta]=1; CHAVES_NUVEM[K.desp]=1; CHAVES_NUVEM[K.est]=1; CHAVES_NUVEM[K.cfg]=1;
 var aplicandoEstadoRemoto = false;
+// Marca a última vez que ESTE aparelho mudou algo que vai pra nuvem
+// (estoque, despesa, pedido manual, config). Sem isso, uma sincronização
+// que caísse no meio dos 900ms de espera do envio (ex.: abriu o painel de
+// novo logo depois de cadastrar um lote) puxava a nuvem ainda desatualizada
+// e apagava a edição local antes dela ter chance de subir — era o bug do
+// "lote que some". Sobrevive a reload porque fica salvo no localStorage.
+var localEstadoEm = Number(ler(K.locEm, 0)) || 0;
 function gravar(k,v){
   try{ localStorage.setItem(k,JSON.stringify(v)); }
   catch(e){ alert('Não consegui salvar. Navegador sem espaço ou em janela anônima.'); }
-  if (CHAVES_NUVEM[k]) agendarPushEstado();
+  if (CHAVES_NUVEM[k]) {
+    if (!aplicandoEstadoRemoto) {
+      localEstadoEm = Date.now();
+      try{ localStorage.setItem(K.locEm, String(localEstadoEm)); }catch(e){}
+    }
+    agendarPushEstado();
+  }
 }
 var pushEstadoTimer = null;
 function agendarPushEstado(){
@@ -708,14 +722,24 @@ function sincronizar(silencioso){
       sincEm = new Date().toISOString();
       gravar(K.rem, remotos); gravar(K.sinc, sincEm);
 
-      if (estadoNuvem && estadoNuvem.atualizadoEm) {
-        // Nuvem já tem estado salvo — ela manda (funciona igual em qualquer aparelho).
+      if (estadoNuvem && estadoNuvem.atualizadoEm && estadoNuvem.atualizadoEm < localEstadoEm) {
+        // Este aparelho editou algo (estoque, despesa, pedido manual...) DEPOIS
+        // da última vez que a nuvem foi salva — se a gente aplicasse o estado
+        // da nuvem por cima agora, essa edição sumia (era o bug do lote que
+        // "some" quando sincroniza rápido demais). Em vez de sobrescrever,
+        // manda o que já temos aqui pra nuvem na hora, sem esperar o debounce.
+        pushEstadoNuvem();
+      } else if (estadoNuvem && estadoNuvem.atualizadoEm) {
+        // Nuvem já tem estado salvo e é igual ou mais nova que a última edição
+        // local — ela manda (funciona igual em qualquer aparelho).
         aplicandoEstadoRemoto = true;
         manuais = estadoNuvem.manuais || [];
         statusManual = estadoNuvem.statusManual || {};
         despesas = estadoNuvem.despesas || [];
         lotes = estadoNuvem.lotes || [];
         cfg = Object.assign({}, cfg, estadoNuvem.cfg || {});
+        localEstadoEm = estadoNuvem.atualizadoEm;
+        try{ localStorage.setItem(K.locEm, String(localEstadoEm)); }catch(e){}
         gravar(K.ped, manuais); gravar(K.sta, statusManual); gravar(K.desp, despesas);
         gravar(K.est, lotes); gravar(K.cfg, cfg);
         aplicandoEstadoRemoto = false;
