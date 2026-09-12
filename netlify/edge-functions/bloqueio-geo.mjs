@@ -17,8 +17,13 @@
  * que geram a prévia do link no anúncio e indexam o site. Bloquear eles
  * quebraria a prévia do anúncio ou marcaria o link como inacessível.
  *
- * Roda só nas páginas que um visitante normal abre (loja, checkout,
- * termos) — nunca em /api/* nem no painel administrativo.
+ * Roda nas páginas que um visitante normal abre (loja, checkout, termos)
+ * E também nos dois endpoints de API que recebem dado de cliente direto
+ * do formulário (criar pedido, carrinho) — um bot esperto pode atacar a
+ * API sem nunca carregar a página, então bloquear só o HTML não adianta
+ * contra tentativa de fraude/roubo de dado ali. NUNCA roda no painel
+ * administrativo nem nos outros endpoints (webhook do Asaas, cron,
+ * rastreio de visita) — bloquear esses quebraria o sistema de verdade.
  *
  * PASSE LIVRE: o bloqueio é só por IP/localização, não sabe diferenciar
  * o dono do site de quem ele quer barrar. Configure a variável de
@@ -92,5 +97,8 @@ export default async (request, context) => {
 }
 
 export const config = {
-  path: ['/', '/index.html', '/checkout', '/checkout.html', '/termos', '/termos.html'],
+  path: [
+    '/', '/index.html', '/checkout', '/checkout.html', '/termos', '/termos.html',
+    '/api/criar-pedido', '/api/carrinho',
+  ],
 }
