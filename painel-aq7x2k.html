@@ -483,6 +483,7 @@ td.sel,th.sel{width:34px;padding-right:0}
       <div class="acoes">
         <button class="btn" id="salvarApi">Salvar conexão</button>
         <button class="btn sec" id="testarApi">Testar agora</button>
+        <button class="btn sec" id="verToken" type="button">Mostrar token</button>
       </div>
       <p class="sub" style="margin:14px 0 0" id="apiMsg"></p>
     </div>
@@ -851,8 +852,9 @@ function renderMarco100k(){
   el('marco100kBarra').style.width = pctv.toFixed(2) + '%';
   el('marco100kTxt').textContent = brl(total) + ' de ' + brl(META) + ' (' + pct(pctv) + ')';
 }
-var PAGINA_NOME = { index: 'Página inicial', checkout: 'Checkout' };
-var CTA_NOME = { header:'Cabeçalho', hero:'Topo (hero)', dock:'Flutuante (mobile)', fab:'Flutuante (desktop)', oferta:'Botão comprar', promo:'Cupom' };
+var PAGINA_NOME = { index: 'Página inicial', oferta: 'Página de venda', checkout: 'Checkout' };
+var CTA_NOME = { header:'Cabeçalho', hero:'Topo (hero)', dock:'Flutuante (mobile)', fab:'Flutuante (desktop)', oferta:'Botão comprar', promo:'Cupom',
+  'venda-topo':'Venda: topo', 'venda-kits':'Venda: escolha do kit', 'venda-meio':'Venda: meio', 'venda-final':'Venda: final', 'venda-dock':'Venda: barra fixa', 'voltar-loja':'Venda: voltou pra loja' };
 var comportamentoLimite = 10;
 el('comportamentoMais').onclick = function(){ comportamentoLimite += 10; renderComportamento(); };
 function segParaTexto(segundos){
@@ -1726,6 +1728,13 @@ el('salvarApi').onclick = function(){
   cfg.url = el('c_url').value.trim(); cfg.token = el('c_token').value.trim();
   gravar(K.cfg,cfg);
   el('apiMsg').textContent = 'Conexão salva. Clique em Sincronizar lá em cima.';
+};
+// Campo é type="password" pra não expor o token em tela compartilhada/print.
+// Este botão revela sob demanda, pra não precisar ir no Netlify só pra ler.
+el('verToken').onclick = function(){
+  var campo = el('c_token'), mostrando = campo.type === 'text';
+  campo.type = mostrando ? 'password' : 'text';
+  this.textContent = mostrando ? 'Mostrar token' : 'Ocultar token';
 };
 el('testarApi').onclick = function(){
   cfg.url = el('c_url').value.trim(); cfg.token = el('c_token').value.trim();

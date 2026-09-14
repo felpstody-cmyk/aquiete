@@ -27,6 +27,12 @@
   to = "/checkout.html"
   status = 200
 
+# Página de venda única pra onde todos os advertoriais apontam
+[[redirects]]
+  from = "/oferta"
+  to = "/oferta.html"
+  status = 200
+
 # ------------------------------------------------------------
 #  VARIÁVEIS DE AMBIENTE
 #  Configure em: Site configuration > Environment variables.
