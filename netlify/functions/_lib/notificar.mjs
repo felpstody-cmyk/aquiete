@@ -77,7 +77,7 @@ export async function notificarVenda({ nome, total, billingType }) {
 const brl = (v) => 'R$ ' + Number(v).toFixed(2).replace('.', ',')
 
 /** Resumo de "como tá o dia", com o tom variando conforme o movimento. */
-export async function notificarResumo({ vendas, total, visitas, checkouts, carrinhos, abandonados, online }) {
+export async function notificarResumo({ vendas, total, visitas, checkouts, carrinhos, abandonados, online, ofertaVisitas, ofertaCheckouts }) {
   const linhas = []
   if (vendas === 0 && visitas === 0) {
     linhas.push('😴 Site quietinho até agora, ninguém passou por aqui ainda.')
@@ -91,6 +91,9 @@ export async function notificarResumo({ vendas, total, visitas, checkouts, carri
     linhas.push('🚀🚀 ' + vendas + ' VENDAS hoje, ' + brl(total) + '! Bora que hoje é dia de Mercedes.')
   }
   linhas.push('📈 ' + visitas + ' visita' + (visitas===1?'':'s') + ' · ' + checkouts + ' checkout' + (checkouts===1?'':'s') + ' iniciado' + (checkouts===1?'':'s'))
+  if (ofertaVisitas > 0) {
+    linhas.push('🎯 Página de venda: ' + ofertaVisitas + ' visita' + (ofertaVisitas===1?'':'s') + ' · ' + ofertaCheckouts + ' checkout' + (ofertaCheckouts===1?'':'s'))
+  }
   if (carrinhos > 0) {
     linhas.push('🛒 ' + carrinhos + ' carrinho' + (carrinhos===1?'':'s') + ' novo' + (carrinhos===1?'':'s') + ' hoje')
   }

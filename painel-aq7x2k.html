@@ -27,6 +27,7 @@ header{background:var(--card);border-bottom:1px solid var(--line);padding:12px 2
 header .sp{flex:1}
 .perbox{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-2);flex-wrap:wrap}
 .perbox .btn.sec.on{background:var(--rose);color:#fff;border-color:var(--rose)}
+.pagfiltro .btn.sec.on{background:var(--rose);color:#fff;border-color:var(--rose)}
 select,input[type=month]{border:1px solid var(--line-2);border-radius:7px;padding:7px 10px;background:var(--card);color:var(--ink)}
 #sinc{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-3)}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--ink-3);flex:none}
@@ -269,7 +270,8 @@ td.sel,th.sel{width:34px;padding-right:0}
 
   <div class="card">
     <h3>Comportamento no site <span class="tag">até onde rolou, quanto tempo ficou e o que clicou — pessoa por pessoa</span></h3>
-    <div class="body" style="display:flex;gap:20px;flex-wrap:wrap;padding-top:0" id="comportamentoResumo"></div>
+    <div class="filtros pagfiltro" id="comportamentoFiltro"></div>
+    <div class="body" style="display:flex;gap:20px;flex-wrap:wrap" id="comportamentoResumo"></div>
     <div class="tw"><table id="tbComportamento"></table></div>
     <button class="btn sec mini" id="comportamentoMais" type="button" style="margin:12px 0 4px" hidden>Ver mais</button>
   </div>
@@ -856,6 +858,7 @@ var PAGINA_NOME = { index: 'Página inicial', oferta: 'Página de venda', checko
 var CTA_NOME = { header:'Cabeçalho', hero:'Topo (hero)', dock:'Flutuante (mobile)', fab:'Flutuante (desktop)', oferta:'Botão comprar', promo:'Cupom',
   'venda-topo':'Venda: topo', 'venda-kits':'Venda: escolha do kit', 'venda-meio':'Venda: meio', 'venda-final':'Venda: final', 'venda-dock':'Venda: barra fixa', 'voltar-loja':'Venda: voltou pra loja' };
 var comportamentoLimite = 10;
+var comportamentoPagina = (function(){ try { return localStorage.getItem('aquiete.comportamentoPagina') || 'todas'; } catch(e){ return 'todas'; } })();
 el('comportamentoMais').onclick = function(){ comportamentoLimite += 10; renderComportamento(); };
 function segParaTexto(segundos){
   var min = Math.floor(segundos/60), seg = segundos%60;
@@ -869,11 +872,36 @@ function renderComportamento(){
   // Ver mais que não batia com as 72 visitas do dia. Filtra pelo mesmo
   // período selecionado no topo, e recalcula os resumos por página só com
   // o que sobrou (em vez do agregado de 30 dias que o servidor manda).
-  var sessoes = (c.sessoes || []).filter(function(s){ return noPeriodo(diaDeTs(s.ultimaAtividade)); });
+  var base = (c.sessoes || []).filter(function(s){ return noPeriodo(diaDeTs(s.ultimaAtividade)); });
+
+  // Filtro por página: cada sessão guarda rolagem, tempo e cliques separados
+  // por página (index, oferta, checkout). Com uma página escolhida, a lista
+  // mostra só quem passou por ela e os números passam a ser só dela, em vez
+  // de somar tudo que a pessoa viu.
+  var contagem = {};
+  base.forEach(function(s){ Object.keys(s.paginas || {}).forEach(function(p){ contagem[p] = (contagem[p] || 0) + 1; }); });
+  if (comportamentoPagina !== 'todas' && !PAGINA_NOME[comportamentoPagina]) comportamentoPagina = 'todas';
+  var opcoes = [['todas','Todas']].concat(Object.keys(PAGINA_NOME).map(function(k){ return [k, PAGINA_NOME[k]]; }));
+  el('comportamentoFiltro').innerHTML = '<span style="font-size:12.5px;color:var(--ink-3)">Mostrar:</span>' + opcoes.map(function(o){
+    var n = o[0] === 'todas' ? base.length : (contagem[o[0]] || 0);
+    return '<button class="btn sec mini' + (comportamentoPagina === o[0] ? ' on' : '') + '" type="button" data-pag="' + o[0] + '">' + esc(o[1]) + ' (' + n + ')</button>';
+  }).join('');
+  Array.prototype.forEach.call(el('comportamentoFiltro').querySelectorAll('[data-pag]'), function(b){
+    b.onclick = function(){
+      comportamentoPagina = b.dataset.pag;
+      comportamentoLimite = 10;
+      try { localStorage.setItem('aquiete.comportamentoPagina', comportamentoPagina); } catch(e){}
+      renderComportamento();
+    };
+  });
+
+  var filtrando = comportamentoPagina !== 'todas';
+  var sessoes = filtrando ? base.filter(function(s){ return s.paginas && s.paginas[comportamentoPagina]; }) : base;
+  function paginasDe(s){ return filtrando ? [comportamentoPagina] : Object.keys(s.paginas || {}); }
 
   var somas = {};
   sessoes.forEach(function(s){
-    Object.keys(s.paginas || {}).forEach(function(p){
+    paginasDe(s).forEach(function(p){
       if (!somas[p]) somas[p] = { somaScroll:0, somaSegundos:0, amostras:0 };
       somas[p].somaScroll += Number(s.paginas[p].scrollMax) || 0;
       somas[p].somaSegundos += Number(s.paginas[p].segundos) || 0;
@@ -896,8 +924,11 @@ function renderComportamento(){
     ? '<thead><tr><th>Quando</th><th>Cidade</th><th>Páginas</th><th class="num">Rolagem máx.</th>' +
       '<th class="num">Tempo</th><th>Clicou em</th><th></th></tr></thead><tbody>' +
       sessoes.slice(0, comportamentoLimite).map(function(s){
-        var pags = Object.keys(s.paginas || {});
-        var pagsTxt = pags.map(function(p){ return esc(PAGINA_NOME[p] || p); }).join(', ') || '—';
+        var pags = paginasDe(s);
+        var pagsTxt = Object.keys(s.paginas || {}).map(function(p){
+          var nome = esc(PAGINA_NOME[p] || p);
+          return filtrando && p === comportamentoPagina ? '<b>' + nome + '</b>' : nome;
+        }).join(', ') || '—';
         var scrollMax = pags.reduce(function(m,p){ return Math.max(m, Number(s.paginas[p].scrollMax)||0); }, 0);
         var segundos = pags.reduce(function(sm,p){ return sm + (Number(s.paginas[p].segundos)||0); }, 0);
         var cliques = [];
@@ -915,7 +946,7 @@ function renderComportamento(){
           '<td class="num">'+scrollMax+'%</td><td class="num">'+segParaTexto(segundos)+'</td><td>'+cliquesTxt+'</td>' +
           '<td><button class="lnk" data-apagar-sessao="'+esc(s.sid)+'">excluir</button></td></tr>';
       }).join('') + '</tbody>'
-    : '<tbody><tr><td class="vazio">Sincronize pra ver o comportamento de navegação.</td></tr></tbody>';
+    : '<tbody><tr><td class="vazio">' + (base.length ? 'Ninguém passou por essa página no período selecionado.' : 'Sincronize pra ver o comportamento de navegação.') + '</td></tr></tbody>';
 
   Array.prototype.forEach.call(el('tbComportamento').querySelectorAll('[data-apagar-sessao]'), function(b){
     b.onclick = function(){ apagarSessaoComportamento(b.dataset.apagarSessao); };
@@ -1057,6 +1088,16 @@ function renderAoVivo(){
   var linhas = [];
   linhas.push('<div><b>'+visitasPer+'</b> visita'+(visitasPer===1?'':'s')+' '+rotuloPer+'</div>');
   linhas.push('<div><b>'+checkoutsPer+'</b> checkout'+(checkoutsPer===1?'':'s')+' iniciado'+(checkoutsPer===1?'':'s')+' '+rotuloPer+'</div>');
+  // Home x página de venda. O total soma as duas, então a home é o total menos
+  // a oferta (isso também deixa certos os dias antes de a oferta existir).
+  var ofVis = somaMetrica('oferta-visita'), ofChk = somaMetrica('oferta-checkout');
+  var hmVis = Math.max(0, visitasPer - ofVis), hmChk = Math.max(0, checkoutsPer - ofChk);
+  var linhaPagina = function(nome, v, ck){
+    return '<div style="padding-left:14px;color:var(--ink-3);font-size:12.5px">↳ ' + nome + ': <b style="color:var(--ink)">' + v + '</b> visita' + (v===1?'':'s') +
+      ' · <b style="color:var(--ink)">' + ck + '</b> checkout' + (ck===1?'':'s') + (v ? ' (' + Math.round(ck / v * 100) + '% foi pro checkout)' : '') + '</div>';
+  };
+  linhas.push(linhaPagina('Página inicial', hmVis, hmChk));
+  linhas.push(linhaPagina('Página de venda', ofVis, ofChk));
   linhas.push('<div><b>'+carrinhosPer+'</b> carrinho'+(carrinhosPer===1?'':'s')+' novo'+(carrinhosPer===1?'':'s')+' '+rotuloPer+'</div>');
   // Carrinho abandonado tem timestamp próprio (quando a pessoa começou a
   // digitar), não uma chave "tipo:dia" — sem filtrar por diaDeTs(a.em) aqui,

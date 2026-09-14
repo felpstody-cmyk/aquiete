@@ -979,8 +979,12 @@ function aqEmTeste(){
 }
 
 /* Contador proprio de checkouts iniciados. Nao usa cookie, nao identifica ninguem —
-   so soma 1 no dia. Se a funcao estiver fora do ar, a pagina nem percebe. */
-try { if (!aqEmTeste()) { fetch('/api/visita?t=checkout', { method:'GET', keepalive:true }).catch(function(){}); } } catch(e){}
+   so soma 1 no dia. Se a funcao estiver fora do ar, a pagina nem percebe.
+   Quem chegou vindo da pagina de venda (/oferta) conta tambem no contador dela. */
+try { if (!aqEmTeste()) {
+  var aqDeOferta = document.referrer.indexOf('/oferta') !== -1;
+  fetch('/api/visita?t=checkout' + (aqDeOferta ? '&p=oferta' : ''), { method:'GET', keepalive:true }).catch(function(){});
+} } catch(e){}
 
 /* Sinal de vida pro painel "pessoas ativas agora". */
 try { if (!aqEmTeste()) {

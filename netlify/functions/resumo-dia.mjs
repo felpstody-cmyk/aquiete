@@ -34,6 +34,8 @@ export default async () => {
       visitas: Number(metricas['visita:' + hoje]) || 0,
       checkouts: Number(metricas['checkout:' + hoje]) || 0,
       carrinhos: Number(metricas['carrinho:' + hoje]) || 0,
+      ofertaVisitas: Number(metricas['oferta-visita:' + hoje]) || 0,
+      ofertaCheckouts: Number(metricas['oferta-checkout:' + hoje]) || 0,
       abandonados: (dados.abandonados || []).length,
       online: (dados.ativos || []).filter((a) => !a.pais || a.pais === 'BR').length,
     })

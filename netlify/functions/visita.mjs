@@ -15,6 +15,11 @@ export default async (req) => {
   const tipo = url.searchParams.get('t') === 'checkout' ? 'checkout' : 'visita'
   await contar(`${tipo}:${dia}`)
 
+  // Visita e checkout que vieram da página de venda (/oferta) ganham um
+  // contador a mais. O total em visita:/checkout: continua somando tudo, então
+  // a home é o total menos o da oferta, inclusive nos dias antes disso existir.
+  if (url.searchParams.get('p') === 'oferta') await contar(`oferta-${tipo}:${dia}`)
+
   // So registra cidade/origem na visita da pagina inicial — contar de novo
   // no checkout inflaria a mesma pessoa duas vezes na lista. O dia entra na
   // chave pra essas listas poderem ser filtradas pelo mesmo seletor de
