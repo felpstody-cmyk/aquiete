@@ -385,6 +385,12 @@ p.centro{margin:0}
 
     <p class="empurra">Com 2 frascos você paga só <b>R$ 33,60 a mais</b> que 1 e não paga frete.</p>
 
+    <div id="relogioOferta" hidden style="display:flex;flex-direction:column;align-items:center;gap:.15rem;margin:0 0 1rem;padding:.9rem 1rem;border:2px solid #E8B4BE;background:#FDF4F5;border-radius:14px;text-align:center">
+      <span style="font-size:.78rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#8A5A62">Seu desconto de 10% termina em</span>
+      <b data-conta style="font-size:2.1rem;font-weight:800;line-height:1.1;color:#B8455C;font-variant-numeric:tabular-nums">00:00:00</b>
+      <span style="font-size:.74rem;color:#8A5A62">O cupom vale até a virada do dia</span>
+    </div>
+
     <a class="btn" href="checkout.html?kit=2&amp;cupom=PRIMEIRA10" data-compra data-cta="venda-kits" id="btnOferta">Quero o meu com 10% OFF<small>Pix, cartão ou boleto · compra segura</small></a>
 
     <div class="selos">
@@ -657,9 +663,16 @@ p.centro{margin:0}
      Mesmo fuso que o resto do sistema usa pra fechar o dia. */
   (function(){
     try {
-      var caixa = d.getElementById('contaCupom');
-      if (!caixa) return;
-      var campo = caixa.querySelector('b');
+      /* Dois relógios na página: a faixa fininha do topo e a caixa grande
+         em cima do botão, na escolha de kit. Os dois são alimentados pelo
+         mesmo tique, senão um atrasaria em relação ao outro. */
+      var caixas = [];
+      ['contaCupom','relogioOferta'].forEach(function(id){
+        var c = d.getElementById(id);
+        if (c && c.querySelector('b')) caixas.push({ caixa: c, campo: c.querySelector('b') });
+      });
+      if (!caixas.length) return;
+
       var fmt = new Intl.DateTimeFormat('en-GB', {
         timeZone: 'America/Sao_Paulo', hour12: false,
         hour: '2-digit', minute: '2-digit', second: '2-digit'
@@ -674,10 +687,13 @@ p.centro{margin:0}
         if (h === 24) h = 0; // en-GB às vezes devolve 24 em vez de 00
         var faltam = 86400 - (h * 3600 + m * 60 + s);
         if (faltam < 0) faltam = 0;
-        campo.textContent = doisDigitos(Math.floor(faltam / 3600)) + ':' +
-                            doisDigitos(Math.floor((faltam % 3600) / 60)) + ':' +
-                            doisDigitos(faltam % 60);
-        caixa.hidden = false;
+        var texto = doisDigitos(Math.floor(faltam / 3600)) + ':' +
+                    doisDigitos(Math.floor((faltam % 3600) / 60)) + ':' +
+                    doisDigitos(faltam % 60);
+        caixas.forEach(function(o){
+          o.campo.textContent = texto;
+          o.caixa.hidden = false;
+        });
       }
 
       tick();
