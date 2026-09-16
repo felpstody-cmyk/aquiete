@@ -5,6 +5,21 @@
  * página que fez a chamada (o próprio site), não quem trouxe a pessoa até
  * aqui — por isso o front manda document.referrer como parâmetro `ref`.
  */
+/**
+ * Nome da campanha do anúncio, vindo de `utm_campaign`.
+ *
+ * Existe separado de `origemDe` de propósito: origem responde "veio de
+ * anúncio ou orgânico", campanha responde "qual criativo trouxe". Sem isso
+ * todo anúncio do Meta cai no mesmo balde e não dá pra comparar um contra
+ * o outro sem depender do gerenciador.
+ */
+export function campanhaDe(url) {
+  const bruto = (url.searchParams.get('utm_campaign') || '').trim().toLowerCase()
+  if (!bruto) return null
+  // Corta tamanho e tira ":" porque a chave do contador é separada por ":"
+  return bruto.replace(/:/g, '-').slice(0, 60)
+}
+
 export function origemDe(url) {
   const p = url.searchParams
   const utmSource = (p.get('utm_source') || '').toLowerCase()

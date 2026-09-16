@@ -7,7 +7,7 @@
 
 import { contar, marcar, diaBR } from './_lib/metricas.mjs'
 import { geoDe } from './_lib/geo.mjs'
-import { origemDe } from './_lib/origem.mjs'
+import { origemDe, campanhaDe } from './_lib/origem.mjs'
 
 export default async (req) => {
   const url = new URL(req.url)
@@ -35,6 +35,11 @@ export default async (req) => {
     }
     const origem = origemDe(url)
     if (origem) await contar(`origem:${dia}:${origem}`)
+
+    // Qual anúncio trouxe a pessoa. `origem` só diz "veio do Meta"; isto diz
+    // QUAL criativo, pra comparar um contra o outro dentro do próprio painel.
+    const campanha = campanhaDe(url)
+    if (campanha) await contar(`campanha:${dia}:${campanha}`)
   }
 
   return new Response(null, { status: 204, headers: { 'Cache-Control': 'no-store' } })

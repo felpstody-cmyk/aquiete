@@ -253,6 +253,10 @@ td.sel,th.sel{width:34px;padding-right:0}
           <div style="font-size:11.5px;color:var(--ink-3);margin-bottom:6px">Origem (anúncio, orgânico, direto)</div>
           <div class="aovivo-lista" id="origemLista"></div>
         </div>
+        <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line)">
+          <div style="font-size:11.5px;color:var(--ink-3);margin-bottom:6px">Campanha (utm_campaign do link)</div>
+          <div class="aovivo-lista" id="campanhaLista"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -1214,10 +1218,34 @@ function renderCidades(){
 }
 
 function renderOrigens(){
+  /* Chamada aqui no topo de propósito: se ficasse no fim, o `return` de
+     "sem visitas" pularia a lista de campanhas junto. */
+  renderCampanhas();
+
   var itens = agruparPorPeriodo(remotos.metricas || {}, 'origem');
   var alvo = el('origemLista');
   if (!itens.length) {
     alvo.innerHTML = '<div style="color:var(--ink-3)">Sem visitas no período.</div>';
+    return;
+  }
+  var total = itens.reduce(function(s,o){ return s+o.n; }, 0);
+  alvo.innerHTML = itens.map(function(o){
+    var pct = total ? Math.round((o.n/total)*100) : 0;
+    return '<div style="display:flex;justify-content:space-between;gap:8px">' +
+      '<span>' + esc(o.resto) + '</span>' +
+      '<b>' + o.n + '<span style="color:var(--ink-3);font-weight:400"> (' + pct + '%)</span></b></div>';
+  }).join('');
+}
+
+/* Quebra as visitas por utm_campaign do link do anúncio. Enquanto a origem
+   diz só "veio do Meta", isto diz QUAL criativo trouxe, pra comparar um
+   contra o outro sem depender do gerenciador de anúncios. */
+function renderCampanhas(){
+  var alvo = el('campanhaLista');
+  if (!alvo) return;
+  var itens = agruparPorPeriodo(remotos.metricas || {}, 'campanha');
+  if (!itens.length) {
+    alvo.innerHTML = '<div style="color:var(--ink-3)">Nenhuma visita com utm_campaign no período.</div>';
     return;
   }
   var total = itens.reduce(function(s,o){ return s+o.n; }, 0);
