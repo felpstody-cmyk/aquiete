@@ -457,26 +457,15 @@ img,svg{display:block;max-width:100%}
 
         </div>
 
-        <!-- Painel do cartão: aqui entra o SDK do gateway -->
+        <!-- Painel do cartão: o cliente digita o cartão na página segura do Asaas -->
         <div class="panel" id="panelCard">
           <div><div class="panel__in">
-            <!-- ==========================================================
-                 ⚠️ NÃO CRIE CAMPOS DE CARTÃO PRÓPRIOS AQUI.
-                 O gateway entrega os campos já tokenizados (iframe ou SDK),
-                 para que o número do cartão nunca passe pelo seu servidor.
-                 É isso que tira você do escopo pesado de PCI-DSS.
-
-                 Exemplos de montagem:
-                   Pagar.me      PagarmeCheckout.mount('#card-fields')
-                   Mercado Pago  mp.cardForm({ ... }).mount('#card-fields')
-                   Appmax        Appmax.tokenize('#card-fields')
-                 ========================================================== -->
             <div class="slot" id="card-fields">
-              <h3>Campos seguros do gateway entram aqui</h3>
+              <h3>Os dados do cartão você digita na próxima tela</h3>
               <p>
-                Número, validade e CVV são renderizados pelo próprio gateway em
-                <code>#card-fields</code>, já tokenizados. Nenhum dado de cartão
-                trafega pelo seu site.
+                Ao finalizar, abre a tela segura do nosso processador de
+                pagamentos para você preencher número, validade e CVV. Os dados
+                do seu cartão não passam por este site.
               </p>
             </div>
           </div></div>
@@ -935,12 +924,12 @@ img,svg{display:block;max-width:100%}
        ou paga e contesta depois. */
     var quem = d.createElement('p');
     quem.style.cssText = 'margin-top:.5rem;font-size:.8125rem;color:var(--ink-3);line-height:1.4';
-    quem.appendChild(d.createTextNode('No app do banco o recebedor aparece como '));
+    quem.appendChild(d.createTextNode('No app do banco, o recebedor aparece como '));
     var rz = d.createElement('strong');
     rz.style.color = 'var(--ink-2)';
-    rz.textContent = '68.601.075 Felipe Strauss Toderati';
+    rz.textContent = 'Felipe Strauss Toderati';
     quem.appendChild(rz);
-    quem.appendChild(d.createTextNode(' — é a razão social da Aquiete.'));
+    quem.appendChild(d.createTextNode('. É o nome da Aquiete no CNPJ, pode confirmar tranquilo.'));
     caixa.appendChild(quem);
 
     var ta = d.createElement('textarea');
