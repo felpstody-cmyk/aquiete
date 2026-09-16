@@ -308,7 +308,7 @@ p.centro{margin:0}
 </head>
 <body>
 
-<p class="faixa">Cupom <span>PRIMEIRA10</span> já aplicado · 10% OFF no seu pedido</p>
+<p class="faixa"><span>10% OFF</span> já aplicado no seu pedido<span id="contaCupom" hidden> · termina hoje em <b style="color:#fff;font-variant-numeric:tabular-nums">00:00:00</b></span></p>
 
 <main>
 
@@ -649,6 +649,41 @@ p.centro{margin:0}
 (function(){
   var d = document;
   var CUPOM = 'PRIMEIRA10';
+
+  /* Contador do cupom na faixa do topo.
+     O prazo é a virada do dia em BRASÍLIA, não no relógio do aparelho: assim
+     todo mundo vê o mesmo número, de qualquer estado, e o valor não reinicia
+     quando a pessoa recarrega a página (o prazo é real, não é de sessão).
+     Mesmo fuso que o resto do sistema usa pra fechar o dia. */
+  (function(){
+    try {
+      var caixa = d.getElementById('contaCupom');
+      if (!caixa) return;
+      var campo = caixa.querySelector('b');
+      var fmt = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'America/Sao_Paulo', hour12: false,
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
+      });
+
+      function doisDigitos(n){ return (n < 10 ? '0' : '') + n; }
+
+      function tick(){
+        var p = {};
+        fmt.formatToParts(new Date()).forEach(function(x){ p[x.type] = x.value; });
+        var h = Number(p.hour), m = Number(p.minute), s = Number(p.second);
+        if (h === 24) h = 0; // en-GB às vezes devolve 24 em vez de 00
+        var faltam = 86400 - (h * 3600 + m * 60 + s);
+        if (faltam < 0) faltam = 0;
+        campo.textContent = doisDigitos(Math.floor(faltam / 3600)) + ':' +
+                            doisDigitos(Math.floor((faltam % 3600) / 60)) + ':' +
+                            doisDigitos(faltam % 60);
+        caixa.hidden = false;
+      }
+
+      tick();
+      setInterval(tick, 1000);
+    } catch (e) { /* contador nunca pode quebrar a página de venda */ }
+  })();
   var KITS = {
     '1': { dock: '1 frasco · + frete',      preco: 'R$ 76,41',  final: '1 frasco (+ frete de R$ 24,90)' },
     '2': { dock: '2 frascos · frete grátis', preco: 'R$ 134,91', final: '2 frascos com frete grátis' },
