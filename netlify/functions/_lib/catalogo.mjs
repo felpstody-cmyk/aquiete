@@ -6,7 +6,7 @@
  */
 
 export const KITS = {
-  '1': { rotulo: '1 unidade',  unidades: 1, preco:  84.90, frete: 24.90 },
+  '1': { rotulo: '1 unidade',  unidades: 1, preco:  84.90, frete: 15.00 },
   '2': { rotulo: '2 unidades', unidades: 2, preco: 149.90, frete: 0 },
   '4': { rotulo: '4 unidades', unidades: 4, preco: 259.90, frete: 0 },
 }
