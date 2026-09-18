@@ -1825,14 +1825,30 @@ el('verToken').onclick = function(){
 };
 el('fixarAcesso').onclick = function(){
   var t = el('c_token').value.trim() || cfg.token;
-  if (!t) { el('fixarMsg').textContent = 'Digita o token no campo acima primeiro.'; return; }
+  if (!t) {
+    alert('Digita o token no campo "Token de administrador" primeiro, depois toca no botão de novo.');
+    el('c_token').focus();
+    return;
+  }
   cfg.url = el('c_url').value.trim() || cfg.url; cfg.token = t;
   gravar(K.cfg, cfg);
-  // replaceState não recarrega a página nem cria entrada nova no histórico.
-  history.replaceState(null, '', location.pathname + location.search + '#acesso=' + encodeURIComponent(t));
-  el('fixarMsg').innerHTML = '<b>Pronto, o acesso tá no link.</b> Agora salva esta página na tela inicial: ' +
-    'no Android, menu <b>⋮ → Adicionar à tela inicial</b>. No iPhone, <b>Compartilhar → Adicionar à Tela de Início</b>. ' +
-    'Abre sempre por esse ícone. Não manda esse link pra ninguém, porque quem tiver ele entra no painel.';
+  // replaceState não recarrega nem cria entrada no histórico. Alguns navegadores
+  // de dentro de app recusam; aí cai no location.hash, que funciona em todos.
+  var hash = '#acesso=' + encodeURIComponent(t);
+  try { history.replaceState(null, '', location.pathname + location.search + hash); }
+  catch(e) { location.hash = hash; }
+  // A resposta tem que ser impossível de não ver no celular: antes ela só
+  // trocava um texto cinza embaixo do botão e parecia que nada tinha acontecido.
+  this.textContent = '✓ Acesso salvo no link';
+  var msg = el('fixarMsg');
+  msg.style.cssText = 'margin:10px 0 0;padding:12px 14px;border-radius:10px;background:#e8f5ec;color:#14532d;border:1px solid #9fd3b0';
+  msg.innerHTML = '<b>Pronto, o acesso tá no link.</b> Agora, sem sair desta página, cria o ícone de novo: ' +
+    'no Android, <b>⋮ → Adicionar à tela inicial</b>. No iPhone, <b>Compartilhar → Adicionar à Tela de Início</b>. ' +
+    'Depois apaga o ícone antigo. Não manda esse link pra ninguém, porque quem tiver ele entra no painel.';
+  msg.scrollIntoView({ behavior:'smooth', block:'center' });
+  alert('Pronto, o acesso tá salvo no link.\n\nAgora, sem sair desta página, cria o ícone de novo:\n' +
+    '• Android: ⋮ → Adicionar à tela inicial\n• iPhone: Compartilhar → Adicionar à Tela de Início\n\n' +
+    'Depois apaga o ícone antigo.');
 };
 el('testarApi').onclick = function(){
   cfg.url = el('c_url').value.trim(); cfg.token = el('c_token').value.trim();
