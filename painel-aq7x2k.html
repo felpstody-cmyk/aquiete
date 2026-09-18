@@ -492,6 +492,10 @@ td.sel,th.sel{width:34px;padding-right:0}
         <button class="btn sec" id="verToken" type="button">Mostrar token</button>
       </div>
       <p class="sub" style="margin:14px 0 0" id="apiMsg"></p>
+      <div class="acoes" style="margin-top:18px">
+        <button class="btn sec" id="fixarAcesso" type="button">Não pedir o token de novo neste aparelho</button>
+      </div>
+      <p class="sub" style="margin:10px 0 0" id="fixarMsg">No celular o navegador às vezes apaga o que o site guardou (link aberto pelo WhatsApp ou Instagram, aba anônima, iPhone depois de uns dias). Este botão põe o acesso dentro do próprio link. Salva o link na tela inicial e abre sempre por lá.</p>
     </div>
   </div>
 
@@ -603,6 +607,20 @@ if (!despesas) {
   gravar(K.desp, despesas);
 }
 cfg = Object.assign({ custo:19, p1:97, p2:169, p4:297, frete:15.00, meta:0, min:12, url:'', token:'' }, cfg);
+
+/* Acesso que sobrevive ao celular apagando o localStorage (navegador do
+ * WhatsApp/Instagram, aba anônima, Safari limpando dado de site parado).
+ * O endereço da API sai do próprio domínio, e o token pode vir no link como
+ * #acesso=... — a parte depois do # nunca vai pro servidor nem pro Referer,
+ * e este painel não tem script de terceiro nenhum pra ler a barra. */
+if (!cfg.url && /^https?:$/.test(location.protocol)) cfg.url = location.origin + '/api/admin-dados';
+var ACESSO_HASH = /(?:^#|&)acesso=([^&]+)/;
+(function(){
+  var m = location.hash.match(ACESSO_HASH);
+  if (!m) return;
+  var t = ''; try { t = decodeURIComponent(m[1]); } catch(e){}
+  if (t && t !== cfg.token) { cfg.token = t; try{ localStorage.setItem(K.cfg, JSON.stringify(cfg)); }catch(e){} }
+})();
 
 /* ================= utilidades ================= */
 var el = function(i){ return document.getElementById(i); };
@@ -1804,6 +1822,17 @@ el('verToken').onclick = function(){
   var campo = el('c_token'), mostrando = campo.type === 'text';
   campo.type = mostrando ? 'password' : 'text';
   this.textContent = mostrando ? 'Mostrar token' : 'Ocultar token';
+};
+el('fixarAcesso').onclick = function(){
+  var t = el('c_token').value.trim() || cfg.token;
+  if (!t) { el('fixarMsg').textContent = 'Digita o token no campo acima primeiro.'; return; }
+  cfg.url = el('c_url').value.trim() || cfg.url; cfg.token = t;
+  gravar(K.cfg, cfg);
+  // replaceState não recarrega a página nem cria entrada nova no histórico.
+  history.replaceState(null, '', location.pathname + location.search + '#acesso=' + encodeURIComponent(t));
+  el('fixarMsg').innerHTML = '<b>Pronto, o acesso tá no link.</b> Agora salva esta página na tela inicial: ' +
+    'no Android, menu <b>⋮ → Adicionar à tela inicial</b>. No iPhone, <b>Compartilhar → Adicionar à Tela de Início</b>. ' +
+    'Abre sempre por esse ícone. Não manda esse link pra ninguém, porque quem tiver ele entra no painel.';
 };
 el('testarApi').onclick = function(){
   cfg.url = el('c_url').value.trim(); cfg.token = el('c_token').value.trim();
