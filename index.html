@@ -895,6 +895,32 @@ body::after{
 .kit__price{font-weight:750;font-size:var(--t-lg);color:var(--ink);white-space:nowrap}
 .kit__price small{font-size:.62em;font-weight:600;color:var(--ink-3);margin-left:.12em}
 .kit__unit{font-size:var(--t-xs);color:var(--ink-3);white-space:nowrap}
+.kit__de{text-decoration:line-through}
+
+/* Promoção de primeira compra: mesma faixa, mesmo relógio e mesmos preços
+   da oferta.html. O prazo é a virada do dia em Brasília (ver script). */
+.promo-faixa{
+  margin:0;background:#1E0F0D;color:#fff;text-align:center;
+  font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  padding:.5rem var(--gutter);
+}
+.promo-faixa span:first-child{color:var(--brand-300)}
+.promo-faixa b{color:#fff;font-variant-numeric:tabular-nums}
+.promo-aviso{
+  margin:var(--s4) auto var(--s5);max-width:max-content;padding:.55rem 1rem;
+  text-align:center;font-size:var(--t-sm);color:var(--ink-2);line-height:1.35;
+  background:var(--brand-100);border:1px solid #E8B4BE;border-radius:999px;
+}
+.promo-aviso b{color:var(--brand-700)}
+.relogio{
+  display:flex;flex-direction:column;align-items:center;gap:.15rem;
+  margin:var(--s3) 0 var(--s4);padding:.9rem 1rem;border:2px solid #E8B4BE;
+  background:#FDF4F5;border-radius:14px;text-align:center;
+}
+.relogio[hidden]{display:none}
+.relogio__t{font-size:.78rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#8A5A62}
+.relogio b{font-size:2.1rem;font-weight:800;line-height:1.1;color:#B8455C;font-variant-numeric:tabular-nums}
+.relogio__s{font-size:.74rem;color:#8A5A62}
 
 /* Estado selecionado */
 .kit[data-sel]{
@@ -1230,6 +1256,9 @@ body::after{
 
 <body>
 <a class="skip" href="#main">Pular para o conteúdo</a>
+
+<!-- Promoção de primeira compra: mesmo texto e mesmo relógio da oferta.html -->
+<p class="promo-faixa"><span>10% OFF</span> já aplicado no seu pedido<span id="contaCupom" hidden> · termina hoje em <b>00:00:00</b></span></p>
 
 <!-- Pontos de navegação — some junto com o realce se data-focus sair -->
 <nav class="secnav" aria-label="Seções da página">
@@ -1884,39 +1913,31 @@ body::after{
 
       <div class="offer__body">
 
-        <!-- Selo de origem — substituiu o bloco de escassez.
-             Produto de estoque contínuo não tem lote acabando; virou
-             argumento de procedência, que é verdadeiro e sustenta preço. -->
-        <div class="origin">
-          <span class="origin__top">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6"/><path d="M10 3v5.5L4.8 17a2.5 2.5 0 0 0 2.1 3.9h10.2A2.5 2.5 0 0 0 19.2 17L14 8.5V3"/><path d="M7 15h10"/></svg>
-            Fabricado em farmácia de manipulação
-          </span>
-          <span class="origin__sub">Produzido em lotes controlados, com rótulo próprio e origem rastreável dos florais.</span>
-        </div>
-
         <p class="center" style="font-size:var(--t-sm);color:var(--ink-3)">Cada frasco tem 30 ml — cerca de 150 aplicações de 4 gotas</p>
 
         <!-- ⚠️ PREENCHER: preços, economia e o data-checkout de cada kit.
              O botão de compra troca de link conforme a opção escolhida. -->
+        <p class="promo-aviso"><b>10% OFF de primeira compra</b> já descontado nos preços abaixo</p>
+
         <div class="kits" role="radiogroup" aria-label="Escolha a quantidade">
 
           <label class="kit" data-sel>
             <input type="radio" name="kit" value="1" checked
-                   data-checkout="checkout.html?kit=1" data-parcel="ou parcelado no cartão">
+                   data-checkout="checkout.html?kit=1&amp;cupom=PRIMEIRA10" data-parcel="ou parcelado no cartão">
             <span class="kit__mark" aria-hidden="true"></span>
             <span class="kit__main">
               <span class="kit__qty">1 unidade</span>
               <span class="kit__desc">Para conhecer · frete calculado no checkout</span>
             </span>
             <span class="kit__cost">
-              <span class="kit__price">R$ 84,90</span>
+              <span class="kit__price">R$ 76,41</span>
+              <span class="kit__unit kit__de">R$ 84,90</span>
             </span>
           </label>
 
           <label class="kit kit--featured">
             <input type="radio" name="kit" value="2"
-                   data-checkout="checkout.html?kit=2" data-parcel="ou parcelado no cartão">
+                   data-checkout="checkout.html?kit=2&amp;cupom=PRIMEIRA10" data-parcel="ou parcelado no cartão">
             <span class="kit__tags" aria-hidden="true">
               <span class="kit__tag kit__tag--soft">Mais escolhido</span>
               <span class="kit__tag">
@@ -1930,14 +1951,15 @@ body::after{
               <span class="kit__desc">Para usar em paralelo: um na bolsa, um na cabeceira</span>
             </span>
             <span class="kit__cost">
-              <span class="kit__price">R$ 74,95 <small>cada</small></span>
-              <span class="kit__unit">R$ 149,90 no total</span>
+              <span class="kit__price">R$ 67,46 <small>cada</small></span>
+              <span class="kit__unit">R$ 134,91 no total</span>
+              <span class="kit__unit kit__de">R$ 149,90</span>
             </span>
           </label>
 
           <label class="kit kit--featured">
             <input type="radio" name="kit" value="4"
-                   data-checkout="checkout.html?kit=4" data-parcel="ou parcelado no cartão">
+                   data-checkout="checkout.html?kit=4&amp;cupom=PRIMEIRA10" data-parcel="ou parcelado no cartão">
             <span class="kit__tags" aria-hidden="true">
               <span class="kit__tag kit__tag--soft">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 17V5a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h1"/><path d="M14 8h4.5a1 1 0 0 1 .8.4l3.5 4.6V17a1 1 0 0 1-1 1h-1"/><circle cx="6" cy="18" r="2.2"/><circle cx="17.5" cy="18" r="2.2"/></svg>
@@ -1951,13 +1973,26 @@ body::after{
               <span class="kit__desc">Para você e para dividir com quem você cuida</span>
             </span>
             <span class="kit__cost">
-              <span class="kit__price">R$ 64,98 <small>cada</small></span>
-              <span class="kit__unit">R$ 259,90 no total</span>
+              <span class="kit__price">R$ 58,48 <small>cada</small></span>
+              <span class="kit__unit">R$ 233,91 no total</span>
+              <span class="kit__unit kit__de">R$ 259,90</span>
             </span>
           </label>
 
         </div>
         <p class="price__note" id="parcel">ou parcelado no cartão</p>
+
+        <!-- href vem do kit selecionado; o padrão abaixo é o de 1 unidade -->
+        <div class="relogio" id="relogioOferta" hidden>
+          <span class="relogio__t">Seu desconto de 10% termina em</span>
+          <b>00:00:00</b>
+          <span class="relogio__s">O cupom vale até a virada do dia</span>
+        </div>
+
+        <a class="btn btn--primary btn--pulse btn--block" href="checkout.html?kit=1&amp;cupom=PRIMEIRA10" id="buy" data-cta="oferta">
+          Quero o meu com 10% OFF
+          <span class="btn__sub">Compra 100% segura · Pix, cartão ou boleto</span>
+        </a>
 
         <ul class="includes">
           <li>
@@ -1977,12 +2012,6 @@ body::after{
             <span>30 dias para devolver o frasco lacrado e receber o valor de volta</span>
           </li>
         </ul>
-
-        <!-- href vem do kit selecionado; o padrão abaixo é o de 1 unidade -->
-        <a class="btn btn--primary btn--pulse btn--block" href="checkout.html?kit=1" id="buy" data-cta="oferta">
-          Quero meu frasco agora
-          <span class="btn__sub">Compra 100% segura · Pix, cartão ou boleto</span>
-        </a>
 
         <div class="guarantee">
           <span class="ico ico--calm" aria-hidden="true">
@@ -2647,6 +2676,41 @@ try { if (!aqEmTeste()) {
   });
   window.addEventListener('pagehide', aqMandarEvento);
 } } catch(e){}
+</script>
+<script>
+/* Relógio do cupom — cópia do contador da oferta.html, pra os dois
+   mostrarem sempre o mesmo número. O prazo é a virada do dia em BRASÍLIA,
+   não no relógio do aparelho: todo mundo vê o mesmo valor, de qualquer
+   estado, e ele não reinicia quando a pessoa recarrega a página. */
+(function(){
+  try {
+    var caixas = [];
+    ['contaCupom','relogioOferta'].forEach(function(id){
+      var c = document.getElementById(id);
+      if (c && c.querySelector('b')) caixas.push({ caixa: c, campo: c.querySelector('b') });
+    });
+    if (!caixas.length) return;
+    var fmt = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'America/Sao_Paulo', hour12: false,
+      hour: '2-digit', minute: '2-digit', second: '2-digit'
+    });
+    function doisDigitos(n){ return (n < 10 ? '0' : '') + n; }
+    function tick(){
+      var p = {};
+      fmt.formatToParts(new Date()).forEach(function(x){ p[x.type] = x.value; });
+      var h = Number(p.hour), m = Number(p.minute), s = Number(p.second);
+      if (h === 24) h = 0; // en-GB às vezes devolve 24 em vez de 00
+      var faltam = 86400 - (h * 3600 + m * 60 + s);
+      if (faltam < 0) faltam = 0;
+      var texto = doisDigitos(Math.floor(faltam / 3600)) + ':' +
+                  doisDigitos(Math.floor((faltam % 3600) / 60)) + ':' +
+                  doisDigitos(faltam % 60);
+      caixas.forEach(function(o){ o.campo.textContent = texto; o.caixa.hidden = false; });
+    }
+    tick();
+    setInterval(tick, 1000);
+  } catch (e) { /* contador nunca pode quebrar a página de venda */ }
+})();
 </script>
 </body>
 </html>
