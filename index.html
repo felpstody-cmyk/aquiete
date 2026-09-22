@@ -2154,12 +2154,36 @@ body::after{
       "description":"Composto de cinco florais de Bach em gotas sublinguais para momentos de aperto emocional. Natural, sem dependência química, sem necessidade de prescrição.",
       "brand":{"@type":"Brand","name":"Aquiete"},
       "category":"Bem-estar",
+      "image":["https://aquieteagora.com.br/img/produto-640.jpg"],
+      "sku":"AQ-30ML",
+      "size":"30 ml",
       "offers":{
-        "@type":"Offer",
+        "@type":"AggregateOffer",
         "priceCurrency":"BRL",
-        "price":"97.00",
+        "lowPrice":"84.90",
+        "highPrice":"259.90",
+        "offerCount":3,
         "availability":"https://schema.org/InStock",
-        "url":"https://aquieteagora.com.br/"
+        "itemCondition":"https://schema.org/NewCondition",
+        "url":"https://aquieteagora.com.br/",
+        "hasMerchantReturnPolicy":{
+          "@type":"MerchantReturnPolicy",
+          "applicableCountry":"BR",
+          "returnPolicyCategory":"https://schema.org/MerchantReturnFiniteReturnWindow",
+          "merchantReturnDays":30,
+          "returnMethod":"https://schema.org/ReturnByMail",
+          "returnFees":"https://schema.org/ReturnShippingFees"
+        },
+        "shippingDetails":{
+          "@type":"OfferShippingDetails",
+          "shippingRate":{"@type":"MonetaryAmount","value":"15.00","currency":"BRL"},
+          "shippingDestination":{"@type":"DefinedRegion","addressCountry":"BR"},
+          "deliveryTime":{
+            "@type":"ShippingDeliveryTime",
+            "handlingTime":{"@type":"QuantitativeValue","minValue":1,"maxValue":2,"unitCode":"DAY"},
+            "transitTime":{"@type":"QuantitativeValue","minValue":3,"maxValue":10,"unitCode":"DAY"}
+          }
+        }
       }
     },
     {
