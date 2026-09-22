@@ -75,33 +75,106 @@ export async function notificarVenda({ nome, total, billingType }) {
 }
 
 const brl = (v) => 'R$ ' + Number(v).toFixed(2).replace('.', ',')
+const plural = (n, um, muitos) => n + ' ' + (n === 1 ? um : (muitos || um + 's'))
+const sorteio = (lista) => lista[Math.floor(Math.random() * lista.length)]
 
-/** Resumo de "como tá o dia", com o tom variando conforme o movimento. */
-export async function notificarResumo({ vendas, total, visitas, checkouts, carrinhos, abandonados, online, ofertaVisitas, ofertaCheckouts }) {
-  const linhas = []
-  if (vendas === 0 && visitas === 0) {
-    linhas.push('😴 Site quietinho até agora, ninguém passou por aqui ainda.')
-  } else if (vendas === 0) {
-    linhas.push('👀 ' + visitas + ' visita' + (visitas===1?'':'s') + ' hoje, mas nenhuma venda ainda. Calma que o dia não acabou.')
-  } else if (vendas <= 2) {
-    linhas.push('🙂 ' + vendas + ' venda' + (vendas===1?'':'s') + ' hoje, ' + brl(total) + ' na conta. Devagar e sempre.')
-  } else if (vendas <= 5) {
-    linhas.push('🔥 ' + vendas + ' vendas hoje, ' + brl(total) + ' faturado! Dia bom.')
+/**
+ * Trava contra notificação repetida.
+ *
+ * O agendador do Netlify garante "pelo menos uma vez": quando a função
+ * demora (esta busca dados no Asaas), ele roda de novo e a mesma
+ * notificação chegava duas vezes com 1 minuto de diferença. A chave fica
+ * guardada no Blobs, então vale mesmo entre execuções diferentes.
+ *
+ * Devolve true se PODE mandar (ainda não mandou essa).
+ */
+export async function podeNotificar(chave, minutos = 30) {
+  try {
+    const { getStore } = await import('@netlify/blobs')
+    const store = getStore('notificacoes')
+    const antes = Number(await store.get(chave)) || 0
+    if (antes && (Date.now() - antes) / 60_000 < minutos) return false
+    await store.set(chave, String(Date.now()))
+    return true
+  } catch {
+    // Sem Blobs é melhor notificar (e talvez repetir) do que ficar mudo.
+    return true
+  }
+}
+
+/* ---- pedaços soltos, pra mensagem não sair sempre igual ---- */
+const linhaVendas = ({ vendas, total }) => {
+  if (vendas === 0) return null
+  if (vendas <= 2) return sorteio([
+    '🙂 ' + plural(vendas, 'venda') + ' hoje, ' + brl(total) + ' na conta.',
+    '💸 Entrou ' + brl(total) + ' hoje, em ' + plural(vendas, 'venda') + '.',
+    '🙂 ' + plural(vendas, 'venda') + ' fechada' + (vendas === 1 ? '' : 's') + '. ' + brl(total) + '.',
+  ])
+  if (vendas <= 5) return sorteio([
+    '🔥 ' + vendas + ' vendas hoje, ' + brl(total) + ' faturado. Dia bom.',
+    '💵 ' + vendas + ' vendas e ' + brl(total) + ' no caixa. Tá andando.',
+  ])
+  return sorteio([
+    '🚀 ' + vendas + ' VENDAS hoje, ' + brl(total) + '. Dia de Mercedes.',
+    '👑 ' + vendas + ' vendas, ' + brl(total) + '. Hoje o gráfico subiu feio.',
+  ])
+}
+const linhaTrafego = ({ visitas, checkouts }) =>
+  '📈 ' + plural(visitas, 'visita') + ' · ' + plural(checkouts, 'checkout') + ' iniciado' + (checkouts === 1 ? '' : 's')
+const linhaOferta = ({ ofertaVisitas, ofertaCheckouts }) =>
+  ofertaVisitas > 0 ? '🎯 Página de venda: ' + plural(ofertaVisitas, 'visita') + ' · ' + plural(ofertaCheckouts, 'checkout') : null
+const linhaCarrinhos = ({ carrinhos }) =>
+  carrinhos > 0 ? '🛒 ' + plural(carrinhos, 'carrinho') + ' novo' + (carrinhos === 1 ? '' : 's') + ' hoje' : null
+const linhaAbandonados = ({ abandonados }) =>
+  abandonados > 0 ? '😬 ' + plural(abandonados, 'carrinho') + ' abandonado' + (abandonados === 1 ? '' : 's') + ' esperando um zap seu.' : null
+const linhaOnline = ({ online }) =>
+  online > 0 ? '🟢 ' + plural(online, 'pessoa') + ' no site AGORA' : null
+
+/**
+ * Resumo de "como tá o dia". Cada horário sorteia um formato diferente —
+ * às vezes o resumo inteiro, às vezes uma linha só, às vezes só o que
+ * pede ação (gente online, carrinho abandonado). Mensagem sempre igual
+ * vira paisagem e a pessoa para de abrir.
+ */
+export async function notificarResumo(d) {
+  const { vendas, visitas, online, abandonados, ontemVisitas } = d
+
+  // Venda é notícia grande: quando tem, sempre aparece.
+  const formatos = []
+  if (vendas > 0) {
+    formatos.push(
+      { titulo: 'Aquiete — como tá o dia 📊', linhas: [linhaVendas(d), linhaTrafego(d), linhaOferta(d), linhaCarrinhos(d), linhaAbandonados(d), linhaOnline(d)] },
+      { titulo: 'Aquiete — vendeu hoje 💸', linhas: [linhaVendas(d)] },
+      { titulo: 'Aquiete — resumo rápido', linhas: [linhaVendas(d), linhaTrafego(d)] },
+    )
   } else {
-    linhas.push('🚀🚀 ' + vendas + ' VENDAS hoje, ' + brl(total) + '! Bora que hoje é dia de Mercedes.')
+    formatos.push(
+      { titulo: 'Aquiete — como tá o dia 📊', linhas: [linhaTrafego(d), linhaOferta(d), linhaCarrinhos(d), linhaAbandonados(d), linhaOnline(d)] },
+      { titulo: 'Aquiete — movimento agora', linhas: [linhaTrafego(d)] },
+    )
+    if (online > 0) formatos.push({ titulo: 'Aquiete — tem gente no site 👀', linhas: [linhaOnline(d)] })
+    if (abandonados > 0) formatos.push({ titulo: 'Aquiete — carrinho esperando 🛒', linhas: [linhaAbandonados(d), linhaCarrinhos(d)] })
+    if (ontemVisitas > 0 && visitas > 0) {
+      const dif = visitas - ontemVisitas
+      formatos.push({
+        titulo: 'Aquiete — contra ontem',
+        linhas: [
+          '📊 ' + plural(visitas, 'visita') + ' hoje. Ontem o dia inteiro deu ' + ontemVisitas + '.',
+          dif >= 0 ? '↗️ Já passou o de ontem.' : '↘️ Faltam ' + Math.abs(dif) + ' pra empatar com ontem.',
+        ],
+      })
+    }
+    if (visitas === 0) {
+      formatos.length = 0
+      formatos.push({ titulo: 'Aquiete — silêncio', linhas: [sorteio([
+        '😴 Ninguém passou no site até agora.',
+        '🦗 Zero visita até aqui. Anúncio tá rodando?',
+      ])] })
+    }
   }
-  linhas.push('📈 ' + visitas + ' visita' + (visitas===1?'':'s') + ' · ' + checkouts + ' checkout' + (checkouts===1?'':'s') + ' iniciado' + (checkouts===1?'':'s'))
-  if (ofertaVisitas > 0) {
-    linhas.push('🎯 Página de venda: ' + ofertaVisitas + ' visita' + (ofertaVisitas===1?'':'s') + ' · ' + ofertaCheckouts + ' checkout' + (ofertaCheckouts===1?'':'s'))
-  }
-  if (carrinhos > 0) {
-    linhas.push('🛒 ' + carrinhos + ' carrinho' + (carrinhos===1?'':'s') + ' novo' + (carrinhos===1?'':'s') + ' hoje')
-  }
-  if (abandonados > 0) {
-    linhas.push('😬 ' + abandonados + ' carrinho' + (abandonados===1?'':'s') + ' abandonado' + (abandonados===1?'':'s') + ' esperando um zap seu.')
-  }
-  if (online > 0) {
-    linhas.push('🟢 ' + online + ' pessoa' + (online===1?'':'s') + ' no site AGORA')
-  }
-  await push(linhas.join('\n'), 'Aquiete — como tá o dia 📊')
+
+  const escolhido = sorteio(formatos)
+  const linhas = escolhido.linhas.filter(Boolean)
+  if (!linhas.length) return
+  await push(linhas.join('\n'), escolhido.titulo)
 }

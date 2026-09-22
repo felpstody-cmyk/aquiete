@@ -6,7 +6,7 @@
  * duplicar a lógica de falar com o Asaas).
  */
 
-import { notificarResumo, push } from './_lib/notificar.mjs'
+import { notificarResumo, push, podeNotificar } from './_lib/notificar.mjs'
 import { diaBR } from './_lib/metricas.mjs'
 
 export default async () => {
@@ -24,6 +24,15 @@ export default async () => {
     if (!r.ok) throw new Error(dados?.erro || `admin-dados ${r.status}`)
 
     const hoje = diaBR()
+    const ontem = diaBR(new Date(Date.now() - 24 * 3600 * 1000))
+
+    // O agendador do Netlify roda "pelo menos uma vez": quando a busca no
+    // Asaas demora, ele reexecuta e o celular recebia a mesma notificacao
+    // duas vezes seguidas. Uma por horario, e so.
+    const hora = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', hour12: false }).format(new Date())
+    if (!await podeNotificar(`resumo:${hoje}:${hora}`, 90)) {
+      return new Response('ja mandei esse resumo')
+    }
     const pedidosHoje = (dados.pedidos || []).filter((p) => p.pagoEm === hoje && p.status === 'Pago')
     const total = pedidosHoje.reduce((s, p) => s + (Number(p.valor) || 0), 0)
     const metricas = dados.metricas || {}
@@ -38,12 +47,15 @@ export default async () => {
       ofertaCheckouts: Number(metricas['oferta-checkout:' + hoje]) || 0,
       abandonados: (dados.abandonados || []).length,
       online: (dados.ativos || []).filter((a) => !a.pais || a.pais === 'BR').length,
+      ontemVisitas: Number(metricas['visita:' + ontem]) || 0,
     })
   } catch (e) {
     console.error('[resumo-dia]', e.message)
     // Antes: dava erro e não mandava nada — parecia "notificação sumida"
     // sem nenhuma pista de por quê. Agora sempre chega alguma coisa.
-    await push('⚠️ Não consegui puxar os dados agora (' + e.message + '). Sem resumo desse horário.', 'Aquiete — deu ruim no resumo')
+    if (await podeNotificar('resumo-erro', 240)) {
+      await push('⚠️ Não consegui puxar os dados agora (' + e.message + '). Sem resumo desse horário.', 'Aquiete — deu ruim no resumo')
+    }
   }
 
   return new Response('ok')

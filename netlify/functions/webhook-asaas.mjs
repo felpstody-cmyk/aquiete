@@ -19,7 +19,7 @@ import { timingSafeEqual } from 'node:crypto'
 import { buscarCliente } from './_lib/gateways/asaas.mjs'
 import { enviar, htmlConfirmacao, htmlVenda } from './_lib/email.mjs'
 import { enviarCompra } from './_lib/meta-capi.mjs'
-import { notificarVenda } from './_lib/notificar.mjs'
+import { notificarVenda, podeNotificar } from './_lib/notificar.mjs'
 import { marcarCarrinhoPago } from './_lib/metricas.mjs'
 
 const json = (dados, status = 200) =>
@@ -158,7 +158,11 @@ export default async (req) => {
   }
 
   // O "toc toc" no celular. Sem cliente ainda manda, só troca o nome por generico.
-  notificarVenda({ nome: cliente?.nome, total, billingType: pgto.billingType }).catch(() => {})
+  // O Asaas reenvia o webhook quando nao recebe 200 na hora; sem trava,
+  // a mesma venda tocava o celular varias vezes.
+  if (await podeNotificar('venda:' + referencia, 24 * 60)) {
+    notificarVenda({ nome: cliente?.nome, total, billingType: pgto.billingType }).catch(() => {})
+  }
 
   return json({ ok: true, referencia, ...resultados })
 }
