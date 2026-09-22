@@ -702,7 +702,8 @@ img,svg{display:block;max-width:100%}
       },
       function(){
         var ok = true;
-        ok = erro(el('cep'),    el('cep').value.replace(/\D/g,'').length === 8 ? '' : 'CEP incompleto') && ok;
+        ok = erro(el('cep'),    el('cep').value.replace(/\D/g,'').length !== 8 ? 'CEP incompleto'
+            : (entregaNesteCep(el('cep').value.replace(/\D/g,'')) ? '' : 'Ainda não entregamos nessa região')) && ok;
         ok = erro(el('rua'),    el('rua').value.trim() ? '' : 'Informe a rua') && ok;
         ok = erro(el('numero'), el('numero').value.trim() ? '' : 'Informe o número') && ok;
         ok = erro(el('bairro'), el('bairro').value.trim() ? '' : 'Informe o bairro') && ok;
@@ -753,9 +754,27 @@ img,svg{display:block;max-width:100%}
 
   /* ---------- Busca de CEP (ViaCEP — gratuito, sem chave) ---------- */
   var cep = el('cep'), cepMsg = el('cepMsg');
+
+  /* Regiões sem entrega (frete pro Norte come a margem do pedido).
+     As faixas são as mesmas do servidor, em catalogo.mjs — lá é que a
+     regra vale de verdade; aqui é só pra pessoa saber antes de preencher
+     o resto do formulário e levar um não no fim.
+       66000–69999 PA, AP, AM, RR, AC · 76800–76999 RO · 77000–77999 TO */
+  var CEPS_SEM_ENTREGA = [[66000, 69999], [76800, 76999], [77000, 77999]];
+  function entregaNesteCep(n){
+    var p = Number(String(n).slice(0, 5));
+    if (!p) return true;
+    return !CEPS_SEM_ENTREGA.some(function(f){ return p >= f[0] && p <= f[1]; });
+  }
+
   cep.addEventListener('blur', function(){
     var n = cep.value.replace(/\D/g, '');
     if (n.length !== 8) return;
+    if (!entregaNesteCep(n)) {
+      cepMsg.textContent = 'Ainda não entregamos nessa região. Escreve pra contato@aquieteagora.com.br que a gente te avisa quando abrir.';
+      cepMsg.setAttribute('data-err', '');
+      return;
+    }
     cepMsg.textContent = 'Buscando…';
     cepMsg.removeAttribute('data-err');
 
@@ -821,7 +840,8 @@ img,svg{display:block;max-width:100%}
     ok = erro(el('cpf'),    cpfValido(el('cpf').value) ? '' : 'CPF inválido') && ok;
     ok = erro(el('email'),  /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(el('email').value) ? '' : 'E-mail inválido') && ok;
     ok = erro(el('tel'),    el('tel').value.replace(/\D/g,'').length < 10 ? 'Celular incompleto' : '') && ok;
-    ok = erro(el('cep'),    el('cep').value.replace(/\D/g,'').length === 8 ? '' : 'CEP incompleto') && ok;
+    ok = erro(el('cep'),    el('cep').value.replace(/\D/g,'').length !== 8 ? 'CEP incompleto'
+            : (entregaNesteCep(el('cep').value.replace(/\D/g,'')) ? '' : 'Ainda não entregamos nessa região')) && ok;
     ok = erro(el('rua'),    el('rua').value.trim() ? '' : 'Informe a rua') && ok;
     ok = erro(el('numero'), el('numero').value.trim() ? '' : 'Informe o número') && ok;
     ok = erro(el('bairro'), el('bairro').value.trim() ? '' : 'Informe o bairro') && ok;

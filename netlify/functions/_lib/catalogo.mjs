@@ -81,6 +81,23 @@ export function cpfValido(valor) {
   return true
 }
 
+/**
+ * Regiões onde a gente não entrega por enquanto: o frete pro Norte come a
+ * margem inteira do pedido. As faixas são de CEP, não de nome de estado,
+ * porque nome vem do formulário e dá pra digitar qualquer coisa.
+ *
+ *   66000–69999  PA, AP, AM, RR e AC
+ *   76800–76999  RO   (76000–76799 é Goiás e continua liberado)
+ *   77000–77999  TO
+ */
+const CEPS_SEM_ENTREGA = [[66000, 69999], [76800, 76999], [77000, 77999]]
+
+export function entregaNesteCep(cep) {
+  const n = Number(digitos(cep).slice(0, 5))
+  if (!n) return true
+  return !CEPS_SEM_ENTREGA.some(([de, ate]) => n >= de && n <= ate)
+}
+
 export function validarCliente(c = {}) {
   const faltando = []
   if (!String(c.nome ?? '').trim().includes(' ')) faltando.push('nome completo')
@@ -93,6 +110,12 @@ export function validarCliente(c = {}) {
   }
   if (faltando.length) {
     throw new ErroDeEntrada(`Dados incompletos: ${faltando.join(', ')}`)
+  }
+
+  if (!entregaNesteCep(c.cep)) {
+    throw new ErroDeEntrada(
+      'Ainda não entregamos nessa região. Escreve pra contato@aquieteagora.com.br que a gente te avisa quando abrir.'
+    )
   }
   return {
     nome: String(c.nome).trim(),
