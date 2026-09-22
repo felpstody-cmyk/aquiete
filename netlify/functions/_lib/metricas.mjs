@@ -103,12 +103,87 @@ export async function salvarCarrinho(email, dados) {
     const store = await loja('carrinhos')
     // Mescla em vez de sobrescrever: se já mandamos o e-mail de recuperação,
     // continuar digitando não pode apagar essa marca.
-    const atual = await store.get(email, { type: 'json' }).catch(() => null)
-    await store.setJSON(email, Object.assign({}, atual, dados))
+    let atual = await store.get(email, { type: 'json' }).catch(() => null)
+    // Quem já pagou e voltou pra comprar de novo começa um carrinho novo —
+    // senão a marca de "pago" da compra anterior esconderia este.
+    if (atual?.pago && !dados.pedido && !dados.pago) atual = null
+    const novo = Object.assign({}, atual, dados)
+    // "criado" é a primeira vez que o e-mail apareceu; "em" é o último toque.
+    if (!atual) novo.criado = dados.em || Date.now()
+    await store.setJSON(email, novo)
     // Só conta como "carrinho novo" na primeira vez que esse e-mail aparece —
     // os próximos toques (continuar digitando, blur de outro campo) não
     // podem inflar a métrica do dia.
     if (!atual) await contar(`carrinho:${diaBR()}`)
+  } catch { /* silêncio proposital */ }
+}
+
+/**
+ * Quanto tempo esperar o pagamento antes de o pedido virar "abandonado".
+ * Antes o carrinho era apagado assim que o Pix saía, e quem gerava o Pix e
+ * não pagava sumia do sistema — tinha que ser cadastrado na mão. Agora o
+ * carrinho fica guardado com o pedido e só sai quando o pagamento cai.
+ * Boleto demora pra compensar, então espera bem mais antes de acusar.
+ */
+export const PRAZO_PAGAMENTO_MIN = { pix: 90, card: 90, boleto: 72 * 60 }
+
+function prazoDe(metodo) {
+  return PRAZO_PAGAMENTO_MIN[metodo] ?? PRAZO_PAGAMENTO_MIN.pix
+}
+
+/** Pedido gerado mas ainda dentro do prazo de pagar: não é abandono (ainda). */
+function aguardandoPagamento(d, agora) {
+  return !!(d.pedido && !d.pago && (agora - d.pedido.em) / 60_000 < prazoDe(d.pedido.metodo))
+}
+
+/**
+ * Situação de um carrinho, na ordem em que a pessoa avança:
+ *   digitando  -> mexeu no checkout há menos de 10 min
+ *   abandonado -> digitou e sumiu sem gerar pedido
+ *   aguardando -> gerou Pix/boleto/cartão e ainda tá no prazo de pagar
+ *   nao-pagou  -> gerou o pedido e o prazo passou sem pagamento
+ *   pago       -> o Asaas confirmou
+ */
+export function situacaoCarrinho(d, agora = Date.now()) {
+  if (d.pago) return 'pago'
+  if (d.pedido) return aguardandoPagamento(d, agora) ? 'aguardando' : 'nao-pagou'
+  return (agora - d.em) / 60_000 < 10 ? 'digitando' : 'abandonado'
+}
+
+/** Índice referência do pedido -> e-mail, pro webhook achar o carrinho mesmo sem o cliente. */
+async function lojaRef() { return loja('carrinhos-ref') }
+
+/**
+ * Chamado quando o pedido sai (Pix, boleto ou cartão gerado). Cria o
+ * carrinho se ele ainda não existia — quem digita rápido e já clica em
+ * pagar pode chegar aqui antes do /api/carrinho salvar.
+ */
+export async function marcarCarrinhoComPedido(email, dados, pedido) {
+  try {
+    const chave = String(email ?? '').trim().toLowerCase()
+    if (!chave) return
+    const store = await loja('carrinhos')
+    const atual = await store.get(chave, { type: 'json' }).catch(() => null)
+    const extra = { pedido: Object.assign({ em: Date.now() }, pedido) }
+    // Pix e boleto já têm o e-mail do próprio código (e o lembrete-pix de 3h).
+    // Pular o toque de 2h da sequência evita a pessoa receber dois e-mails
+    // quase juntos falando do mesmo pedido.
+    if (pedido.metodo !== 'card') extra.etapa = Math.max(atual?.etapa || 0, 1)
+    await salvarCarrinho(chave, Object.assign({}, dados, extra, { em: atual?.em || Date.now() }))
+    if (pedido.referencia) (await lojaRef()).set(pedido.referencia, chave).catch(() => {})
+  } catch { /* silêncio proposital */ }
+}
+
+/** Pagamento confirmado: o carrinho sai da lista de abandonados e das cobranças por e-mail. */
+export async function marcarCarrinhoPago({ email, referencia }) {
+  try {
+    let chave = String(email ?? '').trim().toLowerCase()
+    if (!chave && referencia) chave = String(await (await lojaRef()).get(referencia).catch(() => '') || '')
+    if (!chave) return
+    const store = await loja('carrinhos')
+    const atual = await store.get(chave, { type: 'json' }).catch(() => null)
+    if (!atual) return
+    await store.setJSON(chave, Object.assign({}, atual, { pago: Date.now() }))
   } catch { /* silêncio proposital */ }
 }
 
@@ -132,6 +207,8 @@ export async function carrinhosPendentesDeEmail() {
     await Promise.all(blobs.map(async (b) => {
       const d = await store.get(b.key, { type: 'json' }).catch(() => null)
       if (!d) return
+      // Pagou, ou ainda tá no prazo de pagar o Pix/boleto: não cobra por e-mail.
+      if (d.pago || aguardandoPagamento(d, agora)) return
       const etapa = d.etapa || 0
       if (etapa >= ETAPAS_CARRINHO.length) return
       const horasDesde = (agora - d.em) / 3_600_000
@@ -161,8 +238,13 @@ export async function removerCarrinho(email) {
   } catch { /* silêncio proposital */ }
 }
 
-/** Quem digitou os dados e sumiu sem finalizar — pra chamar de volta. */
-export async function lerCarrinhosAbandonados() {
+/**
+ * Todos os carrinhos da última semana, com a situação de cada um — o que
+ * explica a diferença entre "carrinhos novos" e "abandonados" no painel
+ * (quem ainda tá digitando, quem gerou Pix e tá no prazo, quem pagou).
+ * Lixo de mais de uma semana é limpo em vez de acumular pra sempre.
+ */
+export async function lerTodosCarrinhos() {
   const agora = Date.now()
   const saida = []
   try {
@@ -171,12 +253,19 @@ export async function lerCarrinhosAbandonados() {
     await Promise.all(blobs.map(async (b) => {
       const d = await store.get(b.key, { type: 'json' }).catch(() => null)
       if (!d) return
-      const minutos = (agora - d.em) / 60_000
-      // pessoa ainda digitando não conta como abandonada; lixo de mais
-      // de uma semana é limpo em vez de acumular pra sempre
-      if (minutos > 7 * 24 * 60) { store.delete(b.key).catch(() => {}); return }
-      if (minutos >= 10) saida.push(Object.assign({ email: b.key }, d))
+      if ((agora - d.em) / 60_000 > 7 * 24 * 60) { store.delete(b.key).catch(() => {}); return }
+      saida.push(Object.assign({ email: b.key, situacao: situacaoCarrinho(d, agora) }, d))
     }))
   } catch { /* sem dados é melhor que erro 500 */ }
   return saida
+}
+
+/**
+ * Quem digitou os dados e sumiu sem finalizar — pra chamar de volta.
+ * Inclui quem gerou Pix/boleto/cartão e não pagou no prazo (situacao
+ * "nao-pagou"), que antes sumia do sistema porque o pedido apagava o carrinho.
+ */
+export async function lerCarrinhosAbandonados(todos) {
+  const lista = todos || await lerTodosCarrinhos()
+  return lista.filter((c) => c.situacao === 'abandonado' || c.situacao === 'nao-pagou')
 }

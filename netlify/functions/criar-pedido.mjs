@@ -10,7 +10,8 @@
 import { montarPedido, validarCliente, ErroDeEntrada } from './_lib/catalogo.mjs'
 import { obterGateway, ErroDeGateway } from './_lib/gateways/index.mjs'
 import { enviar, htmlAguardando } from './_lib/email.mjs'
-import { removerCarrinho } from './_lib/metricas.mjs'
+import { marcarCarrinhoComPedido } from './_lib/metricas.mjs'
+import { geoDe } from './_lib/geo.mjs'
 
 const json = (dados, status = 200) =>
   new Response(JSON.stringify(dados), {
@@ -40,8 +41,22 @@ export default async (req) => {
     const gateway = obterGateway()
     const cobranca = await gateway.criarCobranca({ pedido, cliente, referencia })
 
-    // Chegou até aqui: não é mais "abandonado", é um pedido de verdade.
-    removerCarrinho(cliente.email).catch(() => {})
+    // Pedido gerado ainda não é venda: quem gera o Pix e não paga tem que
+    // voltar pra lista de abandonados sozinho depois do prazo. Por isso o
+    // carrinho NÃO é apagado aqui — ele só sai quando o webhook confirma
+    // o pagamento (marcarCarrinhoPago). Nunca derruba o pedido se falhar.
+    const geo = geoDe(req)
+    await marcarCarrinhoComPedido(cliente.email, {
+      nome: cliente.nome,
+      telefone: cliente.telefone,
+      kit: pedido.kitId,
+      cidadeForm: cliente.cidade,
+      ...(geo ? { cidadeIp: geo.cidade, uf: geo.uf } : {}),
+    }, {
+      referencia,
+      metodo: pedido.metodo,
+      total: pedido.total,
+    }).catch(() => {})
 
     // Manda o codigo por e-mail para quem vai pagar depois. Sem isto, quem
     // fecha a pagina do Pix perde a cobranca e precisa refazer o pedido.

@@ -20,6 +20,7 @@ import { buscarCliente } from './_lib/gateways/asaas.mjs'
 import { enviar, htmlConfirmacao, htmlVenda } from './_lib/email.mjs'
 import { enviarCompra } from './_lib/meta-capi.mjs'
 import { notificarVenda } from './_lib/notificar.mjs'
+import { marcarCarrinhoPago } from './_lib/metricas.mjs'
 
 const json = (dados, status = 200) =>
   new Response(JSON.stringify(dados), {
@@ -113,6 +114,10 @@ export default async (req) => {
   }
 
   const resultados = {}
+
+  // Tira da lista de abandonados e da sequência de e-mail. Pela referência
+  // também, pra funcionar mesmo se a busca do cliente no Asaas falhou.
+  await marcarCarrinhoPago({ email: cliente?.email, referencia }).catch(() => {})
 
   if (cliente?.email) {
     try {

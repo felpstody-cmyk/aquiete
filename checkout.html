@@ -1025,18 +1025,26 @@ try { if (!aqEmTeste()) {
     if (!dNome || !dEmail || !dTel) return;
     var kitDoCarrinho = new URLSearchParams(location.search).get('kit') || '';
     var timer = null;
+    /* Todos os campos do formulário: o painel mostra até onde a pessoa
+       chegou. Vai só o NOME de cada campo preenchido, nunca o valor —
+       CPF e endereço não saem daqui antes do pedido de verdade. */
+    var IDS = ['nome','cpf','email','tel','cep','rua','numero','compl','bairro','cidade'];
+    var campos = IDS.map(function(id){ return document.getElementById(id); }).filter(Boolean);
+    var dCidade = document.getElementById('cidade');
     var mandar = function(){
       var email = (dEmail.value || '').trim();
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(email)) return;
+      var preenchidos = campos.filter(function(c){ return (c.value || '').trim(); }).map(function(c){ return c.id; });
       fetch('/api/carrinho', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nome: dNome.value, email: email, telefone: dTel.value, kit: kitDoCarrinho }),
+        body: JSON.stringify({ nome: dNome.value, email: email, telefone: dTel.value, kit: kitDoCarrinho,
+          cidade: dCidade ? dCidade.value : '', campos: preenchidos }),
         keepalive: true
       }).catch(function(){});
     };
     var agendar = function(){ clearTimeout(timer); timer = setTimeout(mandar, 1200); };
-    [dNome, dEmail, dTel].forEach(function(campo){
+    campos.forEach(function(campo){
       campo.addEventListener('blur', mandar);
       campo.addEventListener('input', agendar);
     });
