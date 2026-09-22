@@ -549,6 +549,35 @@ td.sel,th.sel{width:34px;padding-right:0}
 (function(){
 'use strict';
 
+/* ================= versão ================= */
+/* IMPORTANTE: mude esta data toda vez que editar este arquivo.
+ *
+ * O navegador do celular (e o Chrome em modo app no PC) às vezes serve a
+ * cópia guardada e ignora que o site publicou uma versão nova — foi por
+ * isso que o painel abria desatualizado mesmo depois do deploy. Em vez de
+ * depender do cache do navegador, o painel confere sozinho: busca o
+ * próprio arquivo com cache desligado e, se a versão de lá for diferente
+ * da que está rodando, reabre numa URL com ?v=, que o navegador não tem
+ * guardada. O #acesso vai junto, então o token não se perde. */
+var VERSAO_PAINEL = '2026-09-22-1';
+(function(){
+  try {
+    if (!/^https?:$/.test(location.protocol)) return;
+    fetch(location.pathname + '?checagem=' + Date.now(), { cache: 'no-store' })
+      .then(function(r){ return r.ok ? r.text() : null; })
+      .then(function(t){
+        if (!t) return;
+        var m = /VERSAO_PAINEL = '([^']+)'/.exec(t);
+        if (!m || m[1] === VERSAO_PAINEL) return;
+        // Trava contra laço: se recarregar e ainda vier a versão velha, desiste.
+        if (sessionStorage.getItem('aq_versao_tentada') === m[1]) return;
+        sessionStorage.setItem('aq_versao_tentada', m[1]);
+        location.replace(location.pathname + '?v=' + m[1] + location.hash);
+      })
+      .catch(function(){});
+  } catch (e) { /* checagem nunca pode quebrar o painel */ }
+})();
+
 /* ================= armazenamento ================= */
 var K = { ped:'aquiete.pedidos', rem:'aquiete.remoto', desp:'aquiete.despesas',
           est:'aquiete.estoque', cfg:'aquiete.config', sinc:'aquiete.sinc', sta:'aquiete.status',
