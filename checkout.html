@@ -250,6 +250,8 @@ img,svg{display:block;max-width:100%}
 .total span{font-weight:650;color:var(--ink)}
 .total strong{font-family:var(--font-display);font-size:1.875rem;color:var(--brand-700);font-weight:600;line-height:1}
 .total__note{font-size:.75rem;color:var(--ink-3);text-align:right;margin-top:.2rem}
+.frete-nota{font-size:.75rem;line-height:1.45;color:var(--brand-700);background:var(--brand-100);border-radius:var(--r-sm);padding:.5rem .6rem;margin-top:.4rem}
+.frete-nota[hidden]{display:none}
 
 /* ---------- Botão ---------- */
 .btn{
@@ -512,6 +514,7 @@ img,svg{display:block;max-width:100%}
             <div><span>Subtotal</span> <span id="sub">R$ 97,00</span></div>
             <div id="linhaDesc" hidden><span>Desconto</span> <span id="desc">— R$ 0,00</span></div>
             <div><span>Frete</span> <span id="frete">R$ 15,00</span></div>
+            <p class="frete-nota" id="freteNota" hidden>Frete grátis não vale para a sua região: o envio para o Norte é feito por transportadora e sai por R$ 29,90.</p>
           </div>
 
           <div class="total">
@@ -584,18 +587,36 @@ img,svg{display:block;max-width:100%}
   };
   var cupomAtivo = null;
 
+  /* ---------- Frete do Norte ----------
+     Espelho de catalogo.mjs. Mandar pro Norte custa bem mais que o frete
+     padrão, então lá o frete é cobrado mesmo nos kits que têm frete
+     grátis. Quem decide é o servidor; aqui é só pra tela bater com o
+     que vai ser cobrado.
+       66000–69999 PA, AP, AM, RR, AC · 76800–76999 RO · 77000–77999 TO */
+  var FRETE_NORTE = 29.90;
+  var CEPS_NORTE = [[66000, 69999], [76800, 76999], [77000, 77999]];
+  var cepDigitado = '';
+  function ehNorte(n){
+    var p = Number(String(n || '').replace(/\D/g, '').slice(0, 5));
+    if (!p) return false;
+    return CEPS_NORTE.some(function(f){ return p >= f[0] && p <= f[1]; });
+  }
+
   /* ---------- Resumo ---------- */
   var el = function(id){ return d.getElementById(id); };
   function pintarResumo(){
     var desconto = cupomAtivo ? +(kit.preco * cupomAtivo.percentual).toFixed(2) : 0;
-    var total = kit.preco - desconto + kit.frete;
+    var norte = ehNorte(cepDigitado);
+    var frete = norte ? FRETE_NORTE : kit.frete;
+    var total = kit.preco - desconto + frete;
 
     el('itemT').textContent  = kit.rotulo;
     el('itemP').textContent  = brl(kit.preco);
     el('sub').textContent    = brl(kit.preco);
-    el('frete').innerHTML    = kit.frete === 0
+    el('frete').innerHTML    = frete === 0
       ? '<span class="free">Grátis</span>'
-      : brl(kit.frete);
+      : brl(frete);
+    el('freteNota').hidden   = !norte;
     el('linhaDesc').hidden   = !desconto;
     el('desc').textContent   = '— ' + brl(desconto);
     el('total').textContent  = brl(total);
@@ -702,8 +723,7 @@ img,svg{display:block;max-width:100%}
       },
       function(){
         var ok = true;
-        ok = erro(el('cep'),    el('cep').value.replace(/\D/g,'').length !== 8 ? 'CEP incompleto'
-            : (entregaNesteCep(el('cep').value.replace(/\D/g,'')) ? '' : 'Ainda não entregamos nessa região')) && ok;
+        ok = erro(el('cep'),    el('cep').value.replace(/\D/g,'').length === 8 ? '' : 'CEP incompleto') && ok;
         ok = erro(el('rua'),    el('rua').value.trim() ? '' : 'Informe a rua') && ok;
         ok = erro(el('numero'), el('numero').value.trim() ? '' : 'Informe o número') && ok;
         ok = erro(el('bairro'), el('bairro').value.trim() ? '' : 'Informe o bairro') && ok;
@@ -755,26 +775,11 @@ img,svg{display:block;max-width:100%}
   /* ---------- Busca de CEP (ViaCEP — gratuito, sem chave) ---------- */
   var cep = el('cep'), cepMsg = el('cepMsg');
 
-  /* Regiões sem entrega (frete pro Norte come a margem do pedido).
-     As faixas são as mesmas do servidor, em catalogo.mjs — lá é que a
-     regra vale de verdade; aqui é só pra pessoa saber antes de preencher
-     o resto do formulário e levar um não no fim.
-       66000–69999 PA, AP, AM, RR, AC · 76800–76999 RO · 77000–77999 TO */
-  var CEPS_SEM_ENTREGA = [[66000, 69999], [76800, 76999], [77000, 77999]];
-  function entregaNesteCep(n){
-    var p = Number(String(n).slice(0, 5));
-    if (!p) return true;
-    return !CEPS_SEM_ENTREGA.some(function(f){ return p >= f[0] && p <= f[1]; });
-  }
-
   cep.addEventListener('blur', function(){
     var n = cep.value.replace(/\D/g, '');
     if (n.length !== 8) return;
-    if (!entregaNesteCep(n)) {
-      cepMsg.textContent = 'Ainda não entregamos nessa região. Escreve pra contato@aquieteagora.com.br que a gente te avisa quando abrir.';
-      cepMsg.setAttribute('data-err', '');
-      return;
-    }
+    cepDigitado = n;
+    totalAtual = pintarResumo();
     cepMsg.textContent = 'Buscando…';
     cepMsg.removeAttribute('data-err');
 
@@ -840,8 +845,7 @@ img,svg{display:block;max-width:100%}
     ok = erro(el('cpf'),    cpfValido(el('cpf').value) ? '' : 'CPF inválido') && ok;
     ok = erro(el('email'),  /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(el('email').value) ? '' : 'E-mail inválido') && ok;
     ok = erro(el('tel'),    el('tel').value.replace(/\D/g,'').length < 10 ? 'Celular incompleto' : '') && ok;
-    ok = erro(el('cep'),    el('cep').value.replace(/\D/g,'').length !== 8 ? 'CEP incompleto'
-            : (entregaNesteCep(el('cep').value.replace(/\D/g,'')) ? '' : 'Ainda não entregamos nessa região')) && ok;
+    ok = erro(el('cep'),    el('cep').value.replace(/\D/g,'').length === 8 ? '' : 'CEP incompleto') && ok;
     ok = erro(el('rua'),    el('rua').value.trim() ? '' : 'Informe a rua') && ok;
     ok = erro(el('numero'), el('numero').value.trim() ? '' : 'Informe o número') && ok;
     ok = erro(el('bairro'), el('bairro').value.trim() ? '' : 'Informe o bairro') && ok;

@@ -34,7 +34,8 @@ export default async (req) => {
     const corpo = await req.json()
 
     // Ordem importa: valida antes de gastar chamada de API
-    const pedido = montarPedido(corpo.kit, corpo.metodo, corpo.cupom)
+    // O CEP entra aqui porque o frete do Norte depende dele (ver catalogo.mjs).
+    const pedido = montarPedido(corpo.kit, corpo.metodo, corpo.cupom, corpo.cliente?.cep)
     const cliente = validarCliente(corpo.cliente)
     const referencia = gerarReferencia()
 
