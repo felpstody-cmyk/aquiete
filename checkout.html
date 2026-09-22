@@ -873,6 +873,28 @@ img,svg{display:block;max-width:100%}
     botao.innerHTML = travado ? (texto || 'Processando…') : rotuloBotao;
   }
 
+  /* Conversao do Google Ads.
+     Dispara quando o pedido e criado (no cartao e no boleto a pessoa sai
+     da pagina em seguida, entao o evento tem que ir embora antes). Por
+     isso o event_callback, com um prazo de 900ms: se o Google nao
+     responder a tempo, segue o baile e a venda nao trava por causa de
+     rastreamento. */
+  function conversaoGoogle(referencia, valor, depois){
+    var seguiu = false;
+    function seguir(){ if (seguiu) return; seguiu = true; if (depois) depois(); }
+    try {
+      if (!window.gtag) return seguir();
+      gtag('event', 'conversion', {
+        send_to: 'AW-18468707390/W2_HCIHf04EdEL64yOZE',
+        value: valor,
+        currency: 'BRL',
+        transaction_id: referencia || '',
+        event_callback: seguir
+      });
+      setTimeout(seguir, 900);
+    } catch(e) { seguir(); }
+  }
+
   function enviar(){
     travar(true);
     fetch('/api/criar-pedido', {
@@ -902,9 +924,11 @@ img,svg{display:block;max-width:100%}
         if (!/^https:\/\//i.test(String(res.j.redirectUrl))) {
           throw new Error('Endereço de pagamento inválido. Tente outro método.');
         }
-        location.href = res.j.redirectUrl; return;
+        var destino = res.j.redirectUrl;
+        conversaoGoogle(res.j.referencia, totalAtual, function(){ location.href = destino; });
+        return;
       }
-      if (res.j.pix) { mostrarPix(res.j); return; }
+      if (res.j.pix) { conversaoGoogle(res.j.referencia, totalAtual); mostrarPix(res.j); return; }
       throw new Error('Resposta inesperada do gateway');
     })
     .catch(function(e){
@@ -1080,7 +1104,17 @@ try { if (!aqEmTeste()) {
    aceitou na página inicial não precisa aceitar de novo aqui. */
 (function(){
   var META_PIXEL_ID = '1991105264740384';
+  var GOOGLE_ADS_ID = 'AW-18468707390';
   try {
+    if (GOOGLE_ADS_ID && localStorage.getItem('aq_cookies') === 'aceito') {
+      var g = document.createElement('script'); g.async = true;
+      g.src = 'https://www.googletagmanager.com/gtag/js?id=' + GOOGLE_ADS_ID;
+      document.head.appendChild(g);
+      window.dataLayer = window.dataLayer || [];
+      window.gtag = function(){ dataLayer.push(arguments); };
+      gtag('js', new Date());
+      gtag('config', GOOGLE_ADS_ID);
+    }
     if (META_PIXEL_ID && localStorage.getItem('aq_cookies') === 'aceito') {
       /* eslint-disable */
       !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?

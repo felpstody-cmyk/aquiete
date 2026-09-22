@@ -738,8 +738,12 @@ p.centro{margin:0}
     ['btnFaixa','btnOferta','btnFinal'].forEach(function(id){ io.observe(d.getElementById(id)); });
   }
 
-  /* Consentimento + Pixel do Meta */
+  /* Consentimento + Pixel do Meta + tag do Google Ads */
   var META_PIXEL_ID = '1991105264740384';
+  /* A tag do Google precisa rodar AQUI porque e nesta pagina que a pessoa
+     chega com o ?gclid do anuncio. Sem isso a compra acontece mas o Google
+     nao sabe que veio dele. */
+  var GOOGLE_ADS_ID = 'AW-18468707390';
   var carregado = false;
   function lerConsent(){ try { return localStorage.getItem('aq_cookies'); } catch(e){ return null; } }
   function carregarPixel(){
@@ -755,6 +759,16 @@ p.centro{margin:0}
     fbq('init', META_PIXEL_ID);
     fbq('track', 'PageView');
     fbq('track', 'ViewContent', { content_name: 'Aquiete 30ml', content_type: 'product' });
+
+    if (GOOGLE_ADS_ID) {
+      var s = d.createElement('script'); s.async = true;
+      s.src = 'https://www.googletagmanager.com/gtag/js?id=' + GOOGLE_ADS_ID;
+      d.head.appendChild(s);
+      window.dataLayer = window.dataLayer || [];
+      window.gtag = function(){ dataLayer.push(arguments); };
+      gtag('js', new Date());
+      gtag('config', GOOGLE_ADS_ID);
+    }
   }
   function decidir(valor){
     try { localStorage.setItem('aq_cookies', valor); } catch(e){}

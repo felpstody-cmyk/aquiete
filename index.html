@@ -2560,6 +2560,11 @@ body::after{
   (function(){
     var META_PIXEL_ID = '1991105264740384';
     var GA_ID         = '';
+    /* Tag do Google Ads. Precisa estar TAMBEM aqui e na oferta, nao so no
+       checkout: e nesta pagina que a pessoa chega com o ?gclid do anuncio,
+       e e a tag que guarda esse identificador pra conversao ser creditada
+       depois. So carrega depois do "Aceitar" nos cookies. */
+    var GOOGLE_ADS_ID = 'AW-18468707390';
 
     var carregado = false;
 
@@ -2589,12 +2594,13 @@ body::after{
         fbq('track', 'ViewContent', { content_name: 'Aquiete 30ml', content_type: 'product' });
       }
 
-      if (GA_ID) {
-        script('https://www.googletagmanager.com/gtag/js?id=' + GA_ID);
+      if (GA_ID || GOOGLE_ADS_ID) {
+        script('https://www.googletagmanager.com/gtag/js?id=' + (GA_ID || GOOGLE_ADS_ID));
         window.dataLayer = window.dataLayer || [];
         window.gtag = function(){ dataLayer.push(arguments); };
         gtag('js', new Date());
-        gtag('config', GA_ID);
+        if (GA_ID)         gtag('config', GA_ID);
+        if (GOOGLE_ADS_ID) gtag('config', GOOGLE_ADS_ID);
       }
     }
 
