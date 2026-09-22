@@ -89,6 +89,9 @@ export default async (req) => {
       ok: true,
       referencia,
       gateway: gateway.nome,
+      // O total volta pro navegador porque e ele que a conversao do Google
+      // usa. Valor calculado aqui: considera kit, cupom e o frete do Norte.
+      total: pedido.total,
       ...cobranca,
     })
 

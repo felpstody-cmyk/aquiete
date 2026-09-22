@@ -925,10 +925,10 @@ img,svg{display:block;max-width:100%}
           throw new Error('Endereço de pagamento inválido. Tente outro método.');
         }
         var destino = res.j.redirectUrl;
-        conversaoGoogle(res.j.referencia, totalAtual, function(){ location.href = destino; });
+        conversaoGoogle(res.j.referencia, Number(res.j.total) || totalAtual, function(){ location.href = destino; });
         return;
       }
-      if (res.j.pix) { conversaoGoogle(res.j.referencia, totalAtual); mostrarPix(res.j); return; }
+      if (res.j.pix) { conversaoGoogle(res.j.referencia, Number(res.j.total) || totalAtual); mostrarPix(res.j); return; }
       throw new Error('Resposta inesperada do gateway');
     })
     .catch(function(e){
