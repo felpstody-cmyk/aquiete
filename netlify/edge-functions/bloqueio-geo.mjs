@@ -64,6 +64,11 @@ function temCookieLibera(request) {
 
 function eRoboLiberado(request) {
   const ua = (request.headers.get('user-agent') || '').toLowerCase()
+  // Qualquer robo do Google passa. A lista fixa nao dava conta: o validador
+  // de tag do Google Ads se identifica como "Google-Ads-Overview", tomava
+  // 404 e concluia que o site nao tinha tag instalada. Google muda o nome
+  // desses agentes sem avisar, entao a regra e pelo nome da empresa.
+  if (ua.includes('google')) return true
   return ROBOS_LIBERADOS.some((r) => ua.includes(r))
 }
 
