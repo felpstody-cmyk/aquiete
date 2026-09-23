@@ -21,6 +21,7 @@ import { enviar, htmlConfirmacao, htmlVenda } from './_lib/email.mjs'
 import { enviarCompra } from './_lib/meta-capi.mjs'
 import { notificarVenda, podeNotificar } from './_lib/notificar.mjs'
 import { marcarCarrinhoPago, registrarVendaPaga } from './_lib/metricas.mjs'
+import { enviarZap, textoPago } from './_lib/zap.mjs'
 
 const json = (dados, status = 200) =>
   new Response(JSON.stringify(dados), {
@@ -122,6 +123,15 @@ export default async (req) => {
   // Venda paga de verdade: entra na fila de conversao do Google. Se o
   // pedido nao veio de anuncio, isso nao faz nada.
   await registrarVendaPaga({ referencia, valor: total, quando: Date.now() }).catch(() => {})
+
+  // Zap de "pagamento confirmado". Vai junto do e-mail, nao no lugar
+  // dele: quem paga quer ver a confirmacao onde estiver olhando.
+  if (cliente?.telefone) {
+    resultados.zapCliente = await enviarZap({
+      telefone: cliente.telefone,
+      texto: textoPago({ nome: cliente.nome, referencia }),
+    }).catch(() => ({ enviado: false }))
+  }
 
   if (cliente?.email) {
     try {

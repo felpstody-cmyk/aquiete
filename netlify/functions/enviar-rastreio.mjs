@@ -7,6 +7,7 @@
  */
 
 import { enviar, htmlRastreio } from './_lib/email.mjs'
+import { enviarZap, textoRastreio } from './_lib/zap.mjs'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -33,11 +34,18 @@ export default async (req) => {
 
   const nome = String(corpo.nome ?? '').trim()
   const email = String(corpo.email ?? '').trim()
+  const telefone = String(corpo.telefone ?? '').trim()
   const referencia = String(corpo.referencia ?? '').trim()
   const rastreio = String(corpo.rastreio ?? '').trim()
 
   if (!email) return json({ erro: 'Faltando o e-mail do cliente' }, 400)
   if (!rastreio) return json({ erro: 'Faltando o código de rastreio' }, 400)
+
+  // O zap sai primeiro e não derruba o e-mail se falhar. Quem comprou
+  // olha o WhatsApp muito antes de olhar a caixa de entrada.
+  const zap = telefone
+    ? await enviarZap({ telefone, texto: textoRastreio({ nome, referencia, rastreio }) }).catch(() => ({ enviado: false }))
+    : { enviado: false, erro: 'sem telefone' }
 
   try {
     const resultado = await enviar({
@@ -45,8 +53,10 @@ export default async (req) => {
       assunto: `Seu pedido ${referencia || 'Aquiete'} saiu para entrega`,
       html: htmlRastreio({ nome, referencia, rastreio }),
     })
-    return json({ ok: true, ...resultado })
+    return json({ ok: true, zap, ...resultado })
   } catch (e) {
+    // E-mail falhou mas o zap saiu? Isso não é erro: o cliente foi avisado.
+    if (zap.enviado) return json({ ok: true, zap, enviado: false, erro: String(e.message || e) })
     return json({ erro: String(e.message || e) }, 502)
   }
 }

@@ -1672,7 +1672,7 @@ function enviarRastreio(id){
   fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-admin-token': cfg.token },
-    body: JSON.stringify({ nome: p.nome, email: p.contato, referencia: p.referencia, rastreio: codigo })
+    body: JSON.stringify({ nome: p.nome, email: p.contato, telefone: p.telefone || '', referencia: p.referencia, rastreio: codigo })
   })
     .then(function(r){ return r.json().then(function(j){ return { ok: r.ok, j: j }; }); })
     .then(function(res){

@@ -113,6 +113,9 @@ export default async (req) => {
         pagoEm: (p.paymentDate || p.clientPaymentDate || '').slice(0, 10) || '',
         nome: c.name || '—',
         contato: c.email || c.mobilePhone || c.phone || '',
+        // Separado do contato porque o zap precisa do celular, e `contato`
+        // cai pro telefone só quando não existe e-mail.
+        telefone: c.mobilePhone || c.phone || '',
         cpf: c.cpfCnpj || '',
         cidade: c.cityName || c.city || '',
         uf: c.state || '',

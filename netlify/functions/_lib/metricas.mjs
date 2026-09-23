@@ -266,7 +266,7 @@ export async function carrinhosPendentesDeEmail() {
       const horasDesde = (agora - d.em) / 3_600_000
       if (horasDesde < ETAPAS_CARRINHO[etapa].horasDesde) return
       if (horasDesde > 7 * 24) return
-      saida.push({ email: b.key, nome: d.nome, kit: d.kit, etapa })
+      saida.push({ email: b.key, nome: d.nome, kit: d.kit, telefone: d.telefone || '', etapa })
     }))
   } catch { /* sem carrinho pra lembrar é melhor que erro 500 */ }
   return saida

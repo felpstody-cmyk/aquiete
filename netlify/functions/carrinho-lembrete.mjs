@@ -8,6 +8,7 @@
 
 import { carrinhosPendentesDeEmail, marcarEmailCarrinho } from './_lib/metricas.mjs'
 import { enviar, htmlRecuperarCarrinho } from './_lib/email.mjs'
+import { enviarZap, textoCarrinhoParado } from './_lib/zap.mjs'
 
 const ASSUNTOS = [
   'Ainda dá tempo — seu pedido te espera',
@@ -22,6 +23,19 @@ export default async () => {
     const pendentes = await carrinhosPendentesDeEmail()
 
     for (const c of pendentes) {
+      // Zap só no primeiro toque. O e-mail insiste três vezes porque
+      // e-mail se ignora sem custo; WhatsApp insistente irrita a pessoa
+      // e ainda aumenta a chance de alguém denunciar o número.
+      if (c.etapa === 0 && c.telefone) {
+        await enviarZap({
+          telefone: c.telefone,
+          texto: textoCarrinhoParado({
+            nome: c.nome,
+            descricao: c.kit ? `${c.kit} ${c.kit === 1 ? 'unidade' : 'unidades'}` : '',
+          }),
+        }).catch(() => {})
+      }
+
       try {
         await enviar({
           para: c.email,

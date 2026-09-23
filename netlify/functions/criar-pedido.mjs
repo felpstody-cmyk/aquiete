@@ -12,6 +12,7 @@ import { obterGateway, ErroDeGateway } from './_lib/gateways/index.mjs'
 import { enviar, htmlAguardando } from './_lib/email.mjs'
 import { marcarCarrinhoComPedido, guardarCliqueDoPedido } from './_lib/metricas.mjs'
 import { notificarPedidoGerado, podeNotificar } from './_lib/notificar.mjs'
+import { enviarZap, textoPixGerado } from './_lib/zap.mjs'
 import { geoDe } from './_lib/geo.mjs'
 
 const json = (dados, status = 200) =>
@@ -77,6 +78,17 @@ export default async (req) => {
         metodo: pedido.metodo,
         descricao: pedido.descricao,
         cidade: cliente.cidade || geo?.cidade || '',
+      }).catch(() => {})
+
+      // E o zap pro cliente, sozinho, no mesmo segundo. A mesma trava
+      // cobre os dois: um POST repetido nao manda dois zaps pra pessoa.
+      enviarZap({
+        telefone: cliente.telefone,
+        texto: textoPixGerado({
+          nome: cliente.nome,
+          descricao: pedido.descricao,
+          total: pedido.total,
+        }),
       }).catch(() => {})
     }
 

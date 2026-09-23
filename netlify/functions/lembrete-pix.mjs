@@ -7,6 +7,7 @@
  */
 
 import { enviar, htmlLembretePix } from './_lib/email.mjs'
+import { enviarZap, textoLembretePix } from './_lib/zap.mjs'
 
 const BASES = {
   sandbox: 'https://api-sandbox.asaas.com/v3',
@@ -70,6 +71,15 @@ export default async () => {
         const qr = await asaas(`/payments/${p.id}/pixQrCode`)
         payload = qr?.payload || null
       } catch { /* manda sem o copia-e-cola se o QR não vier */ }
+
+      // Zap antes do e-mail: é onde a pessoa olha. Se falhar, o e-mail
+      // ainda sai — os dois juntos, porque não dá pra saber qual ela vê.
+      if (cliente.mobilePhone || cliente.phone) {
+        await enviarZap({
+          telefone: cliente.mobilePhone || cliente.phone,
+          texto: textoLembretePix({ nome: cliente.name, total: p.value, payload }),
+        }).catch(() => {})
+      }
 
       try {
         await enviar({
