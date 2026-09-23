@@ -570,7 +570,7 @@ td.sel,th.sel{width:34px;padding-right:0}
  * próprio arquivo com cache desligado e, se a versão de lá for diferente
  * da que está rodando, reabre numa URL com ?v=, que o navegador não tem
  * guardada. O #acesso vai junto, então o token não se perde. */
-var VERSAO_PAINEL = '2026-09-23-1';
+var VERSAO_PAINEL = '2026-09-23-2';
 (function(){
   try {
     if (!/^https?:$/.test(location.protocol)) return;
@@ -846,6 +846,29 @@ function somaMetrica(tipo){
   });
   return s;
 }
+
+/**
+ * Conta os carrinhos da última semana por situação, dentro do período
+ * escolhido no topo. O que vale como data muda conforme o caso: se a
+ * pessoa gerou Pix, conta o dia em que ela gerou (pedido.em); se só
+ * digitou e sumiu, conta o dia em que ela digitou.
+ */
+function contarCarrinhos(){
+  var c = { gerados:0, aguardando:0, naoPagou:0, pagos:0, abandonados:0, digitando:0 };
+  (remotos.carrinhos||[]).forEach(function(x){
+    var quando = (x.pedido && x.pedido.em) || x.criado || x.em;
+    if (!noPeriodo(diaDeTs(quando))) return;
+    if (x.pedido) {
+      c.gerados++;
+      if (x.situacao === 'pago') c.pagos++;
+      else if (x.situacao === 'aguardando') c.aguardando++;
+      else c.naoPagou++;
+    } else if (x.situacao === 'digitando') c.digitando++;
+    else c.abandonados++;
+  });
+  return c;
+}
+
 function calcular(){
   var ps = doPeriodo();
   var vendidos = ps.filter(pago);
@@ -1025,7 +1048,7 @@ function renderComportamento(){
   el('comportamentoMais').textContent = 'Ver mais (' + restantes + ' restante' + (restantes===1?'':'s') + ')';
 }
 function renderPainel(){
-  var m = calcular(), est = saldoEstoque();
+  var m = calcular(), est = saldoEstoque(), cc = contarCarrinhos();
   renderPagamentoDonut();
   renderMarco100k();
   renderComportamento();
@@ -1055,6 +1078,10 @@ function renderPainel(){
     ['ROI', m.anuncio ? pct(m.roi) : '—', 'lucro sobre o investido', m.roi>=100?'good':(m.anuncio&&m.roi<0?'bad':'')],
     ['Margem', pct(m.margem), 'da receita líquida', m.margem>=30?'good':(m.margem<0?'bad':'')],
     ['Ticket médio', brl(m.ticket), m.unidades + ' frascos', ''],
+    ['Pedidos gerados', String(cc.gerados), cc.pagos + ' pago' + (cc.pagos===1?'':'s') + ' · ' + cc.aguardando + ' no prazo · ' + cc.naoPagou + ' não pagaram',
+      cc.gerados && !cc.pagos ? 'bad' : (cc.pagos ? 'good' : '')],
+    ['Carrinhos abandonados', String(cc.abandonados + cc.naoPagou),
+      cc.abandonados + ' só digitaram · ' + cc.naoPagou + ' geraram e não pagaram', (cc.abandonados + cc.naoPagou) ? 'bad' : ''],
     ['Estoque', est.saldo + ' frascos', est.entrou + ' entraram · ' + est.saiu + ' saíram', est.saldo<=cfg.min?'bad':'good']
   ];
   el('kpis').innerHTML = cards.map(function(c){
@@ -1167,10 +1194,14 @@ function renderAoVivo(){
   linhas.push(linhaPagina('Página inicial', hmVis, hmChk));
   linhas.push(linhaPagina('Página de venda', ofVis, ofChk));
   linhas.push('<div><b>'+carrinhosPer+'</b> carrinho'+(carrinhosPer===1?'':'s')+' novo'+(carrinhosPer===1?'':'s')+' '+rotuloPer+'</div>');
-  // Carrinho abandonado tem timestamp próprio (quando a pessoa começou a
-  // digitar), não uma chave "tipo:dia" — sem filtrar por diaDeTs(a.em) aqui,
-  // um carrinho de outro dia continuava contando dentro de "Hoje".
-  var abandonadosN = (remotos.abandonados||[]).filter(function(a){ return noPeriodo(diaDeTs(a.em)); }).length;
+  // Carrinho e pedido têm timestamp próprio (quando a pessoa digitou e
+  // quando ela gerou o Pix), não uma chave "tipo:dia" — sem filtrar por
+  // período aqui, um carrinho de outro dia contava dentro de "Hoje".
+  var cc = contarCarrinhos();
+  linhas.push('<div><b>'+cc.gerados+'</b> pedido'+(cc.gerados===1?'':'s')+' gerado'+(cc.gerados===1?'':'s')+' '+rotuloPer+
+    (cc.gerados ? ' <span style="color:var(--ink-3)">('+cc.pagos+' pago'+(cc.pagos===1?'':'s')+
+      ', '+cc.aguardando+' no prazo, '+cc.naoPagou+' não pagaram)</span>' : '')+'</div>');
+  var abandonadosN = cc.abandonados + cc.naoPagou;
   linhas.push('<div><b>'+abandonadosN+'</b> carrinho'+(abandonadosN===1?'':'s')+' abandonado'+(abandonadosN===1?'':'s')+' '+rotuloPer+'</div>');
   if (chaves.length) {
     linhas.push('<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line)">Navegando agora:</div>');
