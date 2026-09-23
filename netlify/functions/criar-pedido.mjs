@@ -62,6 +62,11 @@ export default async (req) => {
     }, {
       referencia,
       metodo: pedido.metodo,
+      // A quebra vai junto do total porque o painel mostra quanto era
+      // produto e quanto era frete — sem isso ele só sabe a soma.
+      subtotal: pedido.subtotal,
+      desconto: pedido.desconto,
+      frete: pedido.frete,
       total: pedido.total,
     }).catch(() => {})
 

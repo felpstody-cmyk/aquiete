@@ -570,7 +570,7 @@ td.sel,th.sel{width:34px;padding-right:0}
  * próprio arquivo com cache desligado e, se a versão de lá for diferente
  * da que está rodando, reabre numa URL com ?v=, que o navegador não tem
  * guardada. O #acesso vai junto, então o token não se perde. */
-var VERSAO_PAINEL = '2026-09-23-6';
+var VERSAO_PAINEL = '2026-09-23-7';
 (function(){
   try {
     if (!/^https?:$/.test(location.protocol)) return;
@@ -880,26 +880,51 @@ function somaMetrica(tipo){
  */
 function contarCarrinhos(){
   var c = { gerados:0, aguardando:0, naoPagou:0, pagos:0, abandonados:0, digitando:0,
-            rsGerado:0, rsAguardando:0, rsNaoPagou:0, rsPago:0, rsAbandonado:0 };
+            rsGerado:0, rsAguardando:0, rsNaoPagou:0, rsPago:0, rsAbandonado:0,
+            prodGerado:0, freteGerado:0, prodMesa:0, freteMesa:0 };
   (remotos.carrinhos||[]).forEach(function(x){
     var quando = (x.pedido && x.pedido.em) || x.criado || x.em;
     if (!noPeriodo(diaDeTs(quando))) return;
+    var q = quebraCarrinho(x);
     if (x.pedido) {
-      // Aqui o valor é o do pedido de verdade: já tem cupom e frete dentro.
-      var v = Number(x.pedido.total) || 0;
-      c.gerados++; c.rsGerado += v;
-      if (x.situacao === 'pago') { c.pagos++; c.rsPago += v; }
-      else if (x.situacao === 'aguardando') { c.aguardando++; c.rsAguardando += v; }
-      else { c.naoPagou++; c.rsNaoPagou += v; }
+      c.gerados++; c.rsGerado += q.total;
+      c.prodGerado += q.produto; c.freteGerado += q.frete;
+      if (x.situacao === 'pago') { c.pagos++; c.rsPago += q.total; }
+      else if (x.situacao === 'aguardando') { c.aguardando++; c.rsAguardando += q.total; }
+      else {
+        c.naoPagou++; c.rsNaoPagou += q.total;
+        c.prodMesa += q.produto; c.freteMesa += q.frete;
+      }
     } else if (x.situacao === 'digitando') { c.digitando++; }
     else {
-      // Quem só escolheu o kit e sumiu não tem pedido, então não tem total.
-      // Vale o preço de tabela do kit — é a melhor estimativa do que ficou
-      // na mesa, e é disso que se trata.
-      c.abandonados++; c.rsAbandonado += precoKit(x.kit);
+      c.abandonados++; c.rsAbandonado += q.total;
+      c.prodMesa += q.produto; c.freteMesa += q.frete;
     }
   });
   return c;
+}
+
+/**
+ * Quanto era produto e quanto era frete num carrinho.
+ *
+ * Quem gerou pedido tem os números de verdade (com cupom e com o frete do
+ * Norte, quando é o caso). Quem parou antes não tem pedido nenhum, então
+ * vale o preço de tabela do kit e a regra de frete da loja — estimativa,
+ * mas é a melhor que existe e é o que interessa saber.
+ */
+function quebraCarrinho(c){
+  var p = c && c.pedido;
+  if (p && Number(p.total)) {
+    var frete = Number(p.frete) || 0;
+    var total = Number(p.total);
+    // Pedido antigo, salvo antes de a quebra existir: só dá pra mostrar o total.
+    var produto = (p.subtotal != null) ? (Number(p.subtotal) - (Number(p.desconto)||0)) : (total - frete);
+    return { produto: produto, frete: frete, total: total };
+  }
+  var un = Number(c && c.kit) || 0;
+  var prod = precoKit(un);
+  var f = (un === 1) ? (Number(cfg.frete) || 0) : 0;   // 2 ou mais: frete grátis
+  return { produto: prod, frete: f, total: prod + f };
 }
 
 /**
@@ -907,9 +932,12 @@ function contarCarrinhos(){
  * cupom e frete); quem parou antes vale o preço de tabela do kit, que é a
  * melhor estimativa do que ficou na mesa.
  */
-function valorCarrinho(c){
-  if (c && c.pedido && Number(c.pedido.total)) return Number(c.pedido.total);
-  return precoKit(c && c.kit);
+function valorCarrinho(c){ return quebraCarrinho(c).total; }
+
+/** "R$ 97,00 em produto + R$ 15,00 de frete" — a linha pequena do card. */
+function quebraTxt(produto, frete){
+  if (!produto && !frete) return 'nenhum no período';
+  return brl(produto) + ' em produto' + (frete ? ' + ' + brl(frete) + ' de frete' : ' · frete grátis');
 }
 
 /** Preço de tabela do kit, pros carrinhos que pararam antes de gerar pedido. */
@@ -1130,10 +1158,10 @@ function renderPainel(){
     ['ROI', m.anuncio ? pct(m.roi) : '—', 'lucro sobre o investido', m.roi>=100?'good':(m.anuncio&&m.roi<0?'bad':'')],
     ['Margem', pct(m.margem), 'da receita líquida', m.margem>=30?'good':(m.margem<0?'bad':'')],
     ['Ticket médio', brl(m.ticket), m.unidades + ' frascos', ''],
-    ['Pedidos gerados', brl(cc.rsGerado), brl(cc.rsAguardando) + ' ainda dentro do prazo de pagar',
+    ['Pedidos gerados · ' + cc.gerados, brl(cc.rsGerado), quebraTxt(cc.prodGerado, cc.freteGerado),
       cc.gerados && !cc.pagos ? 'bad' : (cc.pagos ? 'good' : '')],
-    ['Dinheiro na mesa', brl(cc.rsNaoPagou + cc.rsAbandonado), 'gerou o Pix e não pagou, ou desistiu no meio',
-      (cc.rsNaoPagou + cc.rsAbandonado) ? 'bad' : ''],
+    ['Dinheiro na mesa · ' + (cc.abandonados + cc.naoPagou), brl(cc.rsNaoPagou + cc.rsAbandonado),
+      quebraTxt(cc.prodMesa, cc.freteMesa), (cc.rsNaoPagou + cc.rsAbandonado) ? 'bad' : ''],
     ['Estoque', est.saldo + ' frascos', est.entrou + ' entraram · ' + est.saiu + ' saíram', est.saldo<=cfg.min?'bad':'good']
   ];
   el('kpis').innerHTML = cards.map(function(c){
@@ -1251,10 +1279,12 @@ function renderAoVivo(){
   // período aqui, um carrinho de outro dia contava dentro de "Hoje".
   var cc = contarCarrinhos();
   linhas.push('<div><b>'+brl(cc.rsGerado)+'</b> em pedidos gerados '+rotuloPer+
-    (cc.rsGerado ? ' <span style="color:var(--ink-3)">('+brl(cc.rsPago)+' pago, '+brl(cc.rsAguardando)+' no prazo)</span>' : '')+'</div>');
-  var rsMesa = cc.rsNaoPagou + cc.rsAbandonado;
+    ' <span style="color:var(--ink-3)">('+cc.gerados+(cc.gerados===1?' pedido':' pedidos')+
+    (cc.rsGerado ? ', '+brl(cc.rsPago)+' pago, '+brl(cc.rsAguardando)+' no prazo' : '')+')</span></div>');
+  var rsMesa = cc.rsNaoPagou + cc.rsAbandonado, nMesa = cc.abandonados + cc.naoPagou;
   linhas.push('<div><b>'+brl(rsMesa)+'</b> na mesa '+rotuloPer+
-    (rsMesa ? ' <span style="color:var(--ink-3)">(gerou e não pagou, ou desistiu no meio)</span>' : '')+'</div>');
+    ' <span style="color:var(--ink-3)">('+nMesa+(nMesa===1?' carrinho':' carrinhos')+
+    ', '+quebraTxt(cc.prodMesa, cc.freteMesa)+')</span></div>');
   if (chaves.length) {
     linhas.push('<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line)">Navegando agora:</div>');
     chaves.sort(function(a,b){ return porUf[b].ultima-porUf[a].ultima; }).forEach(function(uf){
