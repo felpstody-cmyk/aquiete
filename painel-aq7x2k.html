@@ -189,6 +189,7 @@ td.sel,th.sel{width:34px;padding-right:0}
 <main>
 
 <p id="avisoAmbiente" hidden style="margin:0 0 16px;padding:14px 16px;border-radius:12px;background:var(--bad-bg);color:var(--bad);font-weight:700;line-height:1.45"></p>
+<p id="avisoPendente" hidden style="margin:0 0 16px;padding:14px 16px;border-radius:12px;background:var(--bad-bg);color:var(--bad);font-weight:700;line-height:1.45"></p>
 
 <section class="view on" id="v-painel">
   <h2>Painel</h2>
@@ -619,20 +620,77 @@ function gravar(k,v){
   }
 }
 var pushEstadoTimer = null;
+/* Tem edição local que ainda não chegou na nuvem. Enquanto isso for true,
+ * fechar o painel nesse aparelho perde o lote/despesa que acabou de ser
+ * cadastrado — por isso o aviso na tela e a descarga no pagehide. */
+var estadoPendente = false;
+var tentativasPush = 0;
+
 function agendarPushEstado(){
   if (aplicandoEstadoRemoto || !cfg.url || !cfg.token) return;
+  estadoPendente = true;
+  avisarPendente();
   clearTimeout(pushEstadoTimer);
-  pushEstadoTimer = setTimeout(pushEstadoNuvem, 900);
+  pushEstadoTimer = setTimeout(function(){ pushEstadoNuvem(); }, 900);
 }
-function pushEstadoNuvem(){
+
+function pushEstadoNuvem(aoSair){
   if (!cfg.url || !cfg.token) return;
   var url = cfg.url.replace(/\/?admin-dados\/?$/, '/admin-estado');
-  fetch(url, {
+  var opcoes = {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-admin-token': cfg.token },
     body: JSON.stringify({ manuais:manuais, statusManual:statusManual, despesas:despesas, lotes:lotes, cfg:cfg })
-  }).catch(function(){});
+  };
+  // keepalive faz o navegador terminar o envio mesmo com a aba fechando.
+  if (aoSair) opcoes.keepalive = true;
+
+  fetch(url, opcoes)
+    .then(function(r){
+      // Resposta em HTML é a página de erro do Netlify, não a função. Era
+      // exatamente isso que acontecia com o endereço antigo salvo em
+      // Ajustes: o estoque "salvava", o .catch engolia o 404 e no dia
+      // seguinte a nuvem devolvia o estado velho por cima.
+      var tipo = r.headers.get('content-type') || '';
+      if (!r.ok || tipo.indexOf('json') < 0) throw new Error('HTTP ' + r.status);
+      estadoPendente = false; tentativasPush = 0;
+      avisarPendente();
+    })
+    .catch(function(){
+      // Tenta de novo sozinho, espaçando: 3s, 6s, 12s… até 1 minuto.
+      if (aoSair) return;
+      tentativasPush++;
+      avisarPendente();
+      var espera = Math.min(60000, 3000 * Math.pow(2, tentativasPush - 1));
+      clearTimeout(pushEstadoTimer);
+      pushEstadoTimer = setTimeout(function(){ pushEstadoNuvem(); }, espera);
+    });
 }
+
+/** Deixa visível que tem coisa não salva, em vez de falhar calado.
+ *  Usa getElementById direto: isto roda na migração de despesas, que
+ *  acontece antes de `el` existir. */
+function avisarPendente(){
+  var caixa = document.getElementById('avisoPendente');
+  if (!caixa) return;
+  var ruim = estadoPendente && tentativasPush >= 2;
+  caixa.hidden = !ruim;
+  if (ruim) caixa.textContent = 'O que você cadastrou (estoque, despesa, pedido manual) ainda NÃO subiu pra nuvem — '
+    + 'está só neste aparelho. Confira o endereço e o token em Ajustes. Enquanto isso, não feche o painel.';
+}
+
+/* Fechou a aba, trocou de app, bloqueou a tela: manda agora o que estava
+ * na espera dos 900ms. Sem isto, cadastrar um lote e fechar em seguida
+ * perdia o lote. */
+function descarregarEstado(){
+  if (!estadoPendente) return;
+  clearTimeout(pushEstadoTimer);
+  pushEstadoNuvem(true);
+}
+window.addEventListener('pagehide', descarregarEstado);
+document.addEventListener('visibilitychange', function(){
+  if (document.visibilityState === 'hidden') descarregarEstado();
+});
 
 var manuais = ler(K.ped, []);
 // Situacao dos pedidos do site (o Asaas so sabe se caiu o pagamento; "Enviado" e
@@ -2171,6 +2229,33 @@ carregarCfg();
 if (sincEm) statusSinc((remotos.pedidos||[]).length + ' pedidos · ' + new Date(sincEm).toLocaleDateString('pt-BR'), 'on');
 render();
 if (cfg.url && cfg.token) sincronizar(true);
+
+/* Sincroniza sozinho, sem ninguém clicar.
+ *
+ * Não são os 10 segundos pedidos: cada sincronização bate no Asaas (lista
+ * cobranças e clientes), e de 10 em 10 segundos dá 8.600 chamadas por dia
+ * com o painel aberto — isso estoura limite de API e queima invocação de
+ * função à toa, pra mostrar um número que muda poucas vezes ao dia.
+ *
+ * 30 segundos é indistinguível na prática e pára quando a aba não está à
+ * vista, que é onde o painel passa a maior parte do tempo. O botão
+ * Sincronizar continua ali pra quando você quiser na hora. */
+var AUTO_SINC_MS = 30000;
+setInterval(function(){
+  if (document.visibilityState !== 'visible') return;
+  if (!cfg.url || !cfg.token) return;
+  if (el('btnSinc').disabled) return;              // já tem uma rodando
+  sincronizar(true);
+}, AUTO_SINC_MS);
+
+// Voltou pro painel depois de um tempo fora: atualiza na hora, em vez de
+// mostrar número velho até o próximo tique.
+document.addEventListener('visibilitychange', function(){
+  if (document.visibilityState !== 'visible') return;
+  if (!cfg.url || !cfg.token) return;
+  var idade = sincEm ? (Date.now() - new Date(sincEm).getTime()) : Infinity;
+  if (idade > AUTO_SINC_MS) sincronizar(true);
+});
 
 })();
 </script>
