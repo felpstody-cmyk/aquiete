@@ -212,6 +212,11 @@ td.sel,th.sel{width:34px;padding-right:0}
   <div class="kpis" id="kpis"></div>
 
   <div class="card">
+    <h3>Entrou × Saiu <span class="tag" id="caixaTag"></span></h3>
+    <div class="body" id="caixaCorpo"></div>
+  </div>
+
+  <div class="card">
     <h3>Ao vivo <span class="tag" id="aoVivoTxt"></span></h3>
     <div class="body" style="display:flex;gap:26px;flex-wrap:wrap;align-items:center">
       <svg class="mapa" viewBox="0 0 400 440" aria-hidden="true">
@@ -572,7 +577,7 @@ td.sel,th.sel{width:34px;padding-right:0}
  * próprio arquivo com cache desligado e, se a versão de lá for diferente
  * da que está rodando, reabre numa URL com ?v=, que o navegador não tem
  * guardada. O #acesso vai junto, então o token não se perde. */
-var VERSAO_PAINEL = '2026-09-23-12';
+var VERSAO_PAINEL = '2026-09-23-13';
 (function(){
   try {
     if (!/^https?:$/.test(location.protocol)) return;
@@ -994,6 +999,57 @@ function quebraCarrinho(c){
 function valorCarrinho(c){ return quebraCarrinho(c).total; }
 
 /**
+ * Entrou × Saiu: o dinheiro do período sem conta nenhuma no meio.
+ *
+ * Os cards em cima falam de margem, que é o que diz se o negócio fecha.
+ * Este quadro fala de caixa, que é o que diz se tem dinheiro na conta —
+ * e por isso a compra de frascos entra aqui inteira, no dia em que foi
+ * paga, e não diluída por venda como no Lucro bruto.
+ */
+function renderCaixa(){
+  var m = calcular();
+  var estoque = comprasEstoqueDoPeriodo().reduce(function(s,d){ return s+d.valor; }, 0);
+  var entrou = m.liquido;
+  var saiu = m.desp + estoque;
+  var sobra = entrou - saiu;
+  var max = Math.max(entrou, saiu, 1);
+
+  el('caixaTag').textContent = !periodo ? 'todos os períodos'
+    : (periodoModo === 'hoje' ? 'hoje' : periodoModo === 'ontem' ? 'ontem'
+      : periodoModo === '7dias' ? 'últimos 7 dias' : 'no mês');
+
+  // O detalhe vai numa linha própria embaixo, não na coluna do valor: ali
+  // ele espremia em três linhas quebradas quando tinha anúncio, frasco e
+  // outras despesas juntos.
+  var barra = function(nome, valor, cor, detalhe){
+    return '<div class="fase"><span class="nome">'+nome+'</span>' +
+      '<span class="barra"><i style="width:'+Math.min(100, Math.abs(valor)/max*100)+'%;background:'+cor+'"></i></span>' +
+      '<span class="val"><b>'+brl(valor)+'</b></span></div>' +
+      (detalhe ? '<div style="margin:-2px 0 10px;font-size:12px;color:var(--ink-3)">'+detalhe+'</div>' : '');
+  };
+
+  var detalheSaiu = [];
+  if (m.anuncio) detalheSaiu.push(brl(m.anuncio) + ' anúncio');
+  if (estoque) detalheSaiu.push(brl(estoque) + ' frascos');
+  var outras = m.desp - m.anuncio;
+  if (outras > 0) detalheSaiu.push(brl(outras) + ' outras');
+
+  el('caixaCorpo').innerHTML =
+    barra('Entrou', entrou, 'var(--ok)', m.vendidos.length ? m.vendidos.length + ' venda' + (m.vendidos.length===1?'':'s') + ', já sem a taxa' : 'nenhuma venda') +
+    barra('Saiu', saiu, 'var(--bad)', detalheSaiu.join(' · ')) +
+    '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">' +
+      '<span style="font-weight:650">' + (sobra >= 0 ? 'Sobrou' : 'Faltou') + '</span>' +
+      '<span style="font-size:24px;font-weight:700;color:' + (sobra >= 0 ? 'var(--ok)' : 'var(--bad)') + '">' +
+        (sobra < 0 ? '− ' : '') + brl(Math.abs(sobra)) + '</span>' +
+    '</div>' +
+    '<p class="sub" style="margin:8px 0 0">' +
+      (sobra >= 0
+        ? 'É o que sobrou na conta no período, com a compra de frasco descontada inteira.'
+        : 'Você gastou mais do que entrou no período. Normal em mês de compra de lote — o frasco só vira dinheiro quando vende.') +
+    '</p>';
+}
+
+/**
  * Os lotes comprados no período, no formato de lançamento de despesa.
  * É dinheiro que saiu do bolso, e aparece como tal na aba Despesas e no
  * card do Painel — mas fora da conta do lucro, que já cobra o frasco por
@@ -1036,9 +1092,15 @@ function calcular(){
   var anuncio = ds.filter(function(d){ return d.cat==='Anúncio'; })
                   .reduce(function(s,d){ return s+(Number(d.valor)||0); },0);
   var visitas = somaMetrica('visita'), checkouts = somaMetrica('checkout');
-  var lucro = liquido - custoProd - desp;
+  // Bruto é o que a venda rende antes de anúncio e despesa: só tira o
+  // frasco. Não fica negativo num dia de anúncio sem venda, e é o número
+  // que diz se o preço do produto fecha. O resultado de verdade (com tudo
+  // descontado) está no `lucro` e no quadro Entrou × Saiu.
+  var lucroBruto = liquido - custoProd;
+  var lucro = lucroBruto - desp;
   return { ps:ps, vendidos:vendidos, receita:receita, liquido:liquido, custoProd:custoProd,
-    unidades:unidades, desp:desp, anuncio:anuncio, lucro:lucro,
+    unidades:unidades, desp:desp, anuncio:anuncio, lucro:lucro, lucroBruto:lucroBruto,
+    margemBruta: receita ? lucroBruto/receita*100 : 0,
     visitas:visitas, checkouts:checkouts, taxas:receita-liquido,
     ticket: vendidos.length ? receita/vendidos.length : 0,
     roas: anuncio ? receita/anuncio : 0,
@@ -1209,6 +1271,7 @@ function renderPainel(){
   renderPagamentoDonut();
   renderMarco100k();
   renderComportamento();
+  renderCaixa();
   el('painelPeriodo').textContent = (function(){
     if (!periodo) return 'Todos os períodos';
     if (periodoModo === 'hoje') return 'Hoje (' + dataBR(periodo.inicio) + ')';
@@ -1228,7 +1291,8 @@ function renderPainel(){
 
   var cards = [
     ['Faturamento', brl(m.receita), m.vendidos.length + ' venda' + (m.vendidos.length===1?'':'s'), 'hi'],
-    ['Lucro', brl(m.lucro), pct(m.margem) + ' de margem', m.lucro>=0?'good':'bad'],
+    ['Lucro bruto', brl(m.lucroBruto), 'venda menos o frasco · ' + pct(m.margemBruta) + ' de margem',
+      m.lucroBruto>0?'good':''],
     ['Recebido líquido', brl(m.liquido), brl(m.taxas) + ' em taxas', ''],
     ['Despesas', '− ' + brl(m.desp + estoquePer),
       estoquePer
@@ -1236,7 +1300,7 @@ function renderPainel(){
         : brl(m.anuncio) + ' em anúncio', ''],
     ['ROAS', m.roas ? m.roas.toFixed(2)+'×' : '—', 'retorno sobre anúncio', m.roas>=2?'good':''],
     ['ROI', m.anuncio ? pct(m.roi) : '—', 'lucro sobre o investido', m.roi>=100?'good':(m.anuncio&&m.roi<0?'bad':'')],
-    ['Margem', pct(m.margem), 'da receita líquida', m.margem>=30?'good':(m.margem<0?'bad':'')],
+    ['Margem', pct(m.margem), 'depois do anúncio e das despesas', m.margem>=30?'good':(m.margem<0?'bad':'')],
     ['Ticket médio', brl(m.ticket), m.unidades + ' frascos', ''],
     ['Pedidos gerados · ' + cc.gerados, brl(cc.rsGerado), quebraTxt(cc.prodGerado, cc.freteGerado),
       cc.gerados && !cc.pagos ? 'bad' : (cc.pagos ? 'good' : '')],
