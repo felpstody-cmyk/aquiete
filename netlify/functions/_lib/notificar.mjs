@@ -24,18 +24,76 @@ function tituloNtfy(titulo) {
 }
 
 /** Base de tudo: manda um push pro celular via ntfy.sh. Nunca lança erro. */
-export async function push(texto, titulo) {
+export async function push(texto, titulo, extras = {}) {
   try {
-    await fetch(`https://ntfy.sh/${NTFY_TOPIC}`, {
-      method: 'POST',
-      body: texto,
-      headers: {
-        'Title': tituloNtfy(titulo || 'Aquiete'),
-        'Tags': 'moneybag',
-        'Icon': ICONE,
-      },
-    })
+    const headers = {
+      'Title': tituloNtfy(titulo || 'Aquiete'),
+      'Tags': extras.tags || 'moneybag',
+      'Icon': ICONE,
+    }
+    // Botão dentro da notificação. O valor tem que ser ASCII puro: link
+    // já vem percent-encoded, e o rótulo é escrito sem acento de propósito.
+    if (extras.acoes) headers['Actions'] = extras.acoes
+    await fetch(`https://ntfy.sh/${NTFY_TOPIC}`, { method: 'POST', body: texto, headers })
   } catch { /* notificação nunca pode derrubar quem chamou */ }
+}
+
+/** Só os dígitos, com 55 na frente — do jeito que o wa.me quer. */
+export function zapNumero(telefone) {
+  let d = String(telefone ?? '').replace(/\D/g, '')
+  if (!d) return ''
+  if (d.startsWith('55')) d = d.slice(2)
+  if (d.length < 10 || d.length > 11) return ''   // não é celular BR válido
+  return '55' + d
+}
+
+/**
+ * A mensagem que o Felipe manda pra quem gerou o Pix e ainda não pagou.
+ *
+ * Escrita em primeira pessoa e curta de propósito: chega como mensagem de
+ * gente, não como robô de loja, e é isso que faz a pessoa responder.
+ */
+export function textoZapPix({ nome, descricao, total }) {
+  const primeiro = String(nome ?? '').trim().split(' ')[0] || ''
+  const valor = 'R$ ' + Number(total || 0).toFixed(2).replace('.', ',')
+  return [
+    (primeiro ? `Oi, ${primeiro}! ` : 'Oi! ') + 'Aqui é o Felipe, do Aquiete.',
+    '',
+    `Seu pedido saiu certinho aqui (${descricao || 'Aquiete'}, ${valor}), só falta o Pix cair.`,
+    '',
+    'Se travou alguma coisa na hora de pagar ou ficou alguma dúvida, me chama por aqui mesmo que eu te ajudo. O código vence em 24h.',
+  ].join('\n')
+}
+
+/** Link do WhatsApp já com a mensagem escrita. Vazio se não tem telefone. */
+export function linkZapPix({ telefone, nome, descricao, total }) {
+  const numero = zapNumero(telefone)
+  if (!numero) return ''
+  return `https://wa.me/${numero}?text=${encodeURIComponent(textoZapPix({ nome, descricao, total }))}`
+}
+
+/**
+ * "Fulano gerou um Pix agora." Chega na hora, com o botão de chamar no
+ * zap já pronto — o toque que decide entre a venda cair e o código vencer
+ * é o que acontece nos primeiros minutos, enquanto a pessoa ainda está
+ * com o celular na mão.
+ */
+export async function notificarPedidoGerado({ nome, telefone, total, metodo, descricao, cidade }) {
+  const primeiro = String(nome ?? '').trim().split(' ')[0] || 'Alguém'
+  const valor = 'R$ ' + Number(total || 0).toFixed(2).replace('.', ',')
+  const forma = metodo === 'boleto' ? 'Boleto' : (metodo === 'card' ? 'Cartão' : 'Pix')
+
+  const texto = [
+    `⏳ ${primeiro} gerou um ${forma} de ${valor}` + (cidade ? ` — ${cidade}` : ''),
+    descricao ? `🧴 ${descricao}` : null,
+    'Ainda não pagou. Um zap agora resolve metade delas.',
+  ].filter(Boolean).join('\n')
+
+  const link = linkZapPix({ telefone, nome, descricao, total })
+  await push(texto, `Aquiete — ${forma} gerado`, {
+    tags: 'hourglass_flowing_sand',
+    acoes: link ? `view, Chamar no zap, ${link}, clear=true` : undefined,
+  })
 }
 
 const METODO_TXT = { PIX: 'Pix', CREDIT_CARD: 'Cartão', BOLETO: 'Boleto' }

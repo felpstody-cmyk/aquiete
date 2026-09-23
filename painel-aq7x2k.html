@@ -570,7 +570,7 @@ td.sel,th.sel{width:34px;padding-right:0}
  * próprio arquivo com cache desligado e, se a versão de lá for diferente
  * da que está rodando, reabre numa URL com ?v=, que o navegador não tem
  * guardada. O #acesso vai junto, então o token não se perde. */
-var VERSAO_PAINEL = '2026-09-23-2';
+var VERSAO_PAINEL = '2026-09-23-3';
 (function(){
   try {
     if (!/^https?:$/.test(location.protocol)) return;
@@ -1392,9 +1392,29 @@ function carrinhoSituacao(c){
     default:           return '<span class="pill p-pendente">abandonou no formulário</span>';
   }
 }
+/* Mesma mensagem que o push do celular usa (notificar.mjs). Escrita em
+   primeira pessoa: chega como gente, não como robô de loja. */
+function textoZap(c){
+  var primeiro = String(c.nome||'').trim().split(' ')[0];
+  var un = Number(c.kit)||0;
+  var desc = un ? 'Aquiete — ' + un + (un===1?' unidade':' unidades') : 'Aquiete';
+  var total = c.pedido && c.pedido.total;
+  if (c.pedido) return [
+    (primeiro ? 'Oi, '+primeiro+'! ' : 'Oi! ') + 'Aqui é o Felipe, do Aquiete.', '',
+    'Seu pedido saiu certinho aqui (' + desc + (total ? ', ' + brl(total) : '') + '), só falta o Pix cair.', '',
+    'Se travou alguma coisa na hora de pagar ou ficou alguma dúvida, me chama por aqui mesmo que eu te ajudo. O código vence em 24h.'
+  ].join('\n');
+  return [
+    (primeiro ? 'Oi, '+primeiro+'! ' : 'Oi! ') + 'Aqui é o Felipe, do Aquiete.', '',
+    'Vi que você começou o pedido aqui no site e parou no meio. Deu algum problema?', '',
+    'Se ficou qualquer dúvida sobre o produto ou sobre a entrega, pode me perguntar por aqui que eu respondo.'
+  ].join('\n');
+}
 function carrinhoZap(c){
-  var digitos = String(c.telefone||'').replace(/\D/g,'');
-  return digitos ? '<a class="lnk" href="https://wa.me/55'+digitos+'" target="_blank">chamar no zap</a>' : '';
+  var d = String(c.telefone||'').replace(/\D/g,'');
+  if (d.indexOf('55') === 0) d = d.slice(2);
+  if (d.length < 10 || d.length > 11) return '';
+  return '<a class="lnk" href="https://wa.me/55'+d+'?text='+encodeURIComponent(textoZap(c))+'" target="_blank">chamar no zap</a>';
 }
 
 function renderAbandonados(){

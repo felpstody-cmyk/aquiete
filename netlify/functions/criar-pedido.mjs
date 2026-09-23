@@ -11,6 +11,7 @@ import { montarPedido, validarCliente, ErroDeEntrada } from './_lib/catalogo.mjs
 import { obterGateway, ErroDeGateway } from './_lib/gateways/index.mjs'
 import { enviar, htmlAguardando } from './_lib/email.mjs'
 import { marcarCarrinhoComPedido, guardarCliqueDoPedido } from './_lib/metricas.mjs'
+import { notificarPedidoGerado, podeNotificar } from './_lib/notificar.mjs'
 import { geoDe } from './_lib/geo.mjs'
 
 const json = (dados, status = 200) =>
@@ -62,6 +63,22 @@ export default async (req) => {
       metodo: pedido.metodo,
       total: pedido.total,
     }).catch(() => {})
+
+    // "Toc toc" na hora, com o botao de chamar no zap ja pronto. Cartao
+    // fica de fora: ali a pessoa ja esta na tela de pagamento e nao ha o
+    // que perseguir. A trava e por pessoa, nao por referencia: quem gera o
+    // Pix, fecha e gera de novo cria duas referencias diferentes, e nao ha
+    // motivo pro celular tocar duas vezes pelo mesmo cliente.
+    if (pedido.metodo !== 'card' && await podeNotificar('pedido:' + cliente.email, 30)) {
+      notificarPedidoGerado({
+        nome: cliente.nome,
+        telefone: cliente.telefone,
+        total: pedido.total,
+        metodo: pedido.metodo,
+        descricao: pedido.descricao,
+        cidade: cliente.cidade || geo?.cidade || '',
+      }).catch(() => {})
+    }
 
     // Manda o codigo por e-mail para quem vai pagar depois. Sem isto, quem
     // fecha a pagina do Pix perde a cobranca e precisa refazer o pedido.
