@@ -760,14 +760,37 @@ p.centro{margin:0}
     fbq('track', 'PageView');
     fbq('track', 'ViewContent', { content_name: 'Aquiete 30ml', content_type: 'product' });
 
-    if (GOOGLE_ADS_ID) {
-      var s = d.createElement('script'); s.async = true;
-      s.src = 'https://www.googletagmanager.com/gtag/js?id=' + GOOGLE_ADS_ID;
-      d.head.appendChild(s);
-      window.dataLayer = window.dataLayer || [];
-      window.gtag = function(){ dataLayer.push(arguments); };
-      gtag('js', new Date());
-      gtag('config', GOOGLE_ADS_ID);
+    /* Cookie liberado: avisa a tag do Google, que ja esta na pagina. */
+    if (window.gtag) {
+      gtag('consent', 'update', {
+        ad_storage: 'granted', ad_user_data: 'granted',
+        ad_personalization: 'granted', analytics_storage: 'granted'
+      });
+    }
+  }
+
+  /* Tag do Google com modo de consentimento: carrega sempre, mas nasce
+     sem permissao de cookie. Sem isso o Google nao reconhece a tag no
+     site (ele verifica sem clicar em "Aceitar") e a conversao fica
+     marcada como inativa. */
+  if (GOOGLE_ADS_ID) {
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = function(){ dataLayer.push(arguments); };
+    gtag('consent', 'default', {
+      ad_storage: 'denied', ad_user_data: 'denied',
+      ad_personalization: 'denied', analytics_storage: 'denied',
+      wait_for_update: 500
+    });
+    var sg = d.createElement('script'); sg.async = true;
+    sg.src = 'https://www.googletagmanager.com/gtag/js?id=' + GOOGLE_ADS_ID;
+    d.head.appendChild(sg);
+    gtag('js', new Date());
+    gtag('config', GOOGLE_ADS_ID);
+    if (lerConsent() === 'aceito') {
+      gtag('consent', 'update', {
+        ad_storage: 'granted', ad_user_data: 'granted',
+        ad_personalization: 'granted', analytics_storage: 'granted'
+      });
     }
   }
   function decidir(valor){

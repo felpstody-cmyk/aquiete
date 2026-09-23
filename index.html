@@ -2594,13 +2594,40 @@ body::after{
         fbq('track', 'ViewContent', { content_name: 'Aquiete 30ml', content_type: 'product' });
       }
 
-      if (GA_ID || GOOGLE_ADS_ID) {
-        script('https://www.googletagmanager.com/gtag/js?id=' + (GA_ID || GOOGLE_ADS_ID));
-        window.dataLayer = window.dataLayer || [];
-        window.gtag = function(){ dataLayer.push(arguments); };
-        gtag('js', new Date());
-        if (GA_ID)         gtag('config', GA_ID);
-        if (GOOGLE_ADS_ID) gtag('config', GOOGLE_ADS_ID);
+      /* Cookie liberado: avisa a tag do Google, que ja esta na pagina. */
+      if (window.gtag) {
+        gtag('consent', 'update', {
+          ad_storage: 'granted', ad_user_data: 'granted',
+          ad_personalization: 'granted', analytics_storage: 'granted'
+        });
+      }
+    }
+
+    /* ---- Tag do Google com modo de consentimento ----
+       Ela carrega SEMPRE, mas nasce sem permissao de cookie: nao grava
+       nada e nao identifica ninguem ate a pessoa aceitar.
+       Precisa ser assim por dois motivos:
+       1. O Google so reconhece a tag instalada se ela existir na pagina
+          sem depender de clique — senao a conversao fica "inativa".
+       2. Com o consentimento negado ele ainda mede de forma agregada, o
+          que e mais do que zero, e continua dentro da LGPD. */
+    if (GA_ID || GOOGLE_ADS_ID) {
+      window.dataLayer = window.dataLayer || [];
+      window.gtag = function(){ dataLayer.push(arguments); };
+      gtag('consent', 'default', {
+        ad_storage: 'denied', ad_user_data: 'denied',
+        ad_personalization: 'denied', analytics_storage: 'denied',
+        wait_for_update: 500
+      });
+      script('https://www.googletagmanager.com/gtag/js?id=' + (GA_ID || GOOGLE_ADS_ID));
+      gtag('js', new Date());
+      if (GA_ID)         gtag('config', GA_ID);
+      if (GOOGLE_ADS_ID) gtag('config', GOOGLE_ADS_ID);
+      if (aceitou()) {
+        gtag('consent', 'update', {
+          ad_storage: 'granted', ad_user_data: 'granted',
+          ad_personalization: 'granted', analytics_storage: 'granted'
+        });
       }
     }
 

@@ -1106,14 +1106,28 @@ try { if (!aqEmTeste()) {
   var META_PIXEL_ID = '1991105264740384';
   var GOOGLE_ADS_ID = 'AW-18468707390';
   try {
-    if (GOOGLE_ADS_ID && localStorage.getItem('aq_cookies') === 'aceito') {
+    /* Tag do Google com modo de consentimento: carrega sempre, mas nasce
+       sem permissao de cookie e so ganha permissao se a pessoa aceitou.
+       Sem carregar sempre, o Google nao reconhece a tag no site. */
+    if (GOOGLE_ADS_ID) {
+      window.dataLayer = window.dataLayer || [];
+      window.gtag = function(){ dataLayer.push(arguments); };
+      gtag('consent', 'default', {
+        ad_storage: 'denied', ad_user_data: 'denied',
+        ad_personalization: 'denied', analytics_storage: 'denied',
+        wait_for_update: 500
+      });
       var g = document.createElement('script'); g.async = true;
       g.src = 'https://www.googletagmanager.com/gtag/js?id=' + GOOGLE_ADS_ID;
       document.head.appendChild(g);
-      window.dataLayer = window.dataLayer || [];
-      window.gtag = function(){ dataLayer.push(arguments); };
       gtag('js', new Date());
       gtag('config', GOOGLE_ADS_ID);
+      if (localStorage.getItem('aq_cookies') === 'aceito') {
+        gtag('consent', 'update', {
+          ad_storage: 'granted', ad_user_data: 'granted',
+          ad_personalization: 'granted', analytics_storage: 'granted'
+        });
+      }
     }
     if (META_PIXEL_ID && localStorage.getItem('aq_cookies') === 'aceito') {
       /* eslint-disable */
