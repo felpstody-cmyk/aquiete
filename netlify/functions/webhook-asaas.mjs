@@ -20,7 +20,7 @@ import { buscarCliente } from './_lib/gateways/asaas.mjs'
 import { enviar, htmlConfirmacao, htmlVenda } from './_lib/email.mjs'
 import { enviarCompra } from './_lib/meta-capi.mjs'
 import { notificarVenda, podeNotificar } from './_lib/notificar.mjs'
-import { marcarCarrinhoPago } from './_lib/metricas.mjs'
+import { marcarCarrinhoPago, registrarVendaPaga } from './_lib/metricas.mjs'
 
 const json = (dados, status = 200) =>
   new Response(JSON.stringify(dados), {
@@ -118,6 +118,10 @@ export default async (req) => {
   // Tira da lista de abandonados e da sequência de e-mail. Pela referência
   // também, pra funcionar mesmo se a busca do cliente no Asaas falhou.
   await marcarCarrinhoPago({ email: cliente?.email, referencia }).catch(() => {})
+
+  // Venda paga de verdade: entra na fila de conversao do Google. Se o
+  // pedido nao veio de anuncio, isso nao faz nada.
+  await registrarVendaPaga({ referencia, valor: total, quando: Date.now() }).catch(() => {})
 
   if (cliente?.email) {
     try {

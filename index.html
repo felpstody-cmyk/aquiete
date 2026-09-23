@@ -1252,6 +1252,20 @@ body::after{
   .aura{display:none}
 }
 </style>
+<script>
+/* Identificador do clique do anuncio (gclid).
+   O Google poe ele na URL quando a pessoa chega pelo anuncio. Guardamos
+   por 90 dias, que e a janela de conversao da conta, pra poder dizer
+   depois "esse clique virou venda paga" — a venda so e confirmada la no
+   Asaas, minutos ou dias depois de a pessoa sair do site. */
+(function(){
+  try {
+    var p = new URLSearchParams(location.search);
+    var id = p.get('gclid') || p.get('gbraid') || p.get('wbraid');
+    if (id) localStorage.setItem('aq_clique', JSON.stringify({ id: id, em: Date.now() }));
+  } catch(e){}
+})();
+</script>
 </head>
 
 <body>

@@ -10,7 +10,7 @@
 import { montarPedido, validarCliente, ErroDeEntrada } from './_lib/catalogo.mjs'
 import { obterGateway, ErroDeGateway } from './_lib/gateways/index.mjs'
 import { enviar, htmlAguardando } from './_lib/email.mjs'
-import { marcarCarrinhoComPedido } from './_lib/metricas.mjs'
+import { marcarCarrinhoComPedido, guardarCliqueDoPedido } from './_lib/metricas.mjs'
 import { geoDe } from './_lib/geo.mjs'
 
 const json = (dados, status = 200) =>
@@ -46,6 +46,10 @@ export default async (req) => {
     // voltar pra lista de abandonados sozinho depois do prazo. Por isso o
     // carrinho NÃO é apagado aqui — ele só sai quando o webhook confirma
     // o pagamento (marcarCarrinhoPago). Nunca derruba o pedido se falhar.
+    // Liga este pedido ao clique do anuncio. So sera usado la na frente,
+    // quando (e se) o Asaas confirmar o pagamento.
+    await guardarCliqueDoPedido(referencia, corpo.clique).catch(() => {})
+
     const geo = geoDe(req)
     await marcarCarrinhoComPedido(cliente.email, {
       nome: cliente.nome,

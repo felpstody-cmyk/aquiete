@@ -9,7 +9,7 @@
  * quem de fato recebeu o dinheiro. O sistema local só espelha.
  */
 
-import { lerContadores, lerAtivos, lerTodosCarrinhos, lerCarrinhosAbandonados } from './_lib/metricas.mjs'
+import { lerContadores, lerAtivos, lerTodosCarrinhos, lerCarrinhosAbandonados, lerConversoesGoogle } from './_lib/metricas.mjs'
 import { lerComportamento } from './_lib/jornada.mjs'
 
 const CORS = {
@@ -88,13 +88,14 @@ export default async (req) => {
   if (req.headers.get('x-admin-token') !== esperado) return json({ erro: 'Token inválido' }, 401)
 
   try {
-    const [cobrancas, clientes, metricas, ativos, carrinhos, comportamento] = await Promise.all([
+    const [cobrancas, clientes, metricas, ativos, carrinhos, comportamento, conversoesGoogle] = await Promise.all([
       tudo('/payments'),
       tudo('/customers'),
       lerContadores(),
       lerAtivos(),
       lerTodosCarrinhos(),
       lerComportamento(),
+      lerConversoesGoogle(),
     ])
 
     // Uma leitura só do Blobs: a lista de abandonados sai da lista completa.
@@ -139,6 +140,7 @@ export default async (req) => {
       abandonados,
       carrinhos,
       comportamento,
+      conversoesGoogle,
     })
   } catch (e) {
     return json({ erro: String(e.message || e) }, 502)

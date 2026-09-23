@@ -95,6 +95,58 @@ export async function lerAtivos() {
   return saida
 }
 
+/* ---------------- Conversao paga do Google ---------------- */
+
+/**
+ * O caminho de uma venda ate o Google:
+ *   1. a pessoa chega pelo anuncio com ?gclid=... e o site guarda isso
+ *   2. ela fecha o pedido e o gclid vem junto -> guardamos por referencia
+ *   3. o Asaas confirma o pagamento -> a venda entra na fila de conversao
+ *
+ * Isso existe porque a conversao do navegador dispara quando o Pix e
+ * GERADO. Quem gera e nao paga contaria como venda, e o Google aprenderia
+ * a procurar gerador de Pix em vez de comprador.
+ */
+export async function guardarCliqueDoPedido(referencia, clique) {
+  try {
+    const id = String(clique?.id ?? '').trim()
+    if (!referencia || !id) return
+    const store = await loja('cliques')
+    await store.setJSON(referencia, { id, em: Number(clique.em) || Date.now() })
+  } catch { /* silêncio proposital */ }
+}
+
+/** Chamado quando o pagamento e confirmado. Sem clique guardado, nao faz nada. */
+export async function registrarVendaPaga({ referencia, valor, quando }) {
+  try {
+    if (!referencia) return
+    const cliques = await loja('cliques')
+    const clique = await cliques.get(referencia, { type: 'json' }).catch(() => null)
+    if (!clique?.id) return
+    const store = await loja('conversoes-google')
+    await store.setJSON(referencia, {
+      gclid: clique.id,
+      valor: Number(valor) || 0,
+      quando: quando || Date.now(),
+      enviada: false,
+    })
+  } catch { /* silêncio proposital */ }
+}
+
+/** Vendas pagas que vieram de anuncio, pro painel montar o arquivo do Google. */
+export async function lerConversoesGoogle() {
+  const saida = []
+  try {
+    const store = await loja('conversoes-google')
+    const { blobs } = await store.list()
+    await Promise.all(blobs.map(async (b) => {
+      const d = await store.get(b.key, { type: 'json' }).catch(() => null)
+      if (d) saida.push(Object.assign({ referencia: b.key }, d))
+    }))
+  } catch { /* sem dados é melhor que erro 500 */ }
+  return saida.sort((a, b) => (b.quando || 0) - (a.quando || 0))
+}
+
 /* ---------------- Carrinho abandonado ---------------- */
 
 /** Guarda quem começou a digitar no checkout. E-mail como chave: escrever de novo só atualiza. */

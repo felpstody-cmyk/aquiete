@@ -379,6 +379,15 @@ td.sel,th.sel{width:34px;padding-right:0}
   </div>
 
   <div class="card">
+    <h3>Conversões pro Google <span class="tag" id="convResumo"></span></h3>
+    <p class="sub" style="margin:0;padding:4px 18px 14px">Vendas <b>pagas</b> que vieram de clique no anúncio do Google. A conversão que dispara no site conta quando o Pix é gerado; esta conta só quando o dinheiro cai. Baixa o arquivo e sobe em Google Ads → Metas → Uploads → Enviar conversões.</p>
+    <div class="acoes" style="padding:0 18px 14px">
+      <button class="btn sec mini" id="baixarConv">Baixar arquivo do Google</button>
+    </div>
+    <div class="tw"><table id="tbConv"></table></div>
+  </div>
+
+  <div class="card">
     <h3>Todos os carrinhos · últimos 7 dias <span class="tag" id="carrinhosResumo"></span></h3>
     <p class="sub" style="margin:0;padding:4px 18px 14px">Todo mundo que digitou um e-mail válido no checkout, com a situação de cada um. É isso que explica a diferença entre "carrinhos novos" e "abandonados": quem ainda tá digitando, quem gerou o Pix e tá no prazo, e quem já pagou não aparece como abandonado.</p>
     <div class="tw"><table id="tbCarrinhos"></table></div>
@@ -559,7 +568,7 @@ td.sel,th.sel{width:34px;padding-right:0}
  * próprio arquivo com cache desligado e, se a versão de lá for diferente
  * da que está rodando, reabre numa URL com ?v=, que o navegador não tem
  * guardada. O #acesso vai junto, então o token não se perde. */
-var VERSAO_PAINEL = '2026-09-22-1';
+var VERSAO_PAINEL = '2026-09-22-2';
 (function(){
   try {
     if (!/^https?:$/.test(location.protocol)) return;
@@ -628,7 +637,7 @@ var manuais = ler(K.ped, []);
 // "Entregue" quem marca e voce). Chave e o id do pedido, valor e o status novo.
 var statusManual = ler(K.sta, {});
 var selecionados = {};
-var remotos = ler(K.rem, { pedidos:[], metricas:{}, ativos:[], abandonados:[], carrinhos:[], comportamento:{ porPagina:{}, sessoes:[] } });
+var remotos = ler(K.rem, { pedidos:[], metricas:{}, ativos:[], abandonados:[], carrinhos:[], conversoesGoogle:[], comportamento:{ porPagina:{}, sessoes:[] } });
 var despesas = ler(K.desp, null);
 var lotes   = ler(K.est, []);
 var cfg     = ler(K.cfg, {});
@@ -778,7 +787,7 @@ function sincronizar(silencioso){
   ])
     .then(function(res){
       var d = res[0], estadoNuvem = res[1];
-      remotos = { pedidos: d.pedidos||[], metricas: d.metricas||{}, ativos: d.ativos||[], abandonados: d.abandonados||[], carrinhos: d.carrinhos||[], comportamento: d.comportamento||{ porPagina:{}, sessoes:[] } };
+      remotos = { pedidos: d.pedidos||[], metricas: d.metricas||{}, ativos: d.ativos||[], abandonados: d.abandonados||[], carrinhos: d.carrinhos||[], conversoesGoogle: d.conversoesGoogle||[], comportamento: d.comportamento||{ porPagina:{}, sessoes:[] } };
       sincEm = new Date().toISOString();
       gravar(K.rem, remotos); gravar(K.sinc, sincEm);
 
@@ -1386,6 +1395,48 @@ function renderAbandonados(){
     : '<tbody><tr><td class="vazio">Ninguém abandonado no momento.</td></tr></tbody>';
 }
 
+/* Data no formato que o Google exige no arquivo de conversao:
+   AAAA-MM-DD HH:MM:SS no fuso declarado no cabecalho do arquivo. */
+function dataGoogle(ts){
+  var f = new Intl.DateTimeFormat('sv-SE', { timeZone:'America/Sao_Paulo',
+    year:'numeric', month:'2-digit', day:'2-digit',
+    hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false });
+  return f.format(new Date(Number(ts))).replace('T',' ');
+}
+
+function renderConversoes(){
+  var lista = (remotos.conversoesGoogle||[]).slice();
+  var total = lista.reduce(function(s,c){ return s + (Number(c.valor)||0); }, 0);
+  el('convResumo').textContent = lista.length
+    ? lista.length + ' venda' + (lista.length===1?'':'s') + ' paga' + (lista.length===1?'':'s') + ' · ' + brl(total)
+    : 'nenhuma venda de anúncio do Google ainda';
+  el('tbConv').innerHTML = lista.length
+    ? '<thead><tr><th>Quando</th><th>Pedido</th><th class="num">Valor</th><th>Clique</th></tr></thead><tbody>' +
+      lista.map(function(c){
+        return '<tr><td style="white-space:nowrap">'+esc(dataGoogle(c.quando))+'</td>' +
+          '<td>'+esc(c.referencia)+'</td><td class="num">'+brl(c.valor)+'</td>' +
+          '<td style="font-size:11px;color:var(--ink-3)">'+esc(String(c.gclid).slice(0,18))+'…</td></tr>';
+      }).join('') + '</tbody>'
+    : '<tbody><tr><td class="vazio">Ainda não houve venda paga vinda do Google.</td></tr></tbody>';
+}
+
+el('baixarConv').onclick = function(){
+  var lista = (remotos.conversoesGoogle||[]);
+  if (!lista.length) { alert('Nenhuma venda paga de anúncio do Google ainda.'); return; }
+  // Formato exigido pelo Google: a linha de fuso vem ANTES do cabeçalho.
+  var linhas = ['Parameters:TimeZone=America/Sao_Paulo',
+                'Google Click ID,Conversion Name,Conversion Time,Conversion Value,Conversion Currency'];
+  lista.forEach(function(c){
+    linhas.push([c.gclid, 'Compra paga', dataGoogle(c.quando), (Number(c.valor)||0).toFixed(2), 'BRL'].join(','));
+  });
+  var blob = new Blob([linhas.join(String.fromCharCode(10))], { type:'text/csv;charset=utf-8' });
+  var a = d.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'conversoes-google-' + hoje() + '.csv';
+  a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+};
+
 function renderCarrinhos(){
   var lista = (remotos.carrinhos||[]).slice().sort(function(a,b){ return (b.criado||b.em||0)-(a.criado||a.em||0); });
   var conta = {}; lista.forEach(function(c){ conta[c.situacao] = (conta[c.situacao]||0)+1; });
@@ -1966,7 +2017,7 @@ el('testarApi').onclick = function(){
 };
 
 /* ================= start ================= */
-function render(){ renderPainel(); renderAoVivo(); renderPedidos(); renderAbandonados(); renderCarrinhos(); renderClientes(); renderEstoque(); renderDesp(); renderRel(); }
+function render(){ renderPainel(); renderAoVivo(); renderPedidos(); renderAbandonados(); renderCarrinhos(); renderConversoes(); renderClientes(); renderEstoque(); renderDesp(); renderRel(); }
 el('p_data').value = hoje(); el('d_data').value = hoje(); el('l_data').value = hoje();
 el('l_custo').value = cfg.custo;
 el('p_kit').onchange();
