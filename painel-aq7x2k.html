@@ -570,7 +570,7 @@ td.sel,th.sel{width:34px;padding-right:0}
  * próprio arquivo com cache desligado e, se a versão de lá for diferente
  * da que está rodando, reabre numa URL com ?v=, que o navegador não tem
  * guardada. O #acesso vai junto, então o token não se perde. */
-var VERSAO_PAINEL = '2026-09-23-5';
+var VERSAO_PAINEL = '2026-09-23-6';
 (function(){
   try {
     if (!/^https?:$/.test(location.protocol)) return;
@@ -900,6 +900,16 @@ function contarCarrinhos(){
     }
   });
   return c;
+}
+
+/**
+ * Quanto vale um carrinho. Quem gerou pedido tem total de verdade (já com
+ * cupom e frete); quem parou antes vale o preço de tabela do kit, que é a
+ * melhor estimativa do que ficou na mesa.
+ */
+function valorCarrinho(c){
+  if (c && c.pedido && Number(c.pedido.total)) return Number(c.pedido.total);
+  return precoKit(c && c.kit);
 }
 
 /** Preço de tabela do kit, pros carrinhos que pararam antes de gerar pedido. */
@@ -1463,15 +1473,19 @@ function renderAbandonados(){
   var lista = (remotos.abandonados||[]).slice().sort(function(a,b){ return (b.em||0)-(a.em||0); });
   var TOTAL_ETAPAS = 3;
   var esgotados = lista.filter(function(c){ return (c.etapa||0) >= TOTAL_ETAPAS; }).length;
-  var naoPagou = lista.filter(function(c){ return c.situacao === 'nao-pagou'; }).length;
+  var rsNaoPagou = 0, rsParou = 0;
+  lista.forEach(function(c){
+    if (c.situacao === 'nao-pagou') rsNaoPagou += valorCarrinho(c);
+    else rsParou += valorCarrinho(c);
+  });
   el('abandonadosResumo').textContent = lista.length
-    ? lista.length + ' carrinho' + (lista.length===1?'':'s') +
-      (naoPagou ? ' · ' + naoPagou + ' gerou pagamento e não pagou' : '') +
+    ? brl(rsNaoPagou + rsParou) + ' na mesa' +
+      (rsNaoPagou ? ' · ' + brl(rsNaoPagou) + ' gerou pagamento e não pagou' : '') +
       ' · ' + esgotados + ' já recebeu os 3 e-mails'
     : 'digitou os dados e sumiu antes de comprar';
 
   el('tbAbandonados').innerHTML = lista.length
-    ? '<thead><tr><th>Quando</th><th>Cliente</th><th>Contato</th><th>Cidade</th><th>Kit</th><th>Onde parou</th><th>Preencheu</th><th>Sequência de e-mail</th><th></th></tr></thead><tbody>' +
+    ? '<thead><tr><th>Quando</th><th>Cliente</th><th>Contato</th><th>Cidade</th><th>Kit</th><th class="num">Valor</th><th>Onde parou</th><th>Preencheu</th><th>Sequência de e-mail</th><th></th></tr></thead><tbody>' +
       lista.map(function(c){
         var etapa = c.etapa||0;
         var email;
@@ -1484,7 +1498,8 @@ function renderAbandonados(){
         return '<tr><td style="white-space:nowrap">'+carrinhoQuando(c)+'</td><td><b>'+esc(c.nome||'—')+'</b></td>' +
           '<td style="font-size:12.5px">'+esc(c.email)+(c.telefone?'<br>'+esc(c.telefone):'')+'</td>' +
           '<td>'+carrinhoCidade(c)+'</td>' +
-          '<td>'+esc(c.kit?c.kit+' un.':'—')+'</td><td>'+carrinhoSituacao(c)+'</td><td>'+carrinhoCampos(c)+'</td>' +
+          '<td>'+esc(c.kit?c.kit+' un.':'—')+'</td><td class="num"><b>'+brl(valorCarrinho(c))+'</b></td>' +
+          '<td>'+carrinhoSituacao(c)+'</td><td>'+carrinhoCampos(c)+'</td>' +
           '<td>'+email+'</td><td style="white-space:nowrap">'+carrinhoZap(c)+'</td></tr>';
       }).join('') + '</tbody>'
     : '<tbody><tr><td class="vazio">Ninguém abandonado no momento.</td></tr></tbody>';
@@ -1534,19 +1549,21 @@ el('baixarConv').onclick = function(){
 
 function renderCarrinhos(){
   var lista = (remotos.carrinhos||[]).slice().sort(function(a,b){ return (b.criado||b.em||0)-(a.criado||a.em||0); });
-  var conta = {}; lista.forEach(function(c){ conta[c.situacao] = (conta[c.situacao]||0)+1; });
+  var soma = {}; lista.forEach(function(c){ soma[c.situacao] = (soma[c.situacao]||0) + valorCarrinho(c); });
   var ROTULO = { pago:'pagou', aguardando:'no prazo de pagar', 'nao-pagou':'gerou e não pagou', abandonado:'abandonou', digitando:'digitando' };
+  var tudo = lista.reduce(function(s,c){ return s + valorCarrinho(c); }, 0);
   el('carrinhosResumo').textContent = lista.length
-    ? lista.length + ' no total · ' + Object.keys(ROTULO).filter(function(k){ return conta[k]; })
-        .map(function(k){ return conta[k]+' '+ROTULO[k]; }).join(' · ')
+    ? brl(tudo) + ' no total · ' + Object.keys(ROTULO).filter(function(k){ return soma[k]; })
+        .map(function(k){ return brl(soma[k])+' '+ROTULO[k]; }).join(' · ')
     : 'nenhum carrinho na última semana';
 
   el('tbCarrinhos').innerHTML = lista.length
-    ? '<thead><tr><th>Começou</th><th>Cliente</th><th>Cidade</th><th>Kit</th><th>Situação</th><th>Preencheu</th><th></th></tr></thead><tbody>' +
+    ? '<thead><tr><th>Começou</th><th>Cliente</th><th>Cidade</th><th>Kit</th><th class="num">Valor</th><th>Situação</th><th>Preencheu</th><th></th></tr></thead><tbody>' +
       lista.map(function(c){
         return '<tr><td style="white-space:nowrap">'+carrinhoQuando(c)+'</td>' +
           '<td><b>'+esc(c.nome||'—')+'</b><br><span style="font-size:12px;color:var(--ink-3)">'+esc(c.email)+'</span></td>' +
           '<td>'+carrinhoCidade(c)+'</td><td>'+esc(c.kit?c.kit+' un.':'—')+'</td>' +
+          '<td class="num"><b>'+brl(valorCarrinho(c))+'</b></td>' +
           '<td>'+carrinhoSituacao(c)+'</td><td>'+carrinhoCampos(c)+'</td>' +
           '<td style="white-space:nowrap">'+carrinhoZap(c)+'</td></tr>';
       }).join('') + '</tbody>'
