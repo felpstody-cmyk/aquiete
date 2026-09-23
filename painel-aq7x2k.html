@@ -443,7 +443,8 @@ td.sel,th.sel{width:34px;padding-right:0}
 
 <section class="view" id="v-despesas">
   <h2>Despesas</h2>
-  <p class="sub">Anúncio, rótulo, frasco, embalagem, frete que você pagou. É o que faz o lucro ser real.</p>
+  <p class="sub">Anúncio, rótulo, embalagem, frete que você pagou. É o que faz o lucro ser real.
+    A compra dos frascos entra sozinha, vinda da aba Estoque.</p>
   <div class="card">
     <h3 id="tituloFormD">Novo lançamento</h3>
     <div class="body">
@@ -2005,18 +2006,44 @@ function renderDesp(){
   el('cacGeralAnuncio').textContent = brl(g.anuncio);
   el('cacGeralClientes').textContent = g.nCli;
 
-  var lista = despesas.filter(function(d){ return noPeriodo(d.data); })
+  var lancadas = despesas.filter(function(d){ return noPeriodo(d.data); });
+  var soma = lancadas.reduce(function(s,d){ return s+(Number(d.valor)||0); },0);
+
+  /* A compra dos frascos aparece aqui porque é dinheiro que saiu do bolso,
+   * mas NÃO entra na soma que forma o lucro: o frasco já é cobrado lá por
+   * venda (custo por frasco × unidades vendidas). Somar os dois contaria o
+   * mesmo frasco duas vezes e o lucro sairia menor do que é. Por isso as
+   * duas linhas de total no fim da tabela. */
+  var compras = lotes.filter(function(l){ return noPeriodo(l.data); }).map(function(l){
+    var v = (Number(l.qtd)||0) * (Number(l.custo)||0);
+    return { auto:true, data:l.data, cat:'Estoque',
+      desc: (l.lote ? 'Lote ' + l.lote + ' — ' : '') + (Number(l.qtd)||0) + ' frascos' +
+            (l.forn ? ' · ' + l.forn : ''),
+      valor: v };
+  });
+  var saiuEstoque = compras.reduce(function(s,d){ return s+d.valor; },0);
+
+  var lista = lancadas.concat(compras)
     .sort(function(a,b){ return String(b.data).localeCompare(String(a.data)); });
-  var soma = lista.reduce(function(s,d){ return s+(Number(d.valor)||0); },0);
+
+  var negativo = function(v){
+    return '<span style="color:var(--bad);font-weight:600">− '+brl(v)+'</span>';
+  };
   el('tbDesp').innerHTML = lista.length
     ? '<thead><tr><th>Data</th><th>Categoria</th><th>Descrição</th><th class="num">Valor</th><th></th></tr></thead><tbody>' +
       lista.map(function(d){
-        return '<tr><td>'+dataBR(d.data)+'</td><td><span class="pill p-manual">'+esc(d.cat)+'</span></td>' +
-          '<td>'+esc(d.desc||'—')+'</td><td class="num">'+brl(d.valor)+'</td>' +
-          '<td style="white-space:nowrap"><button class="lnk" data-ded="'+d.id+'">editar</button>' +
-          '<button class="lnk" data-drm="'+d.id+'">excluir</button></td></tr>';
+        return '<tr><td>'+dataBR(d.data)+'</td><td><span class="pill p-'+(d.auto?'enviado':'manual')+'">'+esc(d.cat)+'</span></td>' +
+          '<td>'+esc(d.desc||'—')+(d.auto?'<br><span style="font-size:11px;color:var(--ink-3)">veio da aba Estoque · já contado no custo por frasco</span>':'')+'</td>' +
+          '<td class="num">'+negativo(d.valor)+'</td>' +
+          '<td style="white-space:nowrap">' + (d.auto ? '' :
+            '<button class="lnk" data-ded="'+d.id+'">editar</button>' +
+            '<button class="lnk" data-drm="'+d.id+'">excluir</button>') + '</td></tr>';
       }).join('') +
-      '<tr><td colspan="3"><b>Total do período</b></td><td class="num"><b>'+brl(soma)+'</b></td><td></td></tr></tbody>'
+      '<tr><td colspan="3"><b>Despesas do período</b> <span style="color:var(--ink-3);font-weight:400">— é o que desconta do lucro</span></td>' +
+        '<td class="num"><b>'+negativo(soma)+'</b></td><td></td></tr>' +
+      (saiuEstoque ? '<tr><td colspan="3"><b>Saiu do caixa</b> <span style="color:var(--ink-3);font-weight:400">— com a compra dos frascos junto</span></td>' +
+        '<td class="num"><b>'+negativo(soma + saiuEstoque)+'</b></td><td></td></tr>' : '') +
+      '</tbody>'
     : '<tbody><tr><td class="vazio">Nada lançado no período.</td></tr></tbody>';
 
   Array.prototype.forEach.call(el('tbDesp').querySelectorAll('[data-ded]'), function(b){
