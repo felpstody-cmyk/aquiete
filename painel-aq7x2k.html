@@ -993,6 +993,21 @@ function quebraCarrinho(c){
  */
 function valorCarrinho(c){ return quebraCarrinho(c).total; }
 
+/**
+ * Os lotes comprados no período, no formato de lançamento de despesa.
+ * É dinheiro que saiu do bolso, e aparece como tal na aba Despesas e no
+ * card do Painel — mas fora da conta do lucro, que já cobra o frasco por
+ * venda (ver renderDesp).
+ */
+function comprasEstoqueDoPeriodo(){
+  return lotes.filter(function(l){ return noPeriodo(l.data); }).map(function(l){
+    return { auto:true, data:l.data, cat:'Estoque',
+      desc: (l.lote ? 'Lote ' + l.lote + ' — ' : '') + (Number(l.qtd)||0) + ' frascos' +
+            (l.forn ? ' · ' + l.forn : ''),
+      valor: (Number(l.qtd)||0) * (Number(l.custo)||0) };
+  });
+}
+
 /** "R$ 97,00 em produto + R$ 15,00 de frete" — a linha pequena do card. */
 function quebraTxt(produto, frete){
   if (!produto && !frete) return 'nenhum no período';
@@ -1188,6 +1203,9 @@ function renderComportamento(){
 }
 function renderPainel(){
   var m = calcular(), est = saldoEstoque(), cc = contarCarrinhos();
+  // Compra de frascos entra no card de Despesas (é dinheiro que saiu), mas
+  // não no Lucro: lá o frasco já é cobrado por venda. Ver renderDesp.
+  var estoquePer = comprasEstoqueDoPeriodo().reduce(function(s,d){ return s+d.valor; }, 0);
   renderPagamentoDonut();
   renderMarco100k();
   renderComportamento();
@@ -1212,7 +1230,10 @@ function renderPainel(){
     ['Faturamento', brl(m.receita), m.vendidos.length + ' venda' + (m.vendidos.length===1?'':'s'), 'hi'],
     ['Lucro', brl(m.lucro), pct(m.margem) + ' de margem', m.lucro>=0?'good':'bad'],
     ['Recebido líquido', brl(m.liquido), brl(m.taxas) + ' em taxas', ''],
-    ['Despesas', brl(m.desp), brl(m.anuncio) + ' em anúncio', ''],
+    ['Despesas', '− ' + brl(m.desp + estoquePer),
+      estoquePer
+        ? brl(m.desp) + ' lançadas + ' + brl(estoquePer) + ' em frascos'
+        : brl(m.anuncio) + ' em anúncio', ''],
     ['ROAS', m.roas ? m.roas.toFixed(2)+'×' : '—', 'retorno sobre anúncio', m.roas>=2?'good':''],
     ['ROI', m.anuncio ? pct(m.roi) : '—', 'lucro sobre o investido', m.roi>=100?'good':(m.anuncio&&m.roi<0?'bad':'')],
     ['Margem', pct(m.margem), 'da receita líquida', m.margem>=30?'good':(m.margem<0?'bad':'')],
@@ -2014,13 +2035,7 @@ function renderDesp(){
    * venda (custo por frasco × unidades vendidas). Somar os dois contaria o
    * mesmo frasco duas vezes e o lucro sairia menor do que é. Por isso as
    * duas linhas de total no fim da tabela. */
-  var compras = lotes.filter(function(l){ return noPeriodo(l.data); }).map(function(l){
-    var v = (Number(l.qtd)||0) * (Number(l.custo)||0);
-    return { auto:true, data:l.data, cat:'Estoque',
-      desc: (l.lote ? 'Lote ' + l.lote + ' — ' : '') + (Number(l.qtd)||0) + ' frascos' +
-            (l.forn ? ' · ' + l.forn : ''),
-      valor: v };
-  });
+  var compras = comprasEstoqueDoPeriodo();
   var saiuEstoque = compras.reduce(function(s,d){ return s+d.valor; },0);
 
   var lista = lancadas.concat(compras)
