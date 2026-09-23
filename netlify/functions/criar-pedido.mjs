@@ -70,9 +70,11 @@ export default async (req) => {
       try {
         await enviar({
           para: cliente.email,
+          // Assunto com valor e prazo: e o que decide se o e-mail e aberto
+          // no meio de uma caixa de entrada cheia.
           assunto: pedido.metodo === 'pix'
-            ? `Seu Pix do pedido ${referencia}`
-            : `Seu boleto do pedido ${referencia}`,
+            ? `Falta só o pagamento: seu Pix de R$ ${pedido.total.toFixed(2).replace('.', ',')} vence em 24h`
+            : `Seu boleto de R$ ${pedido.total.toFixed(2).replace('.', ',')} está pronto`,
           html: htmlAguardando({
             nome: cliente.nome,
             referencia,

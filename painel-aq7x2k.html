@@ -188,6 +188,8 @@ td.sel,th.sel{width:34px;padding-right:0}
 
 <main>
 
+<p id="avisoAmbiente" hidden style="margin:0 0 16px;padding:14px 16px;border-radius:12px;background:var(--bad-bg);color:var(--bad);font-weight:700;line-height:1.45"></p>
+
 <section class="view on" id="v-painel">
   <h2>Painel</h2>
   <p class="sub" id="painelPeriodo">—</p>
@@ -568,7 +570,7 @@ td.sel,th.sel{width:34px;padding-right:0}
  * próprio arquivo com cache desligado e, se a versão de lá for diferente
  * da que está rodando, reabre numa URL com ?v=, que o navegador não tem
  * guardada. O #acesso vai junto, então o token não se perde. */
-var VERSAO_PAINEL = '2026-09-22-2';
+var VERSAO_PAINEL = '2026-09-23-1';
 (function(){
   try {
     if (!/^https?:$/.test(location.protocol)) return;
@@ -637,7 +639,7 @@ var manuais = ler(K.ped, []);
 // "Entregue" quem marca e voce). Chave e o id do pedido, valor e o status novo.
 var statusManual = ler(K.sta, {});
 var selecionados = {};
-var remotos = ler(K.rem, { pedidos:[], metricas:{}, ativos:[], abandonados:[], carrinhos:[], conversoesGoogle:[], comportamento:{ porPagina:{}, sessoes:[] } });
+var remotos = ler(K.rem, { pedidos:[], metricas:{}, ativos:[], abandonados:[], carrinhos:[], conversoesGoogle:[], ambiente:'', comportamento:{ porPagina:{}, sessoes:[] } });
 var despesas = ler(K.desp, null);
 var lotes   = ler(K.est, []);
 var cfg     = ler(K.cfg, {});
@@ -787,7 +789,7 @@ function sincronizar(silencioso){
   ])
     .then(function(res){
       var d = res[0], estadoNuvem = res[1];
-      remotos = { pedidos: d.pedidos||[], metricas: d.metricas||{}, ativos: d.ativos||[], abandonados: d.abandonados||[], carrinhos: d.carrinhos||[], conversoesGoogle: d.conversoesGoogle||[], comportamento: d.comportamento||{ porPagina:{}, sessoes:[] } };
+      remotos = { pedidos: d.pedidos||[], metricas: d.metricas||{}, ativos: d.ativos||[], abandonados: d.abandonados||[], carrinhos: d.carrinhos||[], conversoesGoogle: d.conversoesGoogle||[], ambiente: d.ambiente||'', comportamento: d.comportamento||{ porPagina:{}, sessoes:[] } };
       sincEm = new Date().toISOString();
       gravar(K.rem, remotos); gravar(K.sinc, sincEm);
 
@@ -2017,7 +2019,20 @@ el('testarApi').onclick = function(){
 };
 
 /* ================= start ================= */
-function render(){ renderPainel(); renderAoVivo(); renderPedidos(); renderAbandonados(); renderCarrinhos(); renderConversoes(); renderClientes(); renderEstoque(); renderDesp(); renderRel(); }
+/* Aviso gritante quando o Asaas esta em modo de teste: nesse modo o Pix
+   e gerado normalmente, mas NAO existe de verdade — ninguem consegue
+   pagar. E a explicacao mais comum pra "geraram Pix e ninguem pagou". */
+function renderAmbiente(){
+  var caixa = el('avisoAmbiente');
+  if (!caixa) return;
+  var amb = remotos.ambiente || '';
+  var teste = amb && amb !== 'producao';
+  caixa.hidden = !teste;
+  if (teste) caixa.textContent = 'ATENÇÃO: o Asaas está em modo de teste (' + amb + '). '
+    + 'Os Pix gerados não podem ser pagos por ninguém. Troque ASAAS_AMBIENTE para "producao" no Netlify.';
+}
+
+function render(){ renderAmbiente(); renderPainel(); renderAoVivo(); renderPedidos(); renderAbandonados(); renderCarrinhos(); renderConversoes(); renderClientes(); renderEstoque(); renderDesp(); renderRel(); }
 el('p_data').value = hoje(); el('d_data').value = hoje(); el('l_data').value = hoje();
 el('l_custo').value = cfg.custo;
 el('p_kit').onchange();

@@ -105,42 +105,72 @@ export function htmlAguardando({ nome, referencia, descricao, total, metodo, pay
   const primeiro = esc(String(nome || '').split(' ')[0] || 'Olá')
   const ehPix = metodo === 'pix'
 
+  /* O código copia e cola vem ANTES de qualquer explicação: é a única
+     coisa que a pessoa abriu o e-mail para pegar. Cada parágrafo acima
+     dele é um motivo a mais para ela fechar sem pagar. */
   const codigo = ehPix && payload ? `
-    <p style="margin:20px 0 8px;font-size:13px;color:#82655F">Pix copia e cola:</p>
+    <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:#2A1613">Pix copia e cola</p>
     <div style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;line-height:1.5;
                 color:#2A1613;background:#FBEDE9;border:1px dashed #F0A79F;border-radius:12px;
-                padding:12px;word-break:break-all">${esc(payload)}</div>` : ''
+                padding:12px;word-break:break-all;margin-bottom:18px">${esc(payload)}</div>` : ''
 
   const botao = link ? `
-    <table role="presentation" style="margin:22px auto 0"><tr><td style="border-radius:999px;background:#C8453E">
-      <a href="${esc(link)}" style="display:inline-block;padding:13px 28px;color:#fff;
-         text-decoration:none;font-weight:700;font-size:15px">
-        ${ehPix ? 'Abrir e pagar' : 'Ver o boleto'}
+    <div style="text-align:center;margin:22px 0 8px">
+      <a href="${esc(link)}" style="display:inline-block;padding:15px 34px;border-radius:999px;
+         background:#C8453E;color:#fff;text-decoration:none;font-weight:700;font-size:16px">
+        ${ehPix ? 'Abrir o QR Code e pagar' : 'Ver o boleto'}
       </a>
-    </td></tr></table>` : ''
+    </div>` : ''
+
+  const passos = ehPix ? `
+    <div style="background:#FBEDE9;border-radius:14px;padding:16px 18px;margin:18px 0">
+      <p style="margin:0 0 10px;font-weight:700;color:#2A1613;font-size:14px">Como pagar em 30 segundos</p>
+      <p style="margin:0 0 6px"><b>1.</b> Abra o app do seu banco e escolha <b>Pix &rsaquo; Pix Copia e Cola</b>.</p>
+      <p style="margin:0 0 6px"><b>2.</b> Cole o código acima.</p>
+      <p style="margin:0"><b>3.</b> Confira o valor de <b>${brl(total)}</b> e confirme.</p>
+    </div>
+    <p style="margin:0 0 18px;font-size:13px;color:#82655F">
+      No app, o recebedor aparece como <b style="color:#5C4340">Felipe Strauss Toderati</b>.
+      É o nome da Aquiete no CNPJ, pode confirmar tranquilo.
+    </p>` : ''
+
+  const prazo = ehPix
+    ? `<p style="margin:0 0 18px;padding:12px 14px;border-left:3px solid #C8453E;background:#FDF8F6;font-size:14px">
+         <b style="color:#2A1613">Este código vale por 24 horas.</b> Depois disso ele expira e você precisa refazer o pedido.
+       </p>`
+    : `<p style="margin:0 0 18px;font-size:14px">O boleto leva até 3 dias úteis para compensar depois do pagamento.</p>`
 
   return MOLDURA(`
-    <h1 style="font-family:Georgia,serif;font-size:22px;color:#2A1613;margin:0 0 16px;font-weight:normal">
-      ${primeiro}, ${ehPix ? 'seu Pix está pronto' : 'seu boleto está pronto'}.
-    </h1>
-    <p style="margin:0 0 16px">
-      Guardamos seu pedido. ${ehPix
-        ? 'Assim que o pagamento cair, avisamos por aqui e preparamos o envio.'
-        : 'O boleto leva até 3 dias úteis para compensar depois do pagamento.'}
+    <p style="margin:0 0 6px;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:#A8352F;font-weight:700">
+      Falta só o pagamento
     </p>
-    <table style="width:100%;border-collapse:collapse;margin:20px 0;font-size:14px">
-      <tr><td style="padding:8px 0;border-bottom:1px solid #F1DFD9;color:#82655F">Pedido</td>
-          <td style="padding:8px 0;border-bottom:1px solid #F1DFD9;text-align:right;color:#2A1613"><strong>${esc(referencia)}</strong></td></tr>
-      <tr><td style="padding:8px 0;border-bottom:1px solid #F1DFD9;color:#82655F">Item</td>
-          <td style="padding:8px 0;border-bottom:1px solid #F1DFD9;text-align:right;color:#2A1613">${esc(descricao)}</td></tr>
-      <tr><td style="padding:8px 0;color:#82655F">Total</td>
-          <td style="padding:8px 0;text-align:right;color:#A8352F;font-size:18px"><strong>${brl(total)}</strong></td></tr>
-    </table>
+    <h1 style="margin:0 0 14px;font-family:Georgia,serif;font-size:24px;color:#2A1613;line-height:1.3">
+      ${primeiro}, ${ehPix ? 'seu Pix está pronto' : 'seu boleto está pronto'}
+    </h1>
+    <p style="margin:0 0 18px">
+      Seu pedido está guardado. ${ehPix
+        ? 'Assim que o pagamento cair, a gente separa e envia — e te avisa por aqui.'
+        : 'Assim que compensar, a gente separa e envia.'}
+    </p>
+
     ${codigo}
     ${botao}
-    <p style="margin:22px 0 0;font-size:12px;color:#82655F;text-align:center">
-      Já pagou? Pode ignorar este e-mail.
-    </p>`)
+    ${passos}
+    ${prazo}
+
+    <table role="presentation" style="width:100%;border-collapse:collapse;font-size:14px;margin-bottom:18px">
+      <tr><td style="padding:7px 0;color:#82655F">Pedido</td>
+          <td style="padding:7px 0;text-align:right;color:#2A1613;font-weight:700">${esc(referencia)}</td></tr>
+      <tr><td style="padding:7px 0;color:#82655F;border-top:1px solid #F1DFD9">Item</td>
+          <td style="padding:7px 0;text-align:right;color:#2A1613;border-top:1px solid #F1DFD9">${esc(descricao)}</td></tr>
+      <tr><td style="padding:7px 0;color:#82655F;border-top:1px solid #F1DFD9">Total</td>
+          <td style="padding:7px 0;text-align:right;color:#A8352F;font-weight:700;font-size:17px;border-top:1px solid #F1DFD9">${brl(total)}</td></tr>
+    </table>
+
+    <p style="margin:0 0 6px;font-size:13px;color:#82655F">
+      Envio em até 2 dias úteis depois da aprovação · 30 dias de garantia
+    </p>
+    <p style="margin:0;font-size:12px;color:#B9A49F">Já pagou? Pode ignorar este e-mail.</p>`)
 }
 
 /** Pix gerado há um tempo e ainda não pago — lembrete automático. */
