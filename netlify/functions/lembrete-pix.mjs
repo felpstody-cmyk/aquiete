@@ -16,7 +16,7 @@ const BASES = {
 function credenciais() {
   const chave = process.env.ASAAS_API_KEY
   if (!chave) throw new Error('ASAAS_API_KEY não configurada')
-  const base = BASES[(process.env.ASAAS_AMBIENTE || 'sandbox').toLowerCase()] || BASES.sandbox
+  const base = BASES[(process.env.ASAAS_AMBIENTE || 'producao').toLowerCase()] || BASES.producao
   return { chave, base }
 }
 

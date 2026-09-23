@@ -3,10 +3,12 @@
  *
  * Variáveis de ambiente (painel do Netlify > Site settings > Environment):
  *   ASAAS_API_KEY   chave da API (começa com "$aact_")
- *   ASAAS_AMBIENTE  "sandbox" (padrão) ou "producao"
+ *   ASAAS_AMBIENTE  "producao" (padrão) ou "sandbox"
  *
- * Comece SEMPRE em sandbox. Só troque para produção depois de fazer
- * um pedido de teste inteiro e ver o dinheiro cair.
+ * O padrão é produção de propósito: a loja está vendendo. Se a variável
+ * sumir ou vier escrita errada, o certo é continuar cobrando de verdade,
+ * e não gerar em silêncio um Pix de mentira que ninguém consegue pagar.
+ * Para testar, coloque "sandbox" na mão — e lembre de tirar depois.
  */
 
 import { ErroDeGateway } from './index.mjs'
@@ -24,7 +26,7 @@ const BILLING = { pix: 'PIX', card: 'CREDIT_CARD', boleto: 'BOLETO' }
 function config() {
   const chave = process.env.ASAAS_API_KEY
   if (!chave) throw new ErroDeGateway('ASAAS_API_KEY não configurada no Netlify', 500)
-  const base = BASES[(process.env.ASAAS_AMBIENTE || 'sandbox').toLowerCase()] || BASES.sandbox
+  const base = BASES[(process.env.ASAAS_AMBIENTE || 'producao').toLowerCase()] || BASES.producao
   return { chave, base }
 }
 

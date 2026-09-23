@@ -41,5 +41,5 @@
 #
 #    GATEWAY          asaas | pagarme | mercadopago
 #    ASAAS_API_KEY    chave do Asaas (começa com $aact_)
-#    ASAAS_AMBIENTE   sandbox | producao
+#    ASAAS_AMBIENTE   producao (padrão se não existir) | sandbox
 # ------------------------------------------------------------
