@@ -893,6 +893,25 @@ img,svg{display:block;max-width:100%}
      isso o event_callback, com um prazo de 900ms: se o Google nao
      responder a tempo, segue o baile e a venda nao trava por causa de
      rastreamento. */
+  /* Rotulo da conversao "Compra paga", criada no Google Ads como acao
+     separada. Enquanto estiver vazio, nada e disparado — o site nao
+     quebra e a conversao de pedido gerado continua funcionando. */
+  var GOOGLE_PAGA = '';
+
+  /* Dispara a conversao de VENDA PAGA. Chamada pela tela do Pix no
+     instante em que o pagamento cai. */
+  function conversaoPaga(referencia, valor){
+    try {
+      if (!GOOGLE_PAGA || !window.gtag) return;
+      gtag('event', 'conversion', {
+        send_to: GOOGLE_PAGA,
+        value: valor,
+        currency: 'BRL',
+        transaction_id: referencia || ''
+      });
+    } catch(e) {}
+  }
+
   function conversaoGoogle(referencia, valor, depois){
     var seguiu = false;
     function seguir(){ if (seguiu) return; seguiu = true; if (depois) depois(); }
@@ -1015,10 +1034,46 @@ img,svg{display:block;max-width:100%}
     p.appendChild(d.createTextNode('. O envio sai assim que o pagamento cair.'));
     caixa.appendChild(p);
 
+    /* Aviso que troca sozinho quando o pagamento cai. */
+    var aviso = d.createElement('p');
+    aviso.style.cssText = 'margin-top:.75rem;font-size:.8125rem;color:var(--ink-3)';
+    aviso.textContent = 'Esta tela avisa sozinha quando o pagamento cair.';
+    caixa.appendChild(aviso);
+
     alvo.replaceChildren(caixa);
     painelPix.setAttribute('data-open','');
     painelPix.scrollIntoView({ behavior: 'smooth', block: 'center' });
     travar(true, 'Aguardando pagamento');
+
+    vigiarPagamento(dados.referencia, Number(dados.total) || totalAtual, caixa, aviso);
+  }
+
+  /* Pergunta ao servidor, de tempos em tempos, se o pagamento daquele
+     pedido caiu. Serve pra duas coisas:
+       1. avisar a pessoa na hora, sem ela ficar recarregando a pagina
+       2. disparar a conversao de VENDA PAGA no momento certo
+     Para sozinho depois de 20 minutos, ou quando cai. */
+  function vigiarPagamento(referencia, valor, caixa, aviso){
+    if (!referencia) return;
+    var tentativas = 0;
+    var limite = 200;            // 200 x 6s = 20 minutos
+    var timer = setInterval(function(){
+      tentativas++;
+      if (tentativas > limite) { clearInterval(timer); return; }
+      fetch('/api/status-pedido?ref=' + encodeURIComponent(referencia), { cache: 'no-store' })
+        .then(function(r){ return r.json(); })
+        .then(function(j){
+          if (!j || !j.pago) return;
+          clearInterval(timer);
+          conversaoPaga(referencia, valor);
+          caixa.style.background = '#E6F2EC';
+          aviso.style.color = 'var(--ok)';
+          aviso.style.fontWeight = '700';
+          aviso.textContent = 'Pagamento confirmado! Seu pedido já entrou na fila de envio.';
+          travar(true, 'Pagamento confirmado');
+        })
+        .catch(function(){});
+    }, 6000);
   }
 })();
 </script>

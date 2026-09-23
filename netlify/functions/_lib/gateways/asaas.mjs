@@ -78,6 +78,27 @@ export async function buscarCliente(id) {
   return chamar(`/customers/${encodeURIComponent(id)}`)
 }
 
+/**
+ * Situação de um pedido, pela referência que a gente mesmo gerou.
+ *
+ * Existe para a tela do Pix saber, sozinha, a hora exata em que o
+ * pagamento cai — é nesse instante que a conversão de venda paga é
+ * disparada. Sem isso, só o webhook sabe, e o webhook não tem como
+ * avisar o navegador de quem está com o QR aberto.
+ */
+export async function situacaoDoPedido(referencia) {
+  const r = await chamar(`/payments?externalReference=${encodeURIComponent(referencia)}&limit=1`)
+  const p = r?.data?.[0]
+  if (!p) return { encontrado: false, pago: false }
+  const PAGO = new Set(['RECEIVED', 'CONFIRMED', 'RECEIVED_IN_CASH'])
+  return {
+    encontrado: true,
+    pago: PAGO.has(String(p.status || '').toUpperCase()),
+    status: p.status || '',
+    valor: Number(p.value) || 0,
+  }
+}
+
 function vencimento(diasAFrente) {
   const d = new Date(Date.now() + diasAFrente * 86400000)
   return d.toISOString().slice(0, 10)
