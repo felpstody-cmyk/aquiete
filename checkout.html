@@ -887,19 +887,12 @@ img,svg{display:block;max-width:100%}
     botao.innerHTML = travado ? (texto || 'Processando…') : rotuloBotao;
   }
 
-  /* Conversao do Google Ads.
-     Dispara quando o pedido e criado (no cartao e no boleto a pessoa sai
-     da pagina em seguida, entao o evento tem que ir embora antes). Por
-     isso o event_callback, com um prazo de 900ms: se o Google nao
-     responder a tempo, segue o baile e a venda nao trava por causa de
-     rastreamento. */
-  /* Rotulo da conversao "Compra paga", criada no Google Ads como acao
-     separada. Enquanto estiver vazio, nada e disparado — o site nao
-     quebra e a conversao de pedido gerado continua funcionando. */
-  var GOOGLE_PAGA = '';
+  /* Conversao do Google: dispara SO quando o pagamento cai.
+     Antes ela disparava ao gerar o Pix, e quem gerava e nao pagava
+     contava como venda — o Google aprenderia a procurar gerador de Pix.
+     E uma acao de conversao so, pra mesma venda nunca contar duas vezes. */
+  var GOOGLE_PAGA = 'AW-18468707390/W2_HCIHf04EdEL64yOZE';
 
-  /* Dispara a conversao de VENDA PAGA. Chamada pela tela do Pix no
-     instante em que o pagamento cai. */
   function conversaoPaga(referencia, valor){
     try {
       if (!GOOGLE_PAGA || !window.gtag) return;
@@ -910,22 +903,6 @@ img,svg{display:block;max-width:100%}
         transaction_id: referencia || ''
       });
     } catch(e) {}
-  }
-
-  function conversaoGoogle(referencia, valor, depois){
-    var seguiu = false;
-    function seguir(){ if (seguiu) return; seguiu = true; if (depois) depois(); }
-    try {
-      if (!window.gtag) return seguir();
-      gtag('event', 'conversion', {
-        send_to: 'AW-18468707390/W2_HCIHf04EdEL64yOZE',
-        value: valor,
-        currency: 'BRL',
-        transaction_id: referencia || '',
-        event_callback: seguir
-      });
-      setTimeout(seguir, 900);
-    } catch(e) { seguir(); }
   }
 
   function enviar(){
@@ -962,11 +939,12 @@ img,svg{display:block;max-width:100%}
         if (!/^https:\/\//i.test(String(res.j.redirectUrl))) {
           throw new Error('Endereço de pagamento inválido. Tente outro método.');
         }
-        var destino = res.j.redirectUrl;
-        conversaoGoogle(res.j.referencia, Number(res.j.total) || totalAtual, function(){ location.href = destino; });
+        // Cartao e boleto: a conversao dispara na volta, em obrigado.html,
+        // depois que o Asaas confirma o pagamento de verdade.
+        location.href = res.j.redirectUrl;
         return;
       }
-      if (res.j.pix) { conversaoGoogle(res.j.referencia, Number(res.j.total) || totalAtual); mostrarPix(res.j); return; }
+      if (res.j.pix) { mostrarPix(res.j); return; }
       throw new Error('Resposta inesperada do gateway');
     })
     .catch(function(e){

@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pedido confirmado | Aquiete</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#FDF8F6">
+<meta name="color-scheme" content="light">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+
+<!-- Identificador do clique do anuncio: mesma regra das outras paginas. -->
+<script>
+(function(){
+  try {
+    var p = new URLSearchParams(location.search);
+    var id = p.get('gclid') || p.get('gbraid') || p.get('wbraid');
+    if (id) localStorage.setItem('aq_clique', JSON.stringify({ id: id, em: Date.now() }));
+  } catch(e){}
+})();
+</script>
+
+<style>
+:root{
+  color-scheme:light;
+  --bg:#FDF8F6; --surface:#FFFFFF; --sand:#FBEDE9; --line:#F1DFD9;
+  --ink:#2A1613; --ink-2:#5C4340; --ink-3:#82655F;
+  --brand-700:#A8352F; --brand:#C8453E;
+  --ok:#2F7D5B; --ok-100:#E6F2EC;
+  --font-display:ui-serif,"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  --font-body:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box} *{margin:0}
+body{
+  background:var(--bg); color:var(--ink-2); font-family:var(--font-body);
+  min-height:100vh; display:grid; place-items:center; padding:2rem 1.25rem;
+}
+.cartao{
+  background:var(--surface); border:1px solid var(--line); border-radius:22px;
+  padding:2.5rem 2rem; max-width:520px; width:100%; text-align:center;
+  box-shadow:0 2px 4px rgba(90,40,34,.06), 0 12px 28px -8px rgba(90,40,34,.13);
+}
+.gota{ width:34px; height:44px; margin:0 auto 1.25rem; display:block; color:var(--brand); }
+h1{ font-family:var(--font-display); color:var(--ink); font-size:1.75rem; line-height:1.25; margin-bottom:.75rem; }
+p{ line-height:1.6; }
+p+p{ margin-top:.75rem; }
+.selo{
+  display:inline-flex; align-items:center; gap:.5rem; margin-bottom:1.25rem;
+  background:var(--ok-100); color:var(--ok); font-weight:700; font-size:.8125rem;
+  padding:.45rem .9rem; border-radius:999px;
+}
+.ref{ font-family:monospace; color:var(--ink); font-weight:700; }
+.linha{ height:1px; background:var(--line); margin:1.75rem 0 1.25rem; }
+.sub{ font-size:.8125rem; color:var(--ink-3); }
+.btn{
+  display:inline-block; margin-top:1.5rem; padding:.85rem 1.75rem; border-radius:999px;
+  background:linear-gradient(140deg,var(--brand),var(--brand-700)); color:#fff;
+  text-decoration:none; font-weight:700;
+}
+</style>
+</head>
+<body>
+
+<div class="cartao">
+  <svg class="gota" viewBox="-1 -1 26 40" aria-hidden="true">
+    <path d="M12 .6c3.6 7.6 11 17.8 11 26a11 11 0 0 1-22 0c0-8.2 7.4-18.4 11-26Z" fill="currentColor"/>
+  </svg>
+
+  <span class="selo" id="selo">Conferindo o pagamento…</span>
+  <h1 id="titulo">Recebemos seu pedido</h1>
+  <p id="texto">Só um instante, estamos confirmando o pagamento com o banco.</p>
+
+  <div class="linha"></div>
+  <p class="sub">Pedido <span class="ref" id="ref">—</span></p>
+  <p class="sub">O comprovante e o código de rastreio vão pro seu e-mail.</p>
+
+  <a class="btn" href="/">Voltar para a loja</a>
+</div>
+
+<script>
+(function(){
+  var d = document;
+  var el = function(i){ return d.getElementById(i); };
+  var ref = (new URLSearchParams(location.search).get('ref') || '').toUpperCase();
+  el('ref').textContent = ref || '—';
+
+  /* Tag do Google com modo de consentimento, igual as outras paginas:
+     carrega sempre, mas so ganha permissao de cookie se a pessoa aceitou. */
+  var GOOGLE_ADS_ID = 'AW-18468707390';
+  var GOOGLE_PAGA   = 'AW-18468707390/W2_HCIHf04EdEL64yOZE';
+  try {
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = function(){ dataLayer.push(arguments); };
+    gtag('consent', 'default', {
+      ad_storage:'denied', ad_user_data:'denied',
+      ad_personalization:'denied', analytics_storage:'denied', wait_for_update:500
+    });
+    var g = d.createElement('script'); g.async = true;
+    g.src = 'https://www.googletagmanager.com/gtag/js?id=' + GOOGLE_ADS_ID;
+    d.head.appendChild(g);
+    gtag('js', new Date());
+    gtag('config', GOOGLE_ADS_ID);
+    if (localStorage.getItem('aq_cookies') === 'aceito') {
+      gtag('consent', 'update', {
+        ad_storage:'granted', ad_user_data:'granted',
+        ad_personalization:'granted', analytics_storage:'granted'
+      });
+    }
+  } catch(e){}
+
+  /* A conversao so dispara depois que o Asaas confirma o pagamento.
+     Quem chega aqui pelo cartao ja pagou, mas confirmar antes de contar
+     evita registrar venda de cartao recusado. */
+  var jaContou = false;
+  function contar(valor){
+    if (jaContou || !GOOGLE_PAGA || !window.gtag) return;
+    jaContou = true;
+    try {
+      gtag('event', 'conversion', {
+        send_to: GOOGLE_PAGA,
+        value: Number(valor) || 0,
+        currency: 'BRL',
+        transaction_id: ref
+      });
+    } catch(e){}
+  }
+
+  function confirmado(valor){
+    el('selo').textContent = 'Pagamento confirmado';
+    el('titulo').textContent = 'Pagamento confirmado!';
+    el('texto').textContent = 'Seu pedido já entrou na fila de envio. Ele sai em até 2 dias úteis.';
+    contar(valor);
+  }
+
+  function aindaNao(){
+    el('selo').textContent = 'Aguardando o pagamento';
+    el('titulo').textContent = 'Recebemos seu pedido';
+    el('texto').textContent = 'Assim que o pagamento for confirmado, a gente separa e envia. '
+      + 'Se você pagou agora, pode levar alguns minutos.';
+  }
+
+  if (!/^AQ-\d{6}-[A-Z0-9]{5}$/.test(ref)) { aindaNao(); return; }
+
+  var tentativas = 0;
+  (function olhar(){
+    tentativas++;
+    fetch('/api/status-pedido?ref=' + encodeURIComponent(ref), { cache: 'no-store' })
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        if (j && j.pago) { confirmado(j.valor); return; }
+        if (tentativas >= 20) { aindaNao(); return; }   // 20 x 6s = 2 minutos
+        setTimeout(olhar, 6000);
+      })
+      .catch(function(){
+        if (tentativas >= 20) { aindaNao(); return; }
+        setTimeout(olhar, 6000);
+      });
+  })();
+})();
+</script>
+</body>
+</html>

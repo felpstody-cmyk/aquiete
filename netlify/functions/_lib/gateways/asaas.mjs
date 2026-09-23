@@ -117,6 +117,13 @@ export async function criarCobranca({ pedido, cliente, referencia }) {
       dueDate: vencimento(pedido.metodo === 'boleto' ? 3 : 1),
       description: pedido.descricao,
       externalReference: referencia,
+      // Cartao e boleto saem daqui pra pagina do Asaas. Sem isto, quem
+      // paga no cartao nunca mais volta pro site: a venda acontece e nem
+      // o cliente ve confirmacao, nem o Google registra a conversao.
+      callback: {
+        successUrl: `https://aquieteagora.com.br/obrigado.html?ref=${encodeURIComponent(referencia)}`,
+        autoRedirect: true,
+      },
     }),
   })
 

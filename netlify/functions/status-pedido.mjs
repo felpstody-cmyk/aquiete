@@ -35,7 +35,9 @@ export default async (req) => {
 
   try {
     const s = await situacaoDoPedido(ref)
-    return json({ pago: !!s.pago })
+    // O valor vem do Asaas, nao da URL: assim ninguem infla o faturamento
+    // do relatorio trocando um numero no endereco.
+    return json({ pago: !!s.pago, valor: s.pago ? s.valor : 0 })
   } catch (e) {
     console.error('[status-pedido]', e.message)
     // Falha de consulta nunca pode quebrar a tela do Pix.
