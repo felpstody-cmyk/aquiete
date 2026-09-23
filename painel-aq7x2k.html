@@ -570,7 +570,7 @@ td.sel,th.sel{width:34px;padding-right:0}
  * próprio arquivo com cache desligado e, se a versão de lá for diferente
  * da que está rodando, reabre numa URL com ?v=, que o navegador não tem
  * guardada. O #acesso vai junto, então o token não se perde. */
-var VERSAO_PAINEL = '2026-09-23-7';
+var VERSAO_PAINEL = '2026-09-23-8';
 (function(){
   try {
     if (!/^https?:$/.test(location.protocol)) return;
@@ -1274,17 +1274,8 @@ function renderAoVivo(){
   linhas.push(linhaPagina('Página inicial', hmVis, hmChk));
   linhas.push(linhaPagina('Página de venda', ofVis, ofChk));
   linhas.push('<div><b>'+carrinhosPer+'</b> carrinho'+(carrinhosPer===1?'':'s')+' novo'+(carrinhosPer===1?'':'s')+' '+rotuloPer+'</div>');
-  // Carrinho e pedido têm timestamp próprio (quando a pessoa digitou e
-  // quando ela gerou o Pix), não uma chave "tipo:dia" — sem filtrar por
-  // período aqui, um carrinho de outro dia contava dentro de "Hoje".
-  var cc = contarCarrinhos();
-  linhas.push('<div><b>'+brl(cc.rsGerado)+'</b> em pedidos gerados '+rotuloPer+
-    ' <span style="color:var(--ink-3)">('+cc.gerados+(cc.gerados===1?' pedido':' pedidos')+
-    (cc.rsGerado ? ', '+brl(cc.rsPago)+' pago, '+brl(cc.rsAguardando)+' no prazo' : '')+')</span></div>');
-  var rsMesa = cc.rsNaoPagou + cc.rsAbandonado, nMesa = cc.abandonados + cc.naoPagou;
-  linhas.push('<div><b>'+brl(rsMesa)+'</b> na mesa '+rotuloPer+
-    ' <span style="color:var(--ink-3)">('+nMesa+(nMesa===1?' carrinho':' carrinhos')+
-    ', '+quebraTxt(cc.prodMesa, cc.freteMesa)+')</span></div>');
+  // Pedido gerado e dinheiro na mesa saem nos cards lá em cima, com a
+  // quebra de produto e frete. Repetir aqui embaixo só enchia a tela.
   if (chaves.length) {
     linhas.push('<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--line)">Navegando agora:</div>');
     chaves.sort(function(a,b){ return porUf[b].ultima-porUf[a].ultima; }).forEach(function(uf){
