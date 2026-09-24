@@ -2725,7 +2725,18 @@ try { if (!aqEmTeste()) {
   if (!aqSid) { aqSid = Math.random().toString(36).slice(2) + Date.now().toString(36); sessionStorage.setItem('aq_sid', aqSid); }
   var aqBater = function(){ fetch('/api/ativo?sid=' + aqSid, { method:'GET', keepalive:true }).catch(function(){}); };
   aqBater();
-  setInterval(aqBater, 25000);
+  /* A batida alimenta a bolinha de "ao vivo". A cada 25s e sem teto, uma
+     aba esquecida aberta batia 3.456 vezes por dia, e cada batida e uma
+     chamada de funcao que custa credito no Netlify - foi parte do que
+     derrubou a loja em 23/09/2026.
+     Agora: 1 minuto, nao bate com a aba escondida, e para depois de 20
+     minutos. Quem fica mais que isso parado nao e "ao vivo" de verdade. */
+  var aqBatidas = 0;
+  var aqRelogioVivo = setInterval(function(){
+    if (document.visibilityState !== 'visible') return;
+    if (++aqBatidas > 20) { clearInterval(aqRelogioVivo); return; }
+    aqBater();
+  }, 60000);
 } } catch(e){}
 
 /* Ate onde a pessoa rolou a pagina e quanto tempo ficou. Manda so quando
