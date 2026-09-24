@@ -1118,6 +1118,21 @@ try { if (!aqEmTeste()) {
     var p = aqScrollPct();
     if (p > aqScrollMax) aqScrollMax = p;
   }, { passive: true });
+  /* Quais campos já têm alguma coisa dentro, AGORA. Vai só o nome de cada
+     campo, nunca o valor — CPF, e-mail e endereço continuam saindo daqui
+     só no pedido de verdade. Isto sobe pelo evento de comportamento, que
+     não exige e-mail nenhum: é o que faz aparecer "parou depois do nome"
+     de quem nunca chegou a virar carrinho. */
+  var AQ_CAMPOS = ['nome','cpf','email','tel','cep','rua','numero','compl','bairro','cidade'];
+  function aqPreenchidos(){
+    var fora = [];
+    for (var i = 0; i < AQ_CAMPOS.length; i++){
+      var c = document.getElementById(AQ_CAMPOS[i]);
+      if (c && (c.value || '').trim()) fora.push(AQ_CAMPOS[i]);
+    }
+    return fora;
+  }
+
   function aqMandarEvento(){
     var sid = sessionStorage.getItem('aq_sid');
     if (!sid) return;
@@ -1129,6 +1144,7 @@ try { if (!aqEmTeste()) {
       tocou: !!window.aqTocou,
       digitou: !!window.aqDigitou,
       travou: window.aqTravou || [],
+      campos: aqPreenchidos(),
       /* De onde essa sessao veio. Sessao que SO tem checkout e nao tem
          origem nenhuma e link colado na mao ou robo — e e exatamente
          isso que a gente precisa separar. */
@@ -1154,7 +1170,8 @@ try { if (!aqEmTeste()) {
   setInterval(function(){
     // Rolagem arredondada em dezenas pra não mandar aviso a cada pixel.
     var agora = [window.aqEtapa, window.aqTocou, window.aqDigitou,
-                 (window.aqTravou || []).length, Math.round(aqScrollMax / 10)].join('|');
+                 (window.aqTravou || []).length, aqPreenchidos().join(','),
+                 Math.round(aqScrollMax / 10)].join('|');
     if (agora === aqAssinatura) return;
     aqAssinatura = agora;
     aqMandarEvento();

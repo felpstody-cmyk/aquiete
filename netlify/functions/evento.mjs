@@ -43,6 +43,11 @@ export default async (req) => {
     if (Array.isArray(corpo.travou)) {
       dados.travou = corpo.travou.map((t) => String(t).slice(0, 40)).slice(0, 12)
     }
+    // Nomes dos campos já preenchidos — nunca o que foi digitado neles.
+    // É o que mostra até onde a pessoa foi mesmo sem virar carrinho.
+    if (Array.isArray(corpo.campos)) {
+      dados.campos = corpo.campos.map((c) => String(c).slice(0, 20)).slice(0, 20)
+    }
     // De onde veio: só o domínio de origem e o nome da campanha, nunca a
     // URL inteira (que pode carregar dado de quem clicou).
     if (corpo.ref != null) dados.ref = String(corpo.ref).slice(0, 60)

@@ -582,7 +582,7 @@ td.sel,th.sel{width:34px;padding-right:0}
  * próprio arquivo com cache desligado e, se a versão de lá for diferente
  * da que está rodando, reabre numa URL com ?v=, que o navegador não tem
  * guardada. O #acesso vai junto, então o token não se perde. */
-var VERSAO_PAINEL = '2026-09-23-16';
+var VERSAO_PAINEL = '2026-09-23-17';
 (function(){
   try {
     if (!/^https?:$/.test(location.protocol)) return;
@@ -1184,6 +1184,14 @@ function segParaTexto(segundos){
  * "9 checkouts, 1 pedido". Isto aqui vem do evento de comportamento, que
  * só precisa do sid, então pega todo mundo.
  */
+/* Na mesma ordem em que aparecem no formulário — é assim que a contagem
+   por campo vira "até onde ela foi digitando antes de desistir". */
+var CAMPOS_CHECKOUT = ['nome','cpf','email','tel','cep','rua','numero','compl','bairro','cidade'];
+var CAMPO_NOME = {
+  nome:'nome', cpf:'CPF', email:'e-mail', tel:'celular', cep:'CEP',
+  rua:'rua', numero:'número', compl:'complemento', bairro:'bairro', cidade:'cidade'
+};
+
 var ETAPA_NOME = {
   0: 'nem abriu o formulário',
   1: 'parou nos seus dados',
@@ -1220,7 +1228,13 @@ function parouEmTxt(s){
     ? '<br><span style="font-size:11px;color:var(--bad)">travou em: ' +
       esc((ck.travou || []).map(function(t){ return t.split(':')[0]; }).join(', ')) + '</span>'
     : '';
-  return '<span style="color:' + cor + '">' + esc(txt) + '</span>' + travas;
+  // Quais campos ela chegou a preencher, mesmo sem nunca virar carrinho.
+  var campos = ck.campos || [];
+  var preencheu = campos.length
+    ? '<br><span style="font-size:11px;color:var(--ink-3)">preencheu ' + campos.length + ' de ' +
+      CAMPOS_CHECKOUT.length + ': ' + esc(campos.map(function(c){ return CAMPO_NOME[c] || c; }).join(', ')) + '</span>'
+    : '';
+  return '<span style="color:' + cor + '">' + esc(txt) + '</span>' + preencheu + travas;
 }
 
 /**
@@ -1269,13 +1283,33 @@ function renderEtapasCheckout(base){
   });
   var travas = Object.keys(conta).sort(function(a,b){ return conta[b]-conta[a]; });
 
+  /* Quantas pessoas chegaram a preencher cada campo, na ordem do
+     formulário. É aqui que dá pra ver o campo exato onde o preenchimento
+     morre — "7 puseram o nome, 3 puseram o CPF" diz mais que qualquer
+     porcentagem de rolagem. */
+  var porCampo = CAMPOS_CHECKOUT.map(function(id){
+    return [id, ck.filter(function(s){
+      return (s.paginas.checkout.campos || []).indexOf(id) >= 0;
+    }).length];
+  });
+  var topoCampo = porCampo.reduce(function(m,c){ return Math.max(m, c[1]); }, 0);
+  var blocoCampos = topoCampo
+    ? '<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line)">' +
+      '<div style="font-size:12.5px;color:var(--ink-3);margin-bottom:8px">Quantos chegaram a preencher cada campo:</div>' +
+      porCampo.map(function(c){
+        return '<div class="fase"><span class="nome">' + esc(CAMPO_NOME[c[0]] || c[0]) + '</span>' +
+          '<span class="barra"><i style="width:' + Math.round(c[1]/topoCampo*100) + '%"></i></span>' +
+          '<span class="val"><b>' + c[1] + '</b></span></div>';
+      }).join('') + '</div>'
+    : '';
+
   caixa.innerHTML = aviso + passos.map(function(p, i){
     var perda = i > 0 ? passos[i-1][1] - p[1] : 0;
     return '<div class="fase"><span class="nome">'+p[0]+'</span>' +
       '<span class="barra"><i style="width:'+Math.round(p[1]/topo*100)+'%"></i></span>' +
       '<span class="val"><b>'+p[1]+'</b> <small>'+Math.round(p[1]/topo*100)+'%'+
       (perda > 0 ? ' · perdeu ' + perda : '')+'</small></span></div>';
-  }).join('') +
+  }).join('') + blocoCampos +
   (travas.length
     ? '<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line)">' +
       '<div style="font-size:12.5px;color:var(--ink-3);margin-bottom:6px">Campos que barraram (o que dá pra consertar):</div>' +
