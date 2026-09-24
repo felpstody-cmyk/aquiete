@@ -588,7 +588,7 @@ td.sel,th.sel{width:34px;padding-right:0}
  * próprio arquivo com cache desligado e, se a versão de lá for diferente
  * da que está rodando, reabre numa URL com ?v=, que o navegador não tem
  * guardada. O #acesso vai junto, então o token não se perde. */
-var VERSAO_PAINEL = '2026-09-24-3';
+var VERSAO_PAINEL = '2026-09-24-4';
 (function(){
   try {
     if (!/^https?:$/.test(location.protocol)) return;
@@ -1389,7 +1389,11 @@ function renderHistorico(){
   });
   lista.forEach(function(r){
     if (!dias[r.dia]) dias[r.dia] = { dia:r.dia };
-    dias[r.dia].resumo = r;
+    // Resumo sem sessão nenhuma é dia que o resumo não conseguiu medir —
+    // as sessões de antes de 24/09/2026 foram gravadas sem a data na
+    // chave, então o resumo não as enxerga. Mostrar 0 ali seria dizer
+    // "ninguém entrou", que é diferente de "não foi medido".
+    if (r.sessoes > 0) dias[r.dia].resumo = r;
   });
 
   var ordem = Object.keys(dias).sort().reverse();
