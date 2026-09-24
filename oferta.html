@@ -821,7 +821,11 @@ p.centro{margin:0}
   d.querySelectorAll('[data-cta]').forEach(function(a){
     a.addEventListener('click', function(){
       try { localStorage.setItem('aq_cupom', CUPOM); } catch(e){}
-      if (carregado && window.fbq) fbq('track', 'InitiateCheckout');
+      if (!carregado) return;
+      /* Mesma trava do checkout (aq_ic): um evento por pessoa. Quem clica
+         aqui ja disparou, entao ao chegar no checkout nao dispara de novo. */
+      try { if (sessionStorage.getItem('aq_ic')) return; sessionStorage.setItem('aq_ic','1'); } catch(e){}
+      if (window.fbq) fbq('track', 'InitiateCheckout');
     });
   });
 })();

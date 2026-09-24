@@ -2672,6 +2672,9 @@ body::after{
     d.querySelectorAll('[data-cta]').forEach(function(a){
       a.addEventListener('click', function(){
         if (!carregado) return;
+        /* Mesma trava do checkout (aq_ic): um evento por pessoa. Quem clica
+           aqui ja disparou, entao ao chegar no checkout nao dispara de novo. */
+        try { if (sessionStorage.getItem('aq_ic')) return; sessionStorage.setItem('aq_ic','1'); } catch(e){}
         if (window.fbq)  fbq('track', 'InitiateCheckout');
         if (window.gtag) gtag('event', 'begin_checkout', { origem: a.dataset.cta });
       });

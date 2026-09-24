@@ -983,7 +983,7 @@ img,svg{display:block;max-width:100%}
         location.href = res.j.redirectUrl;
         return;
       }
-      if (res.j.pix) { mostrarPix(res.j); return; }
+      if (res.j.pix) { aqGerouPagamento(res.j); mostrarPix(res.j); return; }
       throw new Error('Resposta inesperada do gateway');
     })
     .catch(function(e){
@@ -1250,6 +1250,41 @@ try { if (!aqEmTeste()) {
   }, 8000);
 } } catch(e){}
 
+/* Um "Iniciar finalização de compra" por pessoa, e só com intenção.
+ *
+ * A trava vive no sessionStorage porque o evento pode nascer em duas
+ * páginas diferentes: quem clica em comprar na página de venda já dispara
+ * lá, e não pode disparar de novo ao chegar aqui. Sem isso o Meta contava
+ * duas pessoas onde tinha uma — o custo por evento aparecia pela metade e
+ * a otimização aprendia com número inflado. */
+function aqIniciouCheckout(){
+  try {
+    if (sessionStorage.getItem('aq_ic')) return;
+    sessionStorage.setItem('aq_ic', '1');
+    if (window.fbq) fbq('track', 'InitiateCheckout');
+    if (window.gtag) gtag('event', 'begin_checkout');
+  } catch (e) { /* medição nunca derruba a página */ }
+}
+
+/* Pix gerado. NÃO é o evento que a campanha otimiza — com ~1 por dia o
+ * Meta nunca sairia da fase de aprendizado, que pede umas 50 por semana.
+ * Vale guardar mesmo assim: é o sinal mais honesto que existe antes do
+ * pagamento, serve pra medir de verdade e vira público de remarketing
+ * daqui a um mês. Se o volume um dia passar de 50/semana, a otimização
+ * muda pra cá — que é onde ela deveria estar.
+ *
+ * `event_id` igual à referência: é assim que o Meta junta este evento com
+ * a Compra que o servidor manda depois, em vez de contar duas coisas. */
+function aqGerouPagamento(dados){
+  try {
+    if (window.fbq) {
+      fbq('track', 'AddPaymentInfo',
+        { value: Number(dados.total) || 0, currency: 'BRL' },
+        { eventID: dados.referencia });
+    }
+  } catch (e) { /* medição nunca derruba o pagamento */ }
+}
+
 /* Carrinho abandonado: se a pessoa digitou nome/e-mail e sumiu sem
    finalizar, guarda pra você poder chamar de volta. So manda quando o
    e-mail parece valido — sem isso nao da pra reidentificar ninguem. */
@@ -1286,7 +1321,10 @@ try { if (!aqEmTeste()) {
       // Separa quem só olhou de quem tentou. Isto sobe pelo evento de
       // comportamento, que não exige e-mail nenhum — ao contrário do
       // carrinho aqui em cima, que só existe com e-mail válido.
-      campo.addEventListener('focus', function(){ window.aqTocou = true; });
+      campo.addEventListener('focus', function(){
+        window.aqTocou = true;
+        aqIniciouCheckout();
+      });
       campo.addEventListener('input', function(){
         if ((campo.value || '').trim()) window.aqDigitou = true;
       });
@@ -1334,7 +1372,13 @@ try { if (!aqEmTeste()) {
       /* eslint-enable */
       fbq('init', META_PIXEL_ID);
       fbq('track', 'PageView');
-      fbq('track', 'InitiateCheckout');
+      /* InitiateCheckout NÃO dispara aqui.
+         Disparar no carregamento ensina o Meta a procurar gente que ABRE
+         a página do checkout — e ele faz isso muito bem: traz quem abre,
+         fica 7 segundos e some. Era o objetivo que estava marcado na
+         campanha, e o comportamento batia exatamente com isso.
+         Agora dispara quando a pessoa encosta no formulário (ver
+         aqIniciouCheckout), que é onde existe intenção de verdade. */
     }
   } catch(e){}
 })();
