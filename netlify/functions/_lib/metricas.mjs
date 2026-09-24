@@ -305,7 +305,18 @@ export async function lerTodosCarrinhos() {
     await Promise.all(blobs.map(async (b) => {
       const d = await store.get(b.key, { type: 'json' }).catch(() => null)
       if (!d) return
-      if ((agora - d.em) / 60_000 > 7 * 24 * 60) { store.delete(b.key).catch(() => {}); return }
+      // Quem pagou fica 4 meses: se reclamar depois, dá pra reconstruir o
+      // que aconteceu. Quem não pagou sai em 15 dias — passado disso não
+      // se recupera mais ninguém, e guardar CPF e telefone de quem nunca
+      // comprou é risco sem retorno.
+      //
+      // Isto NÃO é o cadastro do cliente: nome, CPF, e-mail, telefone e
+      // endereço de quem comprou vêm do Asaas a cada sincronização e não
+      // dependem daqui. O que mora neste registro é o contexto do
+      // carrinho (quando começou, que campos preencheu, que etapa
+      // alcançou), que é o que ajuda a entender uma reclamação.
+      const diasGuardar = d.pago ? 120 : 15
+      if ((agora - d.em) / 60_000 > diasGuardar * 24 * 60) { store.delete(b.key).catch(() => {}); return }
       saida.push(Object.assign({ email: b.key, situacao: situacaoCarrinho(d, agora) }, d))
     }))
   } catch { /* sem dados é melhor que erro 500 */ }

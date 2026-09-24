@@ -406,7 +406,8 @@ td.sel,th.sel{width:34px;padding-right:0}
   </div>
 
   <div class="card">
-    <h3>Todos os carrinhos · últimos 7 dias <span class="tag" id="carrinhosResumo"></span></h3>
+    <h3>Todos os carrinhos <span class="tag" id="carrinhosResumo"></span></h3>
+    <p class="sub" style="margin:0 0 10px">Quem pagou fica 4 meses, pra dar conta de reclamação depois. Quem não pagou sai em 15 dias.</p>
     <p class="sub" style="margin:0;padding:4px 18px 14px">Todo mundo que digitou um e-mail válido no checkout, com a situação de cada um. É isso que explica a diferença entre "carrinhos novos" e "abandonados": quem ainda tá digitando, quem gerou o Pix e tá no prazo, e quem já pagou não aparece como abandonado.</p>
     <div class="tw"><table id="tbCarrinhos"></table></div>
   </div>
@@ -587,7 +588,7 @@ td.sel,th.sel{width:34px;padding-right:0}
  * próprio arquivo com cache desligado e, se a versão de lá for diferente
  * da que está rodando, reabre numa URL com ?v=, que o navegador não tem
  * guardada. O #acesso vai junto, então o token não se perde. */
-var VERSAO_PAINEL = '2026-09-24-1';
+var VERSAO_PAINEL = '2026-09-24-2';
 (function(){
   try {
     if (!/^https?:$/.test(location.protocol)) return;
@@ -947,7 +948,7 @@ function somaMetrica(tipo){
 }
 
 /**
- * Conta os carrinhos da última semana por situação, dentro do período
+ * Conta os carrinhos guardados por situação, dentro do período
  * escolhido no topo. O que vale como data muda conforme o caso: se a
  * pessoa gerou Pix, conta o dia em que ela gerou (pedido.em); se só
  * digitou e sumiu, conta o dia em que ela digitou.
@@ -1966,7 +1967,7 @@ function renderCarrinhos(){
   el('carrinhosResumo').textContent = lista.length
     ? brl(tudo) + ' no total · ' + Object.keys(ROTULO).filter(function(k){ return soma[k]; })
         .map(function(k){ return brl(soma[k])+' '+ROTULO[k]; }).join(' · ')
-    : 'nenhum carrinho na última semana';
+    : 'nenhum carrinho guardado';
 
   el('tbCarrinhos').innerHTML = lista.length
     ? '<thead><tr><th>Começou</th><th>Cliente</th><th>Cidade</th><th>Kit</th><th class="num">Valor</th><th>Situação</th><th>Preencheu</th><th></th></tr></thead><tbody>' +
@@ -1978,7 +1979,7 @@ function renderCarrinhos(){
           '<td>'+carrinhoSituacao(c)+'</td><td>'+carrinhoCampos(c)+'</td>' +
           '<td style="white-space:nowrap">'+carrinhoZap(c)+'</td></tr>';
       }).join('') + '</tbody>'
-    : '<tbody><tr><td class="vazio">Ninguém digitou no checkout nos últimos 7 dias.</td></tr></tbody>';
+    : '<tbody><tr><td class="vazio">Nenhum carrinho guardado ainda.</td></tr></tbody>';
 }
 
 /* ================= pedidos ================= */
