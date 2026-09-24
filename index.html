@@ -2764,9 +2764,15 @@ try { if (!aqEmTeste()) {
     });
   });
 
+  /* visibilitychange e pagehide disparam quase juntos quando a aba some:
+     sem esta trava, toda visita mandava o aviso duas vezes, e cada aviso
+     e uma chamada de funcao que custa credito no Netlify. */
+  var aqUltimoAviso = 0;
   function aqMandarEvento(){
     var sid = sessionStorage.getItem('aq_sid');
     if (!sid) return;
+    if (Date.now() - aqUltimoAviso < 2000) return;
+    aqUltimoAviso = Date.now();
     var payload = JSON.stringify({
       sid: sid, pagina: 'index', scrollMax: aqScrollMax,
       segundos: Math.round((Date.now() - aqInicio) / 1000),

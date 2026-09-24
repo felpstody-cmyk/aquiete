@@ -1140,9 +1140,15 @@ try { if (!aqEmTeste()) {
     return fora;
   }
 
+  /* visibilitychange e pagehide disparam quase juntos quando a aba some:
+     sem esta trava, toda visita mandava o aviso duas vezes, e cada aviso
+     e uma chamada de funcao que custa credito no Netlify. */
+  var aqUltimoAviso = 0;
   function aqMandarEvento(){
     var sid = sessionStorage.getItem('aq_sid');
     if (!sid) return;
+    if (Date.now() - aqUltimoAviso < 2000) return;
+    aqUltimoAviso = Date.now();
     var payload = JSON.stringify({
       sid: sid, pagina: 'checkout', scrollMax: aqScrollMax,
       segundos: Math.round((Date.now() - aqInicio) / 1000),
@@ -1173,17 +1179,30 @@ try { if (!aqEmTeste()) {
      contada no carregamento mas a sessão não existia. Dava 13 checkouts
      contados e 7 sessões na tela — e quem some é justamente quem entra e
      sai em dois segundos, que é o que mais interessa saber. */
-  aqMandarEvento();
+  /* Cada aviso é uma chamada de função que custa crédito no Netlify —
+     foi o que derrubou a loja em 23/09/2026. Por isso o teto de envios
+     por sessão e a janela de 8s: o que interessa é o estado final, não
+     cada tecla. */
+  var AQ_MAX_AVISOS = 10;
+  var aqAvisos = 0;
   var aqAssinatura = '';
-  setInterval(function(){
+  function aqAssinaturaAtual(){
     // Rolagem arredondada em dezenas pra não mandar aviso a cada pixel.
-    var agora = [window.aqEtapa, window.aqTocou, window.aqDigitou,
-                 (window.aqTravou || []).length, aqPreenchidos().join(','),
-                 Math.round(aqScrollMax / 10)].join('|');
-    if (agora === aqAssinatura) return;
-    aqAssinatura = agora;
+    return [window.aqEtapa, window.aqTocou, window.aqDigitou,
+            (window.aqTravou || []).length, aqPreenchidos().join(','),
+            Math.round(aqScrollMax / 10)].join('|');
+  }
+  function aqAvisar(){
+    aqAssinatura = aqAssinaturaAtual();
+    aqAvisos++;
     aqMandarEvento();
-  }, 4000);
+  }
+  aqAvisar();
+  var aqRelogio = setInterval(function(){
+    if (aqAvisos >= AQ_MAX_AVISOS) { clearInterval(aqRelogio); return; }
+    if (aqAssinaturaAtual() === aqAssinatura) return;
+    aqAvisar();
+  }, 8000);
 } } catch(e){}
 
 /* Carrinho abandonado: se a pessoa digitou nome/e-mail e sumiu sem
