@@ -588,7 +588,7 @@ td.sel,th.sel{width:34px;padding-right:0}
  * próprio arquivo com cache desligado e, se a versão de lá for diferente
  * da que está rodando, reabre numa URL com ?v=, que o navegador não tem
  * guardada. O #acesso vai junto, então o token não se perde. */
-var VERSAO_PAINEL = '2026-09-24-2';
+var VERSAO_PAINEL = '2026-09-24-3';
 (function(){
   try {
     if (!/^https?:$/.test(location.protocol)) return;
@@ -1252,10 +1252,18 @@ function parouEmTxt(s){
     if (!ck.tocou) txt = 'só olhou, não encostou no formulário';
     else if (!ck.digitou) txt = 'clicou num campo e não digitou';
   }
+  // Separado de propósito: um campo que barrou e depois foi resolvido é
+  // atrito; um que ainda estava barrando quando a pessoa sumiu é o motivo
+  // dela ter ido embora.
+  var presa = (ck.travadoAgora || []);
   var travas = (ck.travou || []).length
-    ? '<br><span style="font-size:11px;color:var(--bad)">travou em: ' +
-      esc((ck.travou || []).map(function(t){ return t.split(':')[0]; }).join(', ')) + '</span>'
+    ? '<br><span style="font-size:11px;color:var(--ink-3)">travou em: ' +
+      esc((ck.travou || []).map(function(t){ return CAMPO_NOME[t.split(':')[0]] || t.split(':')[0]; }).join(', ')) + '</span>'
     : '';
+  if (presa.length) {
+    travas += '<br><span style="font-size:11px;color:var(--bad);font-weight:600">desistiu barrada em: ' +
+      esc(presa.map(function(c){ return CAMPO_NOME[c] || c; }).join(', ')) + '</span>';
+  }
   // Quais campos ela chegou a preencher, mesmo sem nunca virar carrinho.
   var campos = ck.campos || [];
   var preencheu = campos.length

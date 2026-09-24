@@ -46,6 +46,11 @@ export default async (req) => {
     if (Array.isArray(corpo.travou)) {
       dados.travou = corpo.travou.map((t) => String(t).slice(0, 40)).slice(0, 12)
     }
+    // Campos que ainda estavam barrando na hora do último aviso — é o que
+    // separa "travou e resolveu" de "travou e desistiu ali".
+    if (Array.isArray(corpo.travadoAgora)) {
+      dados.travadoAgora = corpo.travadoAgora.map((t) => String(t).slice(0, 20)).slice(0, 12)
+    }
     // Nomes dos campos já preenchidos — nunca o que foi digitado neles.
     // É o que mostra até onde a pessoa foi mesmo sem virar carrinho.
     if (Array.isArray(corpo.campos)) {

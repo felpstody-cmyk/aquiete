@@ -793,6 +793,13 @@ img,svg{display:block;max-width:100%}
       .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
   });
   mascarar(el('tel'), function(v){
+    /* Preenchimento automatico do navegador costuma vir com o +55 na
+       frente. Sem tirar o codigo do pais, o corte em 11 digitos comia o
+       final do numero de verdade e ninguem percebia, porque o resultado
+       tinha 11 digitos e passava na validacao:
+         +55 49 99123-4567  ->  (55) 49991-2345
+       Pedido saia com telefone de outra pessoa. */
+    if (v.length > 11 && v.slice(0,2) === '55') v = v.slice(2);
     v = v.slice(0,11);
     return v.length > 10
       ? v.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3')
@@ -1169,6 +1176,18 @@ try { if (!aqEmTeste()) {
       tocou: !!window.aqTocou,
       digitou: !!window.aqDigitou,
       travou: window.aqTravou || [],
+      /* O de cima e historico e nunca limpa: serve pra saber que campo
+         deu trabalho. Este e o estado AGORA — que campos ainda estao
+         barrando. E a diferenca entre "travou e resolveu" e "travou e
+         desistiu ali", que e o que responde "o que faltou ela colocar". */
+      travadoAgora: (function(){
+        try {
+          return Array.prototype.map.call(
+            document.querySelectorAll('[aria-invalid="true"]'),
+            function(c){ return c.id; }
+          ).filter(Boolean).slice(0, 12);
+        } catch (e) { return []; }
+      })(),
       campos: aqPreenchidos(),
       /* De onde essa sessao veio. Sessao que SO tem checkout e nao tem
          origem nenhuma e link colado na mao ou robo — e e exatamente
