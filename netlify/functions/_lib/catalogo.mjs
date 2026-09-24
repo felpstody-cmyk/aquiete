@@ -53,7 +53,7 @@ export function acharCupom(codigo) {
  *   76800–76999  RO   (76000–76799 é Goiás e continua no frete normal)
  *   77000–77999  TO
  */
-export const FRETE_NORTE = 14.99
+export const FRETE_NORTE = 19.99
 const CEPS_NORTE = [[66000, 69999], [76800, 76999], [77000, 77999]]
 
 export function ehNorte(cep) {

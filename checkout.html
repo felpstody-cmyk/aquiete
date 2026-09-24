@@ -528,7 +528,7 @@ img,svg{display:block;max-width:100%}
             <div><span>Subtotal</span> <span id="sub">R$ 84,90</span></div>
             <div id="linhaDesc" hidden><span>Desconto</span> <span id="desc">— R$ 0,00</span></div>
             <div><span>Frete</span> <span id="frete">R$ 14,99</span></div>
-            <p class="frete-nota" id="freteNota" hidden>Frete grátis não vale para a sua região: o envio para o Norte é feito por transportadora e sai por R$ 14,99.</p>
+            <p class="frete-nota" id="freteNota" hidden>Frete grátis não vale para a sua região: o envio para o Norte é feito por transportadora e sai por R$ 19,99.</p>
           </div>
 
           <div class="total">
@@ -607,7 +607,7 @@ img,svg{display:block;max-width:100%}
      grátis. Quem decide é o servidor; aqui é só pra tela bater com o
      que vai ser cobrado.
        66000–69999 PA, AP, AM, RR, AC · 76800–76999 RO · 77000–77999 TO */
-  var FRETE_NORTE = 14.99;
+  var FRETE_NORTE = 19.99;
   var CEPS_NORTE = [[66000, 69999], [76800, 76999], [77000, 77999]];
   var cepDigitado = '';
   function ehNorte(n){
@@ -630,10 +630,16 @@ img,svg{display:block;max-width:100%}
     el('frete').innerHTML    = frete === 0
       ? '<span class="free">Grátis</span>'
       : brl(frete);
-    // O aviso so faz sentido quando o kit TERIA frete gratis: com 1
-    // frasco o Norte paga o mesmo que todo mundo, entao dizer que
-    // "frete gratis nao vale pra sua regiao" confunde sem motivo.
-    el('freteNota').hidden   = !(norte && kit.frete === 0);
+    /* No Norte o envio e por transportadora e custa mais. Para 2 e 4
+       frascos isso cancela o frete gratis; para 1 frasco so encarece —
+       e dizer "frete gratis nao vale" ali seria falar de um beneficio
+       que aquele kit nunca teve. Duas situacoes, duas frases. */
+    if (norte) {
+      el('freteNota').textContent = kit.frete === 0
+        ? 'Frete grátis não vale para a sua região: o envio para o Norte é feito por transportadora e sai por ' + brl(FRETE_NORTE) + '.'
+        : 'O envio para o Norte é feito por transportadora, por isso o frete é ' + brl(FRETE_NORTE) + '.';
+    }
+    el('freteNota').hidden   = !norte;
     el('linhaDesc').hidden   = !desconto;
     el('desc').textContent   = '— ' + brl(desconto);
     el('total').textContent  = brl(total);
