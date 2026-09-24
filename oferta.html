@@ -903,6 +903,11 @@ try { if (!aqEmTeste()) {
     if (document.visibilityState === 'hidden') aqMandarEvento();
   });
   window.addEventListener('pagehide', aqMandarEvento);
+
+  /* Manda ja na carga. Antes o aviso so subia quando a aba sumia, e quem
+     fecha o navegador do Instagram de supetao nunca gerava aviso: a
+     visita era contada no carregamento mas a sessao nao existia. */
+  aqMandarEvento();
 } } catch(e){}
 </script>
 <script>

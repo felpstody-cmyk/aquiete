@@ -582,7 +582,7 @@ td.sel,th.sel{width:34px;padding-right:0}
  * próprio arquivo com cache desligado e, se a versão de lá for diferente
  * da que está rodando, reabre numa URL com ?v=, que o navegador não tem
  * guardada. O #acesso vai junto, então o token não se perde. */
-var VERSAO_PAINEL = '2026-09-23-15';
+var VERSAO_PAINEL = '2026-09-23-16';
 (function(){
   try {
     if (!/^https?:$/.test(location.protocol)) return;
@@ -1237,6 +1237,18 @@ function renderEtapasCheckout(base){
     return;
   }
 
+  // O contador de checkout sobe no carregamento da página; a sessão só
+  // existia quando a aba sumia. Quem fechava o navegador de supetão era
+  // contado e não aparecia aqui. Já corrigido, mas o dado velho continua
+  // torto — então a diferença fica na tela em vez de enganar.
+  var contados = somaMetrica('checkout');
+  var faltando = contados - ck.length;
+  var aviso = faltando > 0
+    ? '<p class="sub" style="margin:0 0 12px;color:var(--bad)"><b>' + contados + '</b> checkouts contados, mas só <b>' +
+      ck.length + '</b> com detalhe. Os outros ' + faltando + ' fecharam a página antes de dar tempo de registrar ' +
+      '(corrigido hoje — vale do próximo dia em diante).</p>'
+    : '';
+
   var n = function(f){ return ck.filter(f).length; };
   var passos = [
     ['Abriu o checkout', ck.length],
@@ -1257,7 +1269,7 @@ function renderEtapasCheckout(base){
   });
   var travas = Object.keys(conta).sort(function(a,b){ return conta[b]-conta[a]; });
 
-  caixa.innerHTML = passos.map(function(p, i){
+  caixa.innerHTML = aviso + passos.map(function(p, i){
     var perda = i > 0 ? passos[i-1][1] - p[1] : 0;
     return '<div class="fase"><span class="nome">'+p[0]+'</span>' +
       '<span class="barra"><i style="width:'+Math.round(p[1]/topo*100)+'%"></i></span>' +

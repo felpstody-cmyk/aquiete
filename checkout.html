@@ -1142,6 +1142,23 @@ try { if (!aqEmTeste()) {
     if (document.visibilityState === 'hidden') aqMandarEvento();
   });
   window.addEventListener('pagehide', aqMandarEvento);
+
+  /* Manda já na carga, e de novo sempre que algo mudar de estado.
+     Antes o aviso só subia quando a aba sumia, e quem fecha o navegador
+     do Instagram de supetão nunca gerava aviso nenhum: a visita era
+     contada no carregamento mas a sessão não existia. Dava 13 checkouts
+     contados e 7 sessões na tela — e quem some é justamente quem entra e
+     sai em dois segundos, que é o que mais interessa saber. */
+  aqMandarEvento();
+  var aqAssinatura = '';
+  setInterval(function(){
+    // Rolagem arredondada em dezenas pra não mandar aviso a cada pixel.
+    var agora = [window.aqEtapa, window.aqTocou, window.aqDigitou,
+                 (window.aqTravou || []).length, Math.round(aqScrollMax / 10)].join('|');
+    if (agora === aqAssinatura) return;
+    aqAssinatura = agora;
+    aqMandarEvento();
+  }, 4000);
 } } catch(e){}
 
 /* Carrinho abandonado: se a pessoa digitou nome/e-mail e sumiu sem
