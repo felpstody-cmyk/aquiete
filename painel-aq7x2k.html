@@ -588,7 +588,7 @@ td.sel,th.sel{width:34px;padding-right:0}
  * próprio arquivo com cache desligado e, se a versão de lá for diferente
  * da que está rodando, reabre numa URL com ?v=, que o navegador não tem
  * guardada. O #acesso vai junto, então o token não se perde. */
-var VERSAO_PAINEL = '2026-09-24-4';
+var VERSAO_PAINEL = '2026-09-24-5';
 (function(){
   try {
     if (!/^https?:$/.test(location.protocol)) return;
@@ -1316,8 +1316,19 @@ function renderEtapasCheckout(base){
   ];
   var topo = passos[0][1] || 1;
 
-  // Campos que barraram gente, do que mais derruba pro que menos. É o
-  // único número desta tela que aponta um conserto concreto.
+  /* Duas contas diferentes, e misturar as duas engana:
+     - `travou` é histórico e nunca limpa. Um campo aqui pode ter dado
+       erro, a pessoa corrigido e seguido em frente. Isso é atrito.
+     - `travadoAgora` é o que ainda estava barrando quando ela sumiu.
+       Esse é o motivo da venda perdida, e o único que aponta conserto. */
+  var contaPresa = {};
+  ck.forEach(function(s){
+    (s.paginas.checkout.travadoAgora || []).forEach(function(c){
+      contaPresa[c] = (contaPresa[c] || 0) + 1;
+    });
+  });
+  var presas = Object.keys(contaPresa).sort(function(a,b){ return contaPresa[b]-contaPresa[a]; });
+
   var conta = {};
   ck.forEach(function(s){
     (s.paginas.checkout.travou || []).forEach(function(t){
@@ -1325,6 +1336,14 @@ function renderEtapasCheckout(base){
     });
   });
   var travas = Object.keys(conta).sort(function(a,b){ return conta[b]-conta[a]; });
+
+  var blocoPresas = presas.length
+    ? '<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line)">' +
+      '<div style="font-size:12.5px;color:var(--bad);margin-bottom:6px;font-weight:600">Desistiu com o campo ainda barrado — é isto que dá pra consertar:</div>' +
+      presas.map(function(c){
+        return '<div style="font-size:13px"><b>'+contaPresa[c]+'×</b> ' + esc(CAMPO_NOME[c] || c) + '</div>';
+      }).join('') + '</div>'
+    : '';
 
   /* Quantas pessoas chegaram a preencher cada campo, na ordem do
      formulário. É aqui que dá pra ver o campo exato onde o preenchimento
@@ -1352,14 +1371,14 @@ function renderEtapasCheckout(base){
       '<span class="barra"><i style="width:'+Math.round(p[1]/topo*100)+'%"></i></span>' +
       '<span class="val"><b>'+p[1]+'</b> <small>'+Math.round(p[1]/topo*100)+'%'+
       (perda > 0 ? ' · perdeu ' + perda : '')+'</small></span></div>';
-  }).join('') + blocoCampos +
+  }).join('') + blocoCampos + blocoPresas +
   (travas.length
     ? '<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line)">' +
-      '<div style="font-size:12.5px;color:var(--ink-3);margin-bottom:6px">Campos que barraram (o que dá pra consertar):</div>' +
+      '<div style="font-size:12.5px;color:var(--ink-3);margin-bottom:6px">Campos que deram trabalho (mas a pessoa corrigiu e seguiu):</div>' +
       travas.map(function(t){
         var p = t.split(':');
-        return '<div style="font-size:13px"><b>'+conta[t]+'×</b> ' + esc(p[0]) +
-          (p[1] ? ' <span style="color:var(--ink-3)">— '+esc(p.slice(1).join(':'))+'</span>' : '') + '</div>';
+        return '<div style="font-size:13px;color:var(--ink-3)"><b>'+conta[t]+'×</b> ' + esc(CAMPO_NOME[p[0]] || p[0]) +
+          (p[1] ? ' — '+esc(p.slice(1).join(':')) : '') + '</div>';
       }).join('') + '</div>'
     : '');
 }
