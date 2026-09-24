@@ -746,15 +746,31 @@ img,svg{display:block;max-width:100%}
       }
     ];
 
+    /* Até onde a pessoa chegou, pro painel poder responder "parou aonde?".
+       Vive em window porque quem manda isso é o bloco de evento lá
+       embaixo, que roda quando a aba fecha. Sem e-mail, sem carrinho:
+       quem só abriu e saiu também precisa aparecer. */
+    window.aqEtapa = 1;     // chegou na tela é etapa 1
+    window.aqTocou = false; // encostou em algum campo
+    window.aqDigitou = false;
+    window.aqTravou = [];   // nomes dos campos que barraram, com o motivo
+
     etapas.forEach(function(etapa, i){
       var bt = etapa.querySelector('[data-seguir]');
       if (!bt) return;
       bt.addEventListener('click', function(){
         if (!checagens[i]()) {
           var ruim = etapa.querySelector('[aria-invalid="true"]');
+          // Registra TODOS os campos que barraram, não só o primeiro:
+          // é isso que mostra se tem um campo específico derrubando gente.
+          Array.prototype.forEach.call(etapa.querySelectorAll('[aria-invalid="true"]'), function(c){
+            var marca = c.id + ':' + ((c.getAttribute('data-erro') || '').slice(0, 24) || 'invalido');
+            if (window.aqTravou.indexOf(marca) < 0 && window.aqTravou.length < 12) window.aqTravou.push(marca);
+          });
           if (ruim) ruim.focus();
           return;
         }
+        window.aqEtapa = Math.max(window.aqEtapa, i + 2);
         bt.disabled = true;
         bt.style.opacity = '.5';
         abrir(i + 1);
@@ -836,8 +852,9 @@ img,svg{display:block;max-width:100%}
   /* ---------- Validação ---------- */
   function erro(campo, msg){
     var s = campo.parentElement.querySelector('small');
-    if (msg) { campo.setAttribute('aria-invalid','true'); s.textContent = msg; s.setAttribute('data-err',''); }
-    else     { campo.removeAttribute('aria-invalid'); s.textContent = ''; s.removeAttribute('data-err'); }
+    // data-erro guarda o motivo pro relatório de "onde travou" (ver aqTravou).
+    if (msg) { campo.setAttribute('aria-invalid','true'); campo.setAttribute('data-erro', msg); s.textContent = msg; s.setAttribute('data-err',''); }
+    else     { campo.removeAttribute('aria-invalid'); campo.removeAttribute('data-erro'); s.textContent = ''; s.removeAttribute('data-err'); }
     return !msg;
   }
   function cpfValido(v){
@@ -1103,7 +1120,12 @@ try { if (!aqEmTeste()) {
     if (!sid) return;
     var payload = JSON.stringify({
       sid: sid, pagina: 'checkout', scrollMax: aqScrollMax,
-      segundos: Math.round((Date.now() - aqInicio) / 1000)
+      segundos: Math.round((Date.now() - aqInicio) / 1000),
+      // Até onde foi, sem depender de e-mail nenhum (ver window.aqEtapa).
+      etapa: window.aqEtapa || 0,
+      tocou: !!window.aqTocou,
+      digitou: !!window.aqDigitou,
+      travou: window.aqTravou || []
     });
     if (navigator.sendBeacon) navigator.sendBeacon('/api/evento', payload);
     else fetch('/api/evento', { method:'POST', body:payload, keepalive:true }).catch(function(){});
@@ -1147,6 +1169,13 @@ try { if (!aqEmTeste()) {
     campos.forEach(function(campo){
       campo.addEventListener('blur', mandar);
       campo.addEventListener('input', agendar);
+      // Separa quem só olhou de quem tentou. Isto sobe pelo evento de
+      // comportamento, que não exige e-mail nenhum — ao contrário do
+      // carrinho aqui em cima, que só existe com e-mail válido.
+      campo.addEventListener('focus', function(){ window.aqTocou = true; });
+      campo.addEventListener('input', function(){
+        if ((campo.value || '').trim()) window.aqDigitou = true;
+      });
     });
   } catch(e){}
 })();

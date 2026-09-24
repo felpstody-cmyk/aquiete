@@ -281,6 +281,11 @@ td.sel,th.sel{width:34px;padding-right:0}
   </div>
 
   <div class="card">
+    <h3>Dentro do checkout <span class="tag">quem abriu e parou aonde — inclusive quem não digitou nada</span></h3>
+    <div class="body" id="etapasCheckout"></div>
+  </div>
+
+  <div class="card">
     <h3>Comportamento no site <span class="tag">até onde rolou, quanto tempo ficou e o que clicou — pessoa por pessoa</span></h3>
     <div class="filtros pagfiltro" id="comportamentoFiltro"></div>
     <div class="body" style="display:flex;gap:20px;flex-wrap:wrap" id="comportamentoResumo"></div>
@@ -577,7 +582,7 @@ td.sel,th.sel{width:34px;padding-right:0}
  * próprio arquivo com cache desligado e, se a versão de lá for diferente
  * da que está rodando, reabre numa URL com ?v=, que o navegador não tem
  * guardada. O #acesso vai junto, então o token não se perde. */
-var VERSAO_PAINEL = '2026-09-23-13';
+var VERSAO_PAINEL = '2026-09-23-14';
 (function(){
   try {
     if (!/^https?:$/.test(location.protocol)) return;
@@ -1171,6 +1176,91 @@ function segParaTexto(segundos){
   var min = Math.floor(segundos/60), seg = segundos%60;
   return (min>0 ? min+'min ' : '') + seg + 's';
 }
+/* ============ onde a pessoa parou dentro do checkout ============
+ *
+ * O carrinho só nasce quando alguém digita um e-mail válido. Quem abriu
+ * o checkout, olhou e saiu sem digitar nada não virava carrinho nenhum e
+ * ficava invisível — e é exatamente quem precisa aparecer pra explicar
+ * "9 checkouts, 1 pedido". Isto aqui vem do evento de comportamento, que
+ * só precisa do sid, então pega todo mundo.
+ */
+var ETAPA_NOME = {
+  0: 'nem abriu o formulário',
+  1: 'parou nos seus dados',
+  2: 'parou no endereço',
+  3: 'chegou no pagamento'
+};
+
+/** O que aconteceu com esta pessoa dentro do checkout, em uma linha. */
+function parouEmTxt(s){
+  var ck = s.paginas && s.paginas.checkout;
+  if (!ck) return '<span style="color:var(--ink-3)">—</span>';
+  var etapa = Number(ck.etapa) || 0;
+  var cor = etapa >= 3 ? 'var(--ok)' : (etapa <= 1 && !ck.digitou ? 'var(--bad)' : 'var(--ink)');
+  var txt = ETAPA_NOME[etapa] || ('etapa ' + etapa);
+  if (etapa <= 1) {
+    if (!ck.tocou) txt = 'só olhou, não encostou no formulário';
+    else if (!ck.digitou) txt = 'clicou num campo e não digitou';
+  }
+  var travas = (ck.travou || []).length
+    ? '<br><span style="font-size:11px;color:var(--bad)">travou em: ' +
+      esc((ck.travou || []).map(function(t){ return t.split(':')[0]; }).join(', ')) + '</span>'
+    : '';
+  return '<span style="color:' + cor + '">' + esc(txt) + '</span>' + travas;
+}
+
+/**
+ * O funil de dentro do checkout. Responde a pergunta que o funil do site
+ * não responde: das pessoas que chegaram a abrir o checkout, quantas
+ * sequer encostaram no formulário, e qual campo derrubou as outras.
+ */
+function renderEtapasCheckout(base){
+  var caixa = el('etapasCheckout');
+  if (!caixa) return;
+  var ck = base.filter(function(s){ return s.paginas && s.paginas.checkout; });
+  if (!ck.length) {
+    caixa.innerHTML = '<p class="sub" style="margin:0">Ninguém abriu o checkout no período.</p>';
+    return;
+  }
+
+  var n = function(f){ return ck.filter(f).length; };
+  var passos = [
+    ['Abriu o checkout', ck.length],
+    ['Encostou no formulário', n(function(s){ return s.paginas.checkout.tocou; })],
+    ['Digitou alguma coisa', n(function(s){ return s.paginas.checkout.digitou; })],
+    ['Passou dos seus dados', n(function(s){ return (Number(s.paginas.checkout.etapa)||0) >= 2; })],
+    ['Chegou no pagamento', n(function(s){ return (Number(s.paginas.checkout.etapa)||0) >= 3; })]
+  ];
+  var topo = passos[0][1] || 1;
+
+  // Campos que barraram gente, do que mais derruba pro que menos. É o
+  // único número desta tela que aponta um conserto concreto.
+  var conta = {};
+  ck.forEach(function(s){
+    (s.paginas.checkout.travou || []).forEach(function(t){
+      conta[t] = (conta[t] || 0) + 1;
+    });
+  });
+  var travas = Object.keys(conta).sort(function(a,b){ return conta[b]-conta[a]; });
+
+  caixa.innerHTML = passos.map(function(p, i){
+    var perda = i > 0 ? passos[i-1][1] - p[1] : 0;
+    return '<div class="fase"><span class="nome">'+p[0]+'</span>' +
+      '<span class="barra"><i style="width:'+Math.round(p[1]/topo*100)+'%"></i></span>' +
+      '<span class="val"><b>'+p[1]+'</b> <small>'+Math.round(p[1]/topo*100)+'%'+
+      (perda > 0 ? ' · perdeu ' + perda : '')+'</small></span></div>';
+  }).join('') +
+  (travas.length
+    ? '<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--line)">' +
+      '<div style="font-size:12.5px;color:var(--ink-3);margin-bottom:6px">Campos que barraram (o que dá pra consertar):</div>' +
+      travas.map(function(t){
+        var p = t.split(':');
+        return '<div style="font-size:13px"><b>'+conta[t]+'×</b> ' + esc(p[0]) +
+          (p[1] ? ' <span style="color:var(--ink-3)">— '+esc(p.slice(1).join(':'))+'</span>' : '') + '</div>';
+      }).join('') + '</div>'
+    : '');
+}
+
 function renderComportamento(){
   var c = remotos.comportamento || { porPagina:{}, sessoes:[] };
   // O servidor guarda sessão de comportamento por até 30 dias corridos (não
@@ -1227,8 +1317,10 @@ function renderComportamento(){
       }).join('')
     : '';
 
+  renderEtapasCheckout(base);
+
   el('tbComportamento').innerHTML = sessoes.length
-    ? '<thead><tr><th>Quando</th><th>Cidade</th><th>Páginas</th><th class="num">Rolagem máx.</th>' +
+    ? '<thead><tr><th>Quando</th><th>Cidade</th><th>Páginas</th><th>Parou em</th><th class="num">Rolagem máx.</th>' +
       '<th class="num">Tempo</th><th>Clicou em</th><th></th></tr></thead><tbody>' +
       sessoes.slice(0, comportamentoLimite).map(function(s){
         var pags = paginasDe(s);
@@ -1250,6 +1342,7 @@ function renderComportamento(){
         var cidade = s.cidade ? esc(s.cidade) + (s.uf ? '/'+esc(s.uf) : '') : '—';
         if (foraBR) cidade = '<span style="color:var(--bad)" title="Fora do Brasil — provável bot">'+cidade+' ('+esc(pais)+')</span>';
         return '<tr><td>'+dataHoraBR(s.ultimaAtividade)+'</td><td>'+cidade+'</td><td>'+pagsTxt+'</td>' +
+          '<td>'+parouEmTxt(s)+'</td>' +
           '<td class="num">'+scrollMax+'%</td><td class="num">'+segParaTexto(segundos)+'</td><td>'+cliquesTxt+'</td>' +
           '<td><button class="lnk" data-apagar-sessao="'+esc(s.sid)+'">excluir</button></td></tr>';
       }).join('') + '</tbody>'

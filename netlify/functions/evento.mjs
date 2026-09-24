@@ -33,6 +33,16 @@ export default async (req) => {
     if (Array.isArray(corpo.cliques)) {
       dados.cliques = corpo.cliques.map((c) => String(c).slice(0, 30)).slice(0, 20)
     }
+    // Até onde foi dentro do checkout. Isto NÃO depende de e-mail, que é
+    // o que o carrinho exige — quem abre o checkout, olha e sai sem
+    // digitar nada era invisível, e é justamente quem precisa aparecer.
+    if (corpo.etapa != null) dados.etapa = Math.max(0, Math.min(3, Number(corpo.etapa) || 0))
+    if (corpo.tocou != null) dados.tocou = !!corpo.tocou
+    if (corpo.digitou != null) dados.digitou = !!corpo.digitou
+    // Só o NOME do campo que barrou e o motivo, nunca o que foi digitado.
+    if (Array.isArray(corpo.travou)) {
+      dados.travou = corpo.travou.map((t) => String(t).slice(0, 40)).slice(0, 12)
+    }
     try { await registrarEvento(sid, pagina, dados, geoDe(req)) } catch { /* nunca derruba a página */ }
   }
 
