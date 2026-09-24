@@ -4,6 +4,8 @@
  * "ativo agora" — sem cookie, sem dado pessoal.
  */
 
+import { diaBR } from './metricas.mjs'
+
 let getStore = null
 
 async function loja() {
@@ -11,13 +13,35 @@ async function loja() {
   return getStore('jornada')
 }
 
+/**
+ * A chave leva o dia na frente: "2026-09-24/abc123".
+ *
+ * Sem isso a leitura precisava buscar TODAS as sessões guardadas, uma por
+ * uma, pra depois jogar fora as velhas — e desde que a sessão passou a
+ * nascer na carga da página (em vez de só quando a aba sumia) isso virou
+ * milhares de buscas por sincronização e a função estourava o tempo
+ * (504 em 24/09/2026). Com o dia na chave dá pra pedir só os últimos.
+ *
+ * Sessão que atravessa a meia-noite vira duas — acontece pouco e é bem
+ * mais barato que o problema que isso resolve.
+ */
+function chaveDe(sid, quando) { return `${diaBR(quando)}/${sid}` }
+
+/** Quantos dias a leitura varre. O painel filtra por período em cima
+ *  disso, e ninguém olha comportamento de mais de uma semana atrás. */
+const DIAS_LIDOS = 8
+/** Teto duro de sessões lidas por chamada, pra função nunca mais estourar
+ *  o tempo por volume — mesmo num dia fora da curva. */
+const TETO_SESSOES = 1500
+
 /** Atualiza o registro da sessão numa página (scroll máximo, segundos e/ou
  *  cliques). `geo`, quando vem, fica gravado uma vez no topo da sessão —
  *  não muda de página pra página. */
 export async function registrarEvento(sid, pagina, dados, geo) {
   try {
     const store = await loja()
-    const atual = (await store.get(sid, { type: 'json' }).catch(() => null)) || { paginas: {} }
+    const chave = chaveDe(sid)
+    const atual = (await store.get(chave, { type: 'json' }).catch(() => null)) || { paginas: {} }
     const pag = atual.paginas[pagina] || {}
     // `primeiro` nunca é reescrito: é com ele que o painel ordena as páginas
     // na ordem real da visita. A ordem das chaves do objeto é a ordem em que
@@ -35,7 +59,7 @@ export async function registrarEvento(sid, pagina, dados, geo) {
     if (!atual.camp && dados.camp) atual.camp = dados.camp
     delete atual.paginas[pagina].ref
     delete atual.paginas[pagina].camp
-    await store.setJSON(sid, atual)
+    await store.setJSON(chave, atual)
   } catch { /* nunca derruba a página */ }
 }
 
@@ -58,18 +82,34 @@ export async function lerComportamento() {
   const sessoes = []
   try {
     const store = await loja()
-    const { blobs } = await store.list()
     const agora = Date.now()
+
+    // Só os últimos dias, pedidos por prefixo. Antes era store.list() sem
+    // filtro: buscava tudo que existia pra depois descartar o velho.
+    const dias = []
+    for (let i = 0; i < DIAS_LIDOS; i++) {
+      dias.push(diaBR(new Date(agora - i * 24 * 3600 * 1000)))
+    }
+    const listas = await Promise.all(
+      dias.map((d) => store.list({ prefix: `${d}/` }).catch(() => ({ blobs: [] })))
+    )
+    // Transição: o que foi gravado antes da chave com data não tem barra
+    // no nome. Entra em quantidade limitada pra não repetir o estouro, e
+    // some sozinho conforme envelhece.
+    let legado = []
+    try {
+      const todas = await store.list()
+      legado = (todas.blobs || []).filter((b) => !b.key.includes('/')).slice(0, 300)
+    } catch { /* sem o histórico velho é melhor que 504 */ }
+
+    const blobs = listas.flatMap((l) => l.blobs || []).concat(legado).slice(0, TETO_SESSOES)
+
     await Promise.all(blobs.map(async (b) => {
       const r = await store.get(b.key, { type: 'json' }).catch(() => null)
       if (!r || !r.paginas) return
 
       const atualizados = Object.values(r.paginas).map((d) => d.atualizado || 0)
       const maisRecente = atualizados.length ? Math.max(...atualizados) : 0
-      if (agora - maisRecente > 30 * 24 * 3600 * 1000) {
-        store.delete(b.key).catch(() => {})
-        return
-      }
 
       Object.entries(r.paginas).forEach(([pagina, d]) => {
         if (!somas[pagina]) somas[pagina] = { somaScroll: 0, somaSegundos: 0, amostras: 0 }
@@ -94,6 +134,15 @@ export async function lerComportamento() {
       amostras: s.amostras,
     }
   })
+  // Faxina: um dia velho por chamada. Como a leitura só olha os últimos
+  // dias, sem isto o que passa da janela ficaria guardado pra sempre.
+  try {
+    const velho = diaBR(new Date(Date.now() - 31 * 24 * 3600 * 1000))
+    const store = await loja()
+    const { blobs } = await store.list({ prefix: `${velho}/` })
+    await Promise.all((blobs || []).slice(0, 300).map((b) => store.delete(b.key).catch(() => {})))
+  } catch { /* faxina que falha não pode derrubar a leitura */ }
+
   sessoes.sort((a, b) => b.ultimaAtividade - a.ultimaAtividade)
   return { porPagina, sessoes: sessoes.slice(0, 200) }
 }
