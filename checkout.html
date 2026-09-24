@@ -729,19 +729,23 @@ img,svg{display:block;max-width:100%}
     var checagens = [
       function(){
         var ok = true;
-        ok = erro(el('nome'),  el('nome').value.trim().split(/\s+/).length < 2 ? 'Informe nome e sobrenome' : '') && ok;
-        ok = erro(el('cpf'),   cpfValido(el('cpf').value) ? '' : 'CPF inválido') && ok;
-        ok = erro(el('email'), /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(el('email').value) ? '' : 'E-mail inválido') && ok;
-        ok = erro(el('tel'),   el('tel').value.replace(/\D/g,'').length < 10 ? 'Celular incompleto' : '') && ok;
+        /* As mensagens falam do que fazer, não do que está errado. "CPF
+           inválido" soa como acusação e faz a pessoa desistir em vez de
+           reler; faltar dígito e trocar dígito são problemas diferentes e
+           merecem instruções diferentes. */
+        ok = erro(el('nome'),  el('nome').value.trim().split(/\s+/).length < 2 ? 'Falta o sobrenome' : '') && ok;
+        ok = erro(el('cpf'),   msgCpf(el('cpf').value)) && ok;
+        ok = erro(el('email'), /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(el('email').value) ? '' : 'Confira o e-mail — falta o @ ou o ponto') && ok;
+        ok = erro(el('tel'),   el('tel').value.replace(/\D/g,'').length < 10 ? 'Falta número — com o DDD são 11' : '') && ok;
         return ok;
       },
       function(){
         var ok = true;
-        ok = erro(el('cep'),    el('cep').value.replace(/\D/g,'').length === 8 ? '' : 'CEP incompleto') && ok;
-        ok = erro(el('rua'),    el('rua').value.trim() ? '' : 'Informe a rua') && ok;
-        ok = erro(el('numero'), el('numero').value.trim() ? '' : 'Informe o número') && ok;
-        ok = erro(el('bairro'), el('bairro').value.trim() ? '' : 'Informe o bairro') && ok;
-        ok = erro(el('cidade'), el('cidade').value.trim() ? '' : 'Informe a cidade') && ok;
+        ok = erro(el('cep'),    el('cep').value.replace(/\D/g,'').length === 8 ? '' : 'Falta número — o CEP tem 8') && ok;
+        ok = erro(el('rua'),    el('rua').value.trim() ? '' : 'Falta a rua') && ok;
+        ok = erro(el('numero'), el('numero').value.trim() ? '' : 'Falta o número') && ok;
+        ok = erro(el('bairro'), el('bairro').value.trim() ? '' : 'Falta o bairro') && ok;
+        ok = erro(el('cidade'), el('cidade').value.trim() ? '' : 'Falta a cidade') && ok;
         return ok;
       }
     ];
@@ -864,6 +868,17 @@ img,svg{display:block;max-width:100%}
     else     { campo.removeAttribute('aria-invalid'); campo.removeAttribute('data-erro'); s.textContent = ''; s.removeAttribute('data-err'); }
     return !msg;
   }
+  /* Erro de CPF quase sempre é dígito a menos ou dígito trocado, e as duas
+     coisas pedem reação diferente: uma é "continua digitando", a outra é
+     "relê o que você digitou". Uma mensagem só pras duas faz a pessoa
+     achar que o site não aceita o CPF dela. */
+  function msgCpf(v){
+    var n = String(v || '').replace(/\D/g, '');
+    if (!n) return 'Falta o CPF';
+    if (n.length < 11) return 'Falta número — o CPF tem 11';
+    if (cpfValido(n)) return '';
+    return 'Confira o CPF — parece que tem um número trocado';
+  }
   function cpfValido(v){
     v = v.replace(/\D/g,'');
     if (v.length !== 11 || /^(\d)\1{10}$/.test(v)) return false;
@@ -883,11 +898,11 @@ img,svg{display:block;max-width:100%}
     ok = erro(el('cpf'),    cpfValido(el('cpf').value) ? '' : 'CPF inválido') && ok;
     ok = erro(el('email'),  /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(el('email').value) ? '' : 'E-mail inválido') && ok;
     ok = erro(el('tel'),    el('tel').value.replace(/\D/g,'').length < 10 ? 'Celular incompleto' : '') && ok;
-    ok = erro(el('cep'),    el('cep').value.replace(/\D/g,'').length === 8 ? '' : 'CEP incompleto') && ok;
-    ok = erro(el('rua'),    el('rua').value.trim() ? '' : 'Informe a rua') && ok;
-    ok = erro(el('numero'), el('numero').value.trim() ? '' : 'Informe o número') && ok;
-    ok = erro(el('bairro'), el('bairro').value.trim() ? '' : 'Informe o bairro') && ok;
-    ok = erro(el('cidade'), el('cidade').value.trim() ? '' : 'Informe a cidade') && ok;
+    ok = erro(el('cep'),    el('cep').value.replace(/\D/g,'').length === 8 ? '' : 'Falta número — o CEP tem 8') && ok;
+    ok = erro(el('rua'),    el('rua').value.trim() ? '' : 'Falta a rua') && ok;
+    ok = erro(el('numero'), el('numero').value.trim() ? '' : 'Falta o número') && ok;
+    ok = erro(el('bairro'), el('bairro').value.trim() ? '' : 'Falta o bairro') && ok;
+    ok = erro(el('cidade'), el('cidade').value.trim() ? '' : 'Falta a cidade') && ok;
 
     if (!ok) {
       d.querySelector('[aria-invalid="true"]').focus();
