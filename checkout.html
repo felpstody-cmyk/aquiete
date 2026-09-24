@@ -525,16 +525,16 @@ img,svg{display:block;max-width:100%}
           </div>
 
           <div class="lines">
-            <div><span>Subtotal</span> <span id="sub">R$ 97,00</span></div>
+            <div><span>Subtotal</span> <span id="sub">R$ 84,90</span></div>
             <div id="linhaDesc" hidden><span>Desconto</span> <span id="desc">— R$ 0,00</span></div>
-            <div><span>Frete</span> <span id="frete">R$ 15,00</span></div>
-            <p class="frete-nota" id="freteNota" hidden>Frete grátis não vale para a sua região: o envio para o Norte é feito por transportadora e sai por R$ 29,90.</p>
+            <div><span>Frete</span> <span id="frete">R$ 19,90</span></div>
+            <p class="frete-nota" id="freteNota" hidden>Frete grátis não vale para a sua região: o envio para o Norte é feito por transportadora e sai por R$ 19,90.</p>
           </div>
 
           <div class="total">
             <span>Total</span>
             <div style="text-align:right">
-              <strong id="total">R$ 121,90</strong>
+              <strong id="total">R$ 104,80</strong>
               <div class="total__note" id="parc">à vista no Pix</div>
             </div>
           </div>
@@ -584,7 +584,7 @@ img,svg{display:block;max-width:100%}
 
   /* ---------- Catálogo. Bater com o index.html ---------- */
   var KITS = {
-    '1': { rotulo: '1 unidade',  preco:  84.90, frete: 15.00 },
+    '1': { rotulo: '1 unidade',  preco:  84.90, frete: 19.90 },
     '2': { rotulo: '2 unidades', preco: 149.90, frete: 0 },
     '4': { rotulo: '4 unidades', preco: 259.90, frete: 0 }
   };
@@ -607,7 +607,7 @@ img,svg{display:block;max-width:100%}
      grátis. Quem decide é o servidor; aqui é só pra tela bater com o
      que vai ser cobrado.
        66000–69999 PA, AP, AM, RR, AC · 76800–76999 RO · 77000–77999 TO */
-  var FRETE_NORTE = 29.90;
+  var FRETE_NORTE = 19.90;
   var CEPS_NORTE = [[66000, 69999], [76800, 76999], [77000, 77999]];
   var cepDigitado = '';
   function ehNorte(n){
@@ -630,7 +630,10 @@ img,svg{display:block;max-width:100%}
     el('frete').innerHTML    = frete === 0
       ? '<span class="free">Grátis</span>'
       : brl(frete);
-    el('freteNota').hidden   = !norte;
+    // O aviso so faz sentido quando o kit TERIA frete gratis: com 1
+    // frasco o Norte paga o mesmo que todo mundo, entao dizer que
+    // "frete gratis nao vale pra sua regiao" confunde sem motivo.
+    el('freteNota').hidden   = !(norte && kit.frete === 0);
     el('linhaDesc').hidden   = !desconto;
     el('desc').textContent   = '— ' + brl(desconto);
     el('total').textContent  = brl(total);
