@@ -222,6 +222,12 @@ footer .loja-link a{color:var(--brand-700);font-weight:600}
 .cookies button{border:0;border-radius:999px;padding:.5rem 1rem;font:inherit;font-weight:700;cursor:pointer}
 .cookies .sim-bt{background:var(--brand);color:#fff}
 .cookies .nao-bt{background:transparent;color:#EADAD6;border:1px solid #6B504B}
+/* O atributo hidden esconde aplicando display:none, mas QUALQUER regra
+   de display no CSS ganha dele. Sem esta linha, o display:flex la em
+   cima anulava o hidden: a pessoa clicava em Aceitar e a barra nao
+   saia da frente. A pagina inicial nao tinha o problema porque esconde
+   o aviso dela por opacidade, nao por hidden. */
+.cookies[hidden]{display:none}
 
 @media (prefers-reduced-motion:reduce){
   *{transition:none!important;scroll-behavior:auto!important}
