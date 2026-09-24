@@ -6,7 +6,7 @@
  */
 
 export const KITS = {
-  '1': { rotulo: '1 unidade',  unidades: 1, preco:  84.90, frete: 19.90 },
+  '1': { rotulo: '1 unidade',  unidades: 1, preco:  84.90, frete: 14.99 },
   '2': { rotulo: '2 unidades', unidades: 2, preco: 149.90, frete: 0 },
   '4': { rotulo: '4 unidades', unidades: 4, preco: 259.90, frete: 0 },
 }
@@ -53,7 +53,7 @@ export function acharCupom(codigo) {
  *   76800–76999  RO   (76000–76799 é Goiás e continua no frete normal)
  *   77000–77999  TO
  */
-export const FRETE_NORTE = 19.90
+export const FRETE_NORTE = 14.99
 const CEPS_NORTE = [[66000, 69999], [76800, 76999], [77000, 77999]]
 
 export function ehNorte(cep) {
