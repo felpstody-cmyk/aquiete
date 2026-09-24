@@ -2763,6 +2763,11 @@ try { if (!aqEmTeste()) {
     var payload = JSON.stringify({
       sid: sid, pagina: 'index', scrollMax: aqScrollMax,
       segundos: Math.round((Date.now() - aqInicio) / 1000),
+      /* De onde essa sessao veio. So o dominio de origem e o nome da
+         campanha — nunca a URL inteira. Sessao sem origem nenhuma e link
+         colado na mao ou robo, e e isso que separa uma coisa da outra. */
+      ref: (function(){ try { return document.referrer ? new URL(document.referrer).hostname : ''; } catch(e){ return ''; } })(),
+      camp: (new URLSearchParams(location.search).get('utm_campaign') || ''),
       cliques: aqCliques
     });
     if (navigator.sendBeacon) navigator.sendBeacon('/api/evento', payload);

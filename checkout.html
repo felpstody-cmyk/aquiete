@@ -1128,7 +1128,12 @@ try { if (!aqEmTeste()) {
       etapa: window.aqEtapa || 0,
       tocou: !!window.aqTocou,
       digitou: !!window.aqDigitou,
-      travou: window.aqTravou || []
+      travou: window.aqTravou || [],
+      /* De onde essa sessao veio. Sessao que SO tem checkout e nao tem
+         origem nenhuma e link colado na mao ou robo — e e exatamente
+         isso que a gente precisa separar. */
+      ref: (function(){ try { return document.referrer ? new URL(document.referrer).hostname : ''; } catch(e){ return ''; } })(),
+      camp: (new URLSearchParams(location.search).get('utm_campaign') || '')
     });
     if (navigator.sendBeacon) navigator.sendBeacon('/api/evento', payload);
     else fetch('/api/evento', { method:'POST', body:payload, keepalive:true }).catch(function(){});

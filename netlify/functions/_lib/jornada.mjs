@@ -19,8 +19,22 @@ export async function registrarEvento(sid, pagina, dados, geo) {
     const store = await loja()
     const atual = (await store.get(sid, { type: 'json' }).catch(() => null)) || { paginas: {} }
     const pag = atual.paginas[pagina] || {}
-    atual.paginas[pagina] = Object.assign({}, pag, dados, { atualizado: Date.now() })
+    // `primeiro` nunca é reescrito: é com ele que o painel ordena as páginas
+    // na ordem real da visita. A ordem das chaves do objeto é a ordem em que
+    // os avisos CHEGARAM, e eles chegam por sendBeacon quando a aba some —
+    // dois avisos quase juntos podem chegar trocados e inverter a história.
+    atual.paginas[pagina] = Object.assign({}, pag, dados, {
+      atualizado: Date.now(),
+      primeiro: pag.primeiro || Date.now(),
+    })
     if (geo?.cidade && geo?.uf) { atual.cidade = geo.cidade; atual.uf = geo.uf; atual.pais = geo.pais || '' }
+    // De onde a sessão veio, gravado uma vez. Sessão que só tem checkout e
+    // não tem origem nenhuma é link colado ou robô — é o que separa uma
+    // coisa da outra sem ficar no achismo.
+    if (!atual.ref && dados.ref) atual.ref = dados.ref
+    if (!atual.camp && dados.camp) atual.camp = dados.camp
+    delete atual.paginas[pagina].ref
+    delete atual.paginas[pagina].camp
     await store.setJSON(sid, atual)
   } catch { /* nunca derruba a página */ }
 }
@@ -67,6 +81,7 @@ export async function lerComportamento() {
       sessoes.push({
         sid: b.key, cidade: r.cidade || '', uf: r.uf || '', pais: r.pais || '',
         paginas: r.paginas, ultimaAtividade: maisRecente,
+        ref: r.ref || '', camp: r.camp || '',
       })
     }))
   } catch { /* sem dado é melhor que erro 500 */ }

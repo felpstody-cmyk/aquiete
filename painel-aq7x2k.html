@@ -582,7 +582,7 @@ td.sel,th.sel{width:34px;padding-right:0}
  * próprio arquivo com cache desligado e, se a versão de lá for diferente
  * da que está rodando, reabre numa URL com ?v=, que o navegador não tem
  * guardada. O #acesso vai junto, então o token não se perde. */
-var VERSAO_PAINEL = '2026-09-23-14';
+var VERSAO_PAINEL = '2026-09-23-15';
 (function(){
   try {
     if (!/^https?:$/.test(location.protocol)) return;
@@ -1191,6 +1191,20 @@ var ETAPA_NOME = {
   3: 'chegou no pagamento'
 };
 
+/**
+ * De onde a sessão veio. O caso que interessa é o vazio: sessão sem
+ * origem nenhuma não foi clicada em lugar nenhum — é link colado na mão,
+ * robô, ou alguém que já tinha o endereço. É o que separa "o anúncio
+ * mandou pro lugar errado" de "isso nem é gente".
+ */
+function veioDeTxt(s){
+  var partes = [];
+  if (s.ref) partes.push(esc(String(s.ref).replace(/^www\./, '')));
+  if (s.camp) partes.push('<span style="color:var(--ink-3)">' + esc(s.camp) + '</span>');
+  if (!partes.length) return '<span style="color:var(--bad)" title="Ninguém clicou num link pra chegar aqui">direto / sem origem</span>';
+  return partes.join('<br>');
+}
+
 /** O que aconteceu com esta pessoa dentro do checkout, em uma linha. */
 function parouEmTxt(s){
   var ck = s.paginas && s.paginas.checkout;
@@ -1320,14 +1334,19 @@ function renderComportamento(){
   renderEtapasCheckout(base);
 
   el('tbComportamento').innerHTML = sessoes.length
-    ? '<thead><tr><th>Quando</th><th>Cidade</th><th>Páginas</th><th>Parou em</th><th class="num">Rolagem máx.</th>' +
+    ? '<thead><tr><th>Quando</th><th>Cidade</th><th>Veio de</th><th>Páginas</th><th>Parou em</th><th class="num">Rolagem máx.</th>' +
       '<th class="num">Tempo</th><th>Clicou em</th><th></th></tr></thead><tbody>' +
       sessoes.slice(0, comportamentoLimite).map(function(s){
         var pags = paginasDe(s);
-        var pagsTxt = Object.keys(s.paginas || {}).map(function(p){
+        // Ordem real da visita, pelo horário em que cada página apareceu.
+        // A ordem das chaves é a ordem em que os avisos chegaram, e eles
+        // chegam quando a aba some — podem chegar trocados.
+        var pagsTxt = Object.keys(s.paginas || {}).sort(function(a,b){
+          return (s.paginas[a].primeiro||0) - (s.paginas[b].primeiro||0);
+        }).map(function(p){
           var nome = esc(PAGINA_NOME[p] || p);
           return filtrando && p === comportamentoPagina ? '<b>' + nome + '</b>' : nome;
-        }).join(', ') || '—';
+        }).join(' → ') || '—';
         var scrollMax = pags.reduce(function(m,p){ return Math.max(m, Number(s.paginas[p].scrollMax)||0); }, 0);
         var segundos = pags.reduce(function(sm,p){ return sm + (Number(s.paginas[p].segundos)||0); }, 0);
         var cliques = [];
@@ -1341,7 +1360,7 @@ function renderComportamento(){
         var foraBR = s.cidade && pais && pais !== 'BR';
         var cidade = s.cidade ? esc(s.cidade) + (s.uf ? '/'+esc(s.uf) : '') : '—';
         if (foraBR) cidade = '<span style="color:var(--bad)" title="Fora do Brasil — provável bot">'+cidade+' ('+esc(pais)+')</span>';
-        return '<tr><td>'+dataHoraBR(s.ultimaAtividade)+'</td><td>'+cidade+'</td><td>'+pagsTxt+'</td>' +
+        return '<tr><td>'+dataHoraBR(s.ultimaAtividade)+'</td><td>'+cidade+'</td><td>'+veioDeTxt(s)+'</td><td>'+pagsTxt+'</td>' +
           '<td>'+parouEmTxt(s)+'</td>' +
           '<td class="num">'+scrollMax+'%</td><td class="num">'+segParaTexto(segundos)+'</td><td>'+cliquesTxt+'</td>' +
           '<td><button class="lnk" data-apagar-sessao="'+esc(s.sid)+'">excluir</button></td></tr>';

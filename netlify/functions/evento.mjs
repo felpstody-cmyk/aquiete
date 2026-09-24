@@ -43,6 +43,10 @@ export default async (req) => {
     if (Array.isArray(corpo.travou)) {
       dados.travou = corpo.travou.map((t) => String(t).slice(0, 40)).slice(0, 12)
     }
+    // De onde veio: só o domínio de origem e o nome da campanha, nunca a
+    // URL inteira (que pode carregar dado de quem clicou).
+    if (corpo.ref != null) dados.ref = String(corpo.ref).slice(0, 60)
+    if (corpo.camp != null) dados.camp = String(corpo.camp).slice(0, 60)
     try { await registrarEvento(sid, pagina, dados, geoDe(req)) } catch { /* nunca derruba a página */ }
   }
 
