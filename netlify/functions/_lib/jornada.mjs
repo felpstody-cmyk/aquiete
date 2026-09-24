@@ -74,8 +74,8 @@ export async function apagarSessao(sid) {
 /**
  * Devolve o resumo agregado por página (scroll médio e tempo médio) e a
  * lista de sessões individuais, mais recente primeiro, pra ver pessoa por
- * pessoa até onde foi e o que clicou. Aproveita a leitura pra limpar
- * sessões com mais de 30 dias (sem isso acumula pra sempre).
+ * pessoa até onde foi e o que clicou. Olha só os últimos dias (DIAS_LIDOS);
+ * o histórico longo sai dos resumos diários, não daqui.
  */
 export async function lerComportamento() {
   const somas = {}
@@ -134,15 +134,92 @@ export async function lerComportamento() {
       amostras: s.amostras,
     }
   })
-  // Faxina: um dia velho por chamada. Como a leitura só olha os últimos
-  // dias, sem isto o que passa da janela ficaria guardado pra sempre.
-  try {
-    const velho = diaBR(new Date(Date.now() - 31 * 24 * 3600 * 1000))
-    const store = await loja()
-    const { blobs } = await store.list({ prefix: `${velho}/` })
-    await Promise.all((blobs || []).slice(0, 300).map((b) => store.delete(b.key).catch(() => {})))
-  } catch { /* faxina que falha não pode derrubar a leitura */ }
-
+  // Nada é apagado. O que estourava o tempo era LER tudo, não guardar —
+  // e isso a chave com data já resolveu. O dono quer o histórico inteiro
+  // desde a abertura da loja, então o bruto fica, e o que a tela precisa
+  // de longe vem do resumo diário (resumirDia / lerResumos).
   sessoes.sort((a, b) => b.ultimaAtividade - a.ultimaAtividade)
   return { porPagina, sessoes: sessoes.slice(0, 200) }
+}
+
+/* ==================== resumo diário ====================
+ *
+ * O bruto (uma sessão por visitante) é guardado pra sempre, mas ler
+ * milhares dele é o que derrubou a função. Então uma vez por dia o dia
+ * inteiro vira UM registro pequeno, e é dele que sai o histórico longo —
+ * desde a abertura da loja, sem custo de leitura.
+ *
+ * O bruto continua lá pra quem quiser abrir um dia específico.
+ */
+async function lojaResumo() {
+  if (!getStore) ({ getStore } = await import('@netlify/blobs'))
+  return getStore('jornada-resumo')
+}
+
+/** Lê o bruto de UM dia e guarda o resumo. Idempotente: rodar de novo
+ *  no mesmo dia só reescreve com número igual ou mais completo. */
+export async function resumirDia(dia) {
+  const alvo = dia || diaBR(new Date(Date.now() - 24 * 3600 * 1000))
+  try {
+    const store = await loja()
+    const { blobs } = await store.list({ prefix: `${alvo}/` })
+    const sessoes = []
+    await Promise.all((blobs || []).slice(0, TETO_SESSOES).map(async (b) => {
+      const r = await store.get(b.key, { type: 'json' }).catch(() => null)
+      if (r && r.paginas) sessoes.push(r)
+    }))
+
+    const ck = sessoes.filter((s) => s.paginas.checkout)
+    const temGesto = (s) => Object.values(s.paginas).some((p) => p.humano || p.tocou || p.digitou)
+    const rolou = (s) => Object.values(s.paginas).some((p) => (Number(p.scrollMax) || 0) >= 25)
+    const temOCampo = (s) => Object.values(s.paginas).some((p) => p.humano != null)
+
+    const porCampo = {}
+    const porTrava = {}
+    const porCampanha = {}
+    ck.forEach((s) => {
+      ;(s.paginas.checkout.campos || []).forEach((c) => { porCampo[c] = (porCampo[c] || 0) + 1 })
+      ;(s.paginas.checkout.travou || []).forEach((t) => { porTrava[t] = (porTrava[t] || 0) + 1 })
+    })
+    sessoes.forEach((s) => {
+      const c = s.camp || '(sem campanha)'
+      porCampanha[c] = (porCampanha[c] || 0) + 1
+    })
+
+    const resumo = {
+      dia: alvo,
+      sessoes: sessoes.length,
+      checkouts: ck.length,
+      encostou: ck.filter((s) => s.paginas.checkout.tocou).length,
+      digitou: ck.filter((s) => s.paginas.checkout.digitou).length,
+      passouDados: ck.filter((s) => (Number(s.paginas.checkout.etapa) || 0) >= 2).length,
+      chegouPagamento: ck.filter((s) => (Number(s.paginas.checkout.etapa) || 0) >= 3).length,
+      semGesto: sessoes.filter((s) => temOCampo(s) && rolou(s) && !temGesto(s)).length,
+      semOrigem: sessoes.filter((s) => !s.ref && !s.camp).length,
+      porCampo, porTrava, porCampanha,
+      feitoEm: Date.now(),
+    }
+    await (await lojaResumo()).setJSON(alvo, resumo)
+    return resumo
+  } catch {
+    return null
+  }
+}
+
+/** Todos os resumos, do mais novo pro mais velho. Um por dia: mesmo com
+ *  dois anos de loja são ~730 registros pequenos. */
+export async function lerResumos(limite = 400) {
+  try {
+    const store = await lojaResumo()
+    const { blobs } = await store.list()
+    const chaves = (blobs || []).map((b) => b.key).sort().reverse().slice(0, limite)
+    const fora = []
+    await Promise.all(chaves.map(async (k) => {
+      const r = await store.get(k, { type: 'json' }).catch(() => null)
+      if (r) fora.push(r)
+    }))
+    return fora.sort((a, b) => String(b.dia).localeCompare(String(a.dia)))
+  } catch {
+    return []
+  }
 }

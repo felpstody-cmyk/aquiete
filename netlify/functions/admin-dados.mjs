@@ -10,7 +10,7 @@
  */
 
 import { lerContadores, lerAtivos, lerTodosCarrinhos, lerCarrinhosAbandonados, lerConversoesGoogle } from './_lib/metricas.mjs'
-import { lerComportamento } from './_lib/jornada.mjs'
+import { lerComportamento, lerResumos } from './_lib/jornada.mjs'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -88,7 +88,7 @@ export default async (req) => {
   if (req.headers.get('x-admin-token') !== esperado) return json({ erro: 'Token inválido' }, 401)
 
   try {
-    const [cobrancas, clientes, metricas, ativos, carrinhos, comportamento, conversoesGoogle] = await Promise.all([
+    const [cobrancas, clientes, metricas, ativos, carrinhos, comportamento, conversoesGoogle, resumos] = await Promise.all([
       tudo('/payments'),
       tudo('/customers'),
       lerContadores(),
@@ -96,6 +96,9 @@ export default async (req) => {
       lerTodosCarrinhos(),
       lerComportamento(),
       lerConversoesGoogle(),
+      // Um registro por dia, desde a abertura da loja. É de onde sai o
+      // histórico longo sem precisar ler o bruto de meses.
+      lerResumos(),
     ])
 
     // Uma leitura só do Blobs: a lista de abandonados sai da lista completa.
@@ -144,6 +147,7 @@ export default async (req) => {
       carrinhos,
       comportamento,
       conversoesGoogle,
+      resumos,
     })
   } catch (e) {
     return json({ erro: String(e.message || e) }, 502)
