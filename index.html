@@ -4,6 +4,29 @@
 <html lang="pt-BR" data-focus>
 <head>
 <meta charset="utf-8">
+
+<!-- Campanhas que devem cair direto na página de venda.
+     Publicação impulsionada pelo Instagram não deixa trocar o link depois
+     de criada (o Gerenciador diz isso na cara), e encerrar pra recriar joga
+     fora o aprendizado. Como o link aponta pra cá, o desvio é feito aqui.
+     Em 23/09 a 120253998307620170 trouxe 399 visitas pra home e tirou 1
+     checkout; a que caía na página de venda tirou 8 em 101.
+     Fica antes de tudo, inclusive da marcação de visita, pra não contar a
+     mesma pessoa duas vezes. A query inteira vai junto: sem ela o utm e o
+     gclid se perdem e a visita fica sem origem. -->
+<script>
+(function(){
+  try {
+    var CAMPANHAS_PRA_OFERTA = ['120253998307620170'];
+    var camp = (new URLSearchParams(location.search).get('utm_campaign') || '').toLowerCase();
+    if (CAMPANHAS_PRA_OFERTA.indexOf(camp) < 0) return;
+    if (sessionStorage.getItem('aq_desviado')) return;   // trava contra laço
+    sessionStorage.setItem('aq_desviado', '1');
+    location.replace('/oferta.html' + location.search + location.hash);
+  } catch (e) { /* desvio nunca pode quebrar a home */ }
+})();
+</script>
+
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Quando a ansiedade aperta, você tem 20 segundos | Aquiete — Floral em gotas</title>
 <meta name="description" content="Composto floral em gotas sublinguais para os momentos em que a ansiedade aperta. Natural, sem dependência química, sem receita. Alívio pontual para levar no bolso.">
