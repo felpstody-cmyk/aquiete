@@ -2742,6 +2742,13 @@ try { if (!aqEmTeste()) {
     if (altura <= 0) return 0;
     return Math.min(100, Math.round((window.scrollY / altura) * 100));
   }
+  /* Houve gesto humano de verdade nesta pagina? Robo que rola a pagina
+     por codigo dispara 'scroll', mas nao dispara dedo na tela nem tecla.
+     Sessao com rolagem alta e ZERO gesto e o retrato de automacao. */
+  var aqHumano = false;
+  ['pointerdown','touchstart','keydown','wheel'].forEach(function(ev){
+    window.addEventListener(ev, function(){ aqHumano = true; }, { passive:true, once:true });
+  });
   window.addEventListener('scroll', function(){
     var p = aqScrollPct();
     if (p > aqScrollMax) aqScrollMax = p;
@@ -2763,6 +2770,7 @@ try { if (!aqEmTeste()) {
     var payload = JSON.stringify({
       sid: sid, pagina: 'index', scrollMax: aqScrollMax,
       segundos: Math.round((Date.now() - aqInicio) / 1000),
+      humano: aqHumano,
       /* De onde essa sessao veio. So o dominio de origem e o nome da
          campanha — nunca a URL inteira. Sessao sem origem nenhuma e link
          colado na mao ou robo, e e isso que separa uma coisa da outra. */

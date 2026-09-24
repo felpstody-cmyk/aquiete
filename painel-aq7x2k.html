@@ -582,7 +582,7 @@ td.sel,th.sel{width:34px;padding-right:0}
  * próprio arquivo com cache desligado e, se a versão de lá for diferente
  * da que está rodando, reabre numa URL com ?v=, que o navegador não tem
  * guardada. O #acesso vai junto, então o token não se perde. */
-var VERSAO_PAINEL = '2026-09-23-17';
+var VERSAO_PAINEL = '2026-09-23-18';
 (function(){
   try {
     if (!/^https?:$/.test(location.protocol)) return;
@@ -1205,6 +1205,28 @@ var ETAPA_NOME = {
  * robô, ou alguém que já tinha o endereço. É o que separa "o anúncio
  * mandou pro lugar errado" de "isso nem é gente".
  */
+/**
+ * Sessão que rolou a página mas nunca registrou um gesto humano — nenhum
+ * dedo na tela, nenhuma tecla, nenhuma roda de mouse. Robô que rola por
+ * código dispara 'scroll' mas não dispara nada disso.
+ *
+ * Só acusa quem teve rolagem: sem rolagem nenhuma não há o que explicar,
+ * e quem abre e sai em um segundo legitimamente não encosta em nada.
+ */
+function pareceRobo(s){
+  var pags = Object.keys(s.paginas || {});
+  var rolou = false, gesto = false;
+  pags.forEach(function(p){
+    if ((Number(s.paginas[p].scrollMax) || 0) >= 25) rolou = true;
+    if (s.paginas[p].humano) gesto = true;
+    if (s.paginas[p].tocou || s.paginas[p].digitou) gesto = true;
+  });
+  // `humano` só existe daqui pra frente: sessão antiga não tem o campo e
+  // não pode ser acusada por isso.
+  var temOCampo = pags.some(function(p){ return s.paginas[p].humano != null; });
+  return temOCampo && rolou && !gesto;
+}
+
 function veioDeTxt(s){
   var partes = [];
   if (s.ref) partes.push(esc(String(s.ref).replace(/^www\./, '')));
@@ -1263,6 +1285,13 @@ function renderEtapasCheckout(base){
       '(corrigido hoje — vale do próximo dia em diante).</p>'
     : '';
 
+  var robos = ck.filter(pareceRobo).length;
+  var avisoRobo = robos
+    ? '<p class="sub" style="margin:0 0 12px;color:var(--bad)"><b>' + robos + '</b> dest' + (robos===1?'a':'as') +
+      (robos===1?' sessão rolou':' sessões rolaram') + ' a página sem nenhum dedo, tecla ou roda de mouse. ' +
+      'Isso não é gente navegando — dá pra descontar do funil.</p>'
+    : '';
+
   var n = function(f){ return ck.filter(f).length; };
   var passos = [
     ['Abriu o checkout', ck.length],
@@ -1303,7 +1332,7 @@ function renderEtapasCheckout(base){
       }).join('') + '</div>'
     : '';
 
-  caixa.innerHTML = aviso + passos.map(function(p, i){
+  caixa.innerHTML = aviso + avisoRobo + passos.map(function(p, i){
     var perda = i > 0 ? passos[i-1][1] - p[1] : 0;
     return '<div class="fase"><span class="nome">'+p[0]+'</span>' +
       '<span class="barra"><i style="width:'+Math.round(p[1]/topo*100)+'%"></i></span>' +
@@ -1406,6 +1435,7 @@ function renderComportamento(){
         var foraBR = s.cidade && pais && pais !== 'BR';
         var cidade = s.cidade ? esc(s.cidade) + (s.uf ? '/'+esc(s.uf) : '') : '—';
         if (foraBR) cidade = '<span style="color:var(--bad)" title="Fora do Brasil — provável bot">'+cidade+' ('+esc(pais)+')</span>';
+        if (pareceRobo(s)) cidade += '<br><span style="font-size:11px;color:var(--bad)" title="Rolou a página mas não houve dedo, tecla nem roda de mouse">rolou sem tocar na tela</span>';
         return '<tr><td>'+dataHoraBR(s.ultimaAtividade)+'</td><td>'+cidade+'</td><td>'+veioDeTxt(s)+'</td><td>'+pagsTxt+'</td>' +
           '<td>'+parouEmTxt(s)+'</td>' +
           '<td class="num">'+scrollMax+'%</td><td class="num">'+segParaTexto(segundos)+'</td><td>'+cliquesTxt+'</td>' +

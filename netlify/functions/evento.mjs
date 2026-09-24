@@ -37,6 +37,9 @@ export default async (req) => {
     // o que o carrinho exige — quem abre o checkout, olha e sai sem
     // digitar nada era invisível, e é justamente quem precisa aparecer.
     if (corpo.etapa != null) dados.etapa = Math.max(0, Math.min(3, Number(corpo.etapa) || 0))
+    // Gesto humano de verdade (dedo, tecla, roda). Robô que rola por código
+    // dispara scroll, mas não dispara nenhum destes.
+    if (corpo.humano != null) dados.humano = !!corpo.humano
     if (corpo.tocou != null) dados.tocou = !!corpo.tocou
     if (corpo.digitou != null) dados.digitou = !!corpo.digitou
     // Só o NOME do campo que barrou e o motivo, nunca o que foi digitado.
