@@ -11,6 +11,7 @@
 
 import { lerContadores, lerAtivos, lerTodosCarrinhos, lerCarrinhosAbandonados, lerConversoesGoogle } from './_lib/metricas.mjs'
 import { lerComportamento, lerResumos } from './_lib/jornada.mjs'
+import { KITS, FRETE_NORTE } from './_lib/catalogo.mjs'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -148,6 +149,16 @@ export default async (req) => {
       comportamento,
       conversoesGoogle,
       resumos,
+      // Preço vem daqui, do mesmo lugar que o checkout cobra. O painel
+      // tinha a própria cópia em Ajustes e ela ficou pra trás: carrinho
+      // de 2 unidades aparecia como R$ 169,00 quando a loja cobrava
+      // R$ 149,90. Uma fonte só, e não desencontra mais.
+      precos: {
+        kits: Object.fromEntries(
+          Object.entries(KITS).map(([id, k]) => [id, { preco: k.preco, frete: k.frete, unidades: k.unidades }])
+        ),
+        freteNorte: FRETE_NORTE,
+      },
     })
   } catch (e) {
     return json({ erro: String(e.message || e) }, 502)

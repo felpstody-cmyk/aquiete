@@ -588,7 +588,7 @@ td.sel,th.sel{width:34px;padding-right:0}
  * próprio arquivo com cache desligado e, se a versão de lá for diferente
  * da que está rodando, reabre numa URL com ?v=, que o navegador não tem
  * guardada. O #acesso vai junto, então o token não se perde. */
-var VERSAO_PAINEL = '2026-09-24-5';
+var VERSAO_PAINEL = '2026-09-28-1';
 (function(){
   try {
     if (!/^https?:$/.test(location.protocol)) return;
@@ -714,7 +714,7 @@ var manuais = ler(K.ped, []);
 // "Entregue" quem marca e voce). Chave e o id do pedido, valor e o status novo.
 var statusManual = ler(K.sta, {});
 var selecionados = {};
-var remotos = ler(K.rem, { pedidos:[], metricas:{}, ativos:[], abandonados:[], carrinhos:[], conversoesGoogle:[], ambiente:'', comportamento:{ porPagina:{}, sessoes:[] }, resumos:[] });
+var remotos = ler(K.rem, { pedidos:[], metricas:{}, ativos:[], abandonados:[], carrinhos:[], conversoesGoogle:[], ambiente:'', comportamento:{ porPagina:{}, sessoes:[] }, resumos:[], precos:null });
 var despesas = ler(K.desp, null);
 var lotes   = ler(K.est, []);
 var cfg     = ler(K.cfg, {});
@@ -727,7 +727,7 @@ if (!despesas) {
   });
   gravar(K.desp, despesas);
 }
-cfg = Object.assign({ custo:19, p1:97, p2:169, p4:297, frete:15.00, meta:0, min:12, url:'', token:'' }, cfg);
+cfg = Object.assign({ custo:19, p1:84.90, p2:149.90, p4:259.90, frete:14.99, meta:0, min:12, url:'', token:'' }, cfg);
 
 /* Acesso que sobrevive ao celular apagando o localStorage (navegador do
  * WhatsApp/Instagram, aba anônima, Safari limpando dado de site parado).
@@ -889,7 +889,7 @@ function sincronizar(silencioso){
   ])
     .then(function(res){
       var d = res[0], estadoNuvem = res[1];
-      remotos = { pedidos: d.pedidos||[], metricas: d.metricas||{}, ativos: d.ativos||[], abandonados: d.abandonados||[], carrinhos: d.carrinhos||[], conversoesGoogle: d.conversoesGoogle||[], ambiente: d.ambiente||'', comportamento: d.comportamento||{ porPagina:{}, sessoes:[] }, resumos: d.resumos||[] };
+      remotos = { pedidos: d.pedidos||[], metricas: d.metricas||{}, ativos: d.ativos||[], abandonados: d.abandonados||[], carrinhos: d.carrinhos||[], conversoesGoogle: d.conversoesGoogle||[], ambiente: d.ambiente||'', comportamento: d.comportamento||{ porPagina:{}, sessoes:[] }, resumos: d.resumos||[], precos: d.precos||null };
       sincEm = new Date().toISOString();
       gravar(K.rem, remotos); gravar(K.sinc, sincEm);
 
@@ -998,7 +998,7 @@ function quebraCarrinho(c){
   }
   var un = Number(c && c.kit) || 0;
   var prod = precoKit(un);
-  var f = (un === 1) ? (Number(cfg.frete) || 0) : 0;   // 2 ou mais: frete grátis
+  var f = freteKit(un);
   return { produto: prod, frete: f, total: prod + f };
 }
 
@@ -1084,10 +1084,24 @@ function quebraTxt(produto, frete){
 /** Preço de tabela do kit, pros carrinhos que pararam antes de gerar pedido. */
 function precoKit(un){
   var n = Number(un) || 0;
+  // O preço vem do servidor, do mesmo catálogo que o checkout cobra.
+  // O painel tinha a própria tabela em Ajustes e ela ficou pra trás:
+  // carrinho de 2 aparecia como R$ 169,00 com a loja cobrando R$ 149,90.
+  // Ajustes vira só reserva, pra quando ainda não sincronizou.
+  var k = (remotos.precos && remotos.precos.kits) || null;
+  if (k && k[n]) return Number(k[n].preco) || 0;
   if (n === 1) return Number(cfg.p1) || 0;
   if (n === 2) return Number(cfg.p2) || 0;
   if (n === 4) return Number(cfg.p4) || 0;
   return n * (Number(cfg.p1) || 0);
+}
+
+/** Frete de tabela pro kit, também vindo do servidor. */
+function freteKit(un){
+  var n = Number(un) || 0;
+  var k = (remotos.precos && remotos.precos.kits) || null;
+  if (k && k[n]) return Number(k[n].frete) || 0;
+  return n === 1 ? (Number(cfg.frete) || 0) : 0;
 }
 
 function calcular(){
