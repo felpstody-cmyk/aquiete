@@ -938,17 +938,27 @@ img,svg{display:block;max-width:100%}
   /* Conversao do Google: dispara SO quando o pagamento cai.
      Antes ela disparava ao gerar o Pix, e quem gerava e nao pagava
      contava como venda — o Google aprenderia a procurar gerador de Pix.
-     E uma acao de conversao so, pra mesma venda nunca contar duas vezes. */
-  var GOOGLE_PAGA = 'AW-17670361503/n1OQCOXx-IodEJ-j8elB';
+     Uma acao de conversao por conta, e so uma por conta: a mesma venda
+     nunca conta duas vezes dentro do mesmo painel. */
+  /* Uma venda paga, duas contas. Cada rotulo carrega o ID da sua conta no
+     send_to, entao o Google entrega a conversao so pra ela — uma nunca
+     conta a venda da outra, mesmo saindo do mesmo clique. */
+  var GOOGLE_PAGA = [
+    'AW-17670361503/n1OQCOXx-IodEJ-j8elB',   // conta que roda os anuncios hoje
+    'AW-18468707390/W2_HCIHf04EdEL64yOZE',   // segunda conta, medindo em paralelo
+  ];
 
   function conversaoPaga(referencia, valor){
     try {
-      if (!GOOGLE_PAGA || !window.gtag) return;
-      gtag('event', 'conversion', {
-        send_to: GOOGLE_PAGA,
-        value: valor,
-        currency: 'BRL',
-        transaction_id: referencia || ''
+      if (!window.gtag) return;
+      GOOGLE_PAGA.forEach(function(alvo){
+        if (!alvo) return;
+        gtag('event', 'conversion', {
+          send_to: alvo,
+          value: valor,
+          currency: 'BRL',
+          transaction_id: referencia || ''
+        });
       });
     } catch(e) {}
   }
@@ -1346,7 +1356,10 @@ function aqGerouPagamento(dados){
    aceitou na página inicial não precisa aceitar de novo aqui. */
 (function(){
   var META_PIXEL_ID = '1991105264740384';
+  // Duas contas medem ao mesmo tempo. Cada conversao vai marcada com o
+  // send_to da sua conta, entao uma nunca conta a da outra.
   var GOOGLE_ADS_ID = 'AW-17670361503';
+  var GOOGLE_ADS_ID2 = 'AW-18468707390';
   try {
     /* Tag do Google com modo de consentimento: carrega sempre, mas nasce
        sem permissao de cookie e so ganha permissao se a pessoa aceitou.
@@ -1364,6 +1377,7 @@ function aqGerouPagamento(dados){
       document.head.appendChild(g);
       gtag('js', new Date());
       gtag('config', GOOGLE_ADS_ID);
+      if (GOOGLE_ADS_ID2) gtag('config', GOOGLE_ADS_ID2);
       if (localStorage.getItem('aq_cookies') === 'aceito') {
         gtag('consent', 'update', {
           ad_storage: 'granted', ad_user_data: 'granted',

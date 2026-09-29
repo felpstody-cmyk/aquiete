@@ -788,7 +788,10 @@ p.centro{margin:0}
   /* A tag do Google precisa rodar AQUI porque e nesta pagina que a pessoa
      chega com o ?gclid do anuncio. Sem isso a compra acontece mas o Google
      nao sabe que veio dele. */
+  // Duas contas medem ao mesmo tempo. Cada conversao vai marcada com o
+  // send_to da sua conta, entao uma nunca conta a da outra.
   var GOOGLE_ADS_ID = 'AW-17670361503';
+  var GOOGLE_ADS_ID2 = 'AW-18468707390';
   var carregado = false;
   function lerConsent(){ try { return localStorage.getItem('aq_cookies'); } catch(e){ return null; } }
   function carregarPixel(){
@@ -831,6 +834,7 @@ p.centro{margin:0}
     d.head.appendChild(sg);
     gtag('js', new Date());
     gtag('config', GOOGLE_ADS_ID);
+    if (GOOGLE_ADS_ID2) gtag('config', GOOGLE_ADS_ID2);
     if (lerConsent() === 'aceito') {
       gtag('consent', 'update', {
         ad_storage: 'granted', ad_user_data: 'granted',

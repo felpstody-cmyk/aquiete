@@ -2601,7 +2601,10 @@ body::after{
        checkout: e nesta pagina que a pessoa chega com o ?gclid do anuncio,
        e e a tag que guarda esse identificador pra conversao ser creditada
        depois. So carrega depois do "Aceitar" nos cookies. */
+    // Duas contas medem ao mesmo tempo. Cada conversao vai marcada com o
+    // send_to da sua conta, entao uma nunca conta a da outra.
     var GOOGLE_ADS_ID = 'AW-17670361503';
+    var GOOGLE_ADS_ID2 = 'AW-18468707390';
 
     var carregado = false;
 
@@ -2660,6 +2663,7 @@ body::after{
       gtag('js', new Date());
       if (GA_ID)         gtag('config', GA_ID);
       if (GOOGLE_ADS_ID) gtag('config', GOOGLE_ADS_ID);
+      if (GOOGLE_ADS_ID2) gtag('config', GOOGLE_ADS_ID2);
       if (aceitou()) {
         gtag('consent', 'update', {
           ad_storage: 'granted', ad_user_data: 'granted',
