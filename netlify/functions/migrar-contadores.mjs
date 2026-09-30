@@ -18,8 +18,18 @@ export default async (req) => {
   const store = getStore('metricas')
   const t0 = Date.now()
 
+  // O list() do Blobs e eventualmente consistente: chave apagada continua
+  // aparecendo por um tempo. Sem cursor, cada chamada pegava as mesmas 250
+  // do topo e a migracao nao saia do lugar. Por isso o avanco e por NOME:
+  // a ordem da listagem e estavel, entao "tudo que vem depois da ultima que
+  // eu tratei" funciona mesmo com a lista desatualizada.
+  const depois = new URL(req.url).searchParams.get('depois') || ''
   const { blobs } = await store.list()
-  const velhas = blobs.map((b) => b.key).filter((k) => !k.startsWith('g:') && k.split(':').length >= 3)
+  const velhas = blobs
+    .map((b) => b.key)
+    .filter((k) => !k.startsWith('g:') && k.split(':').length >= 3)
+    .sort()
+    .filter((k) => k > depois)
   const lote = velhas.slice(0, LOTE)
   if (!lote.length) return json({ pronto: true, restam: 0, ms: Date.now() - t0 })
 
@@ -47,7 +57,7 @@ export default async (req) => {
     await Promise.all(itens.map((it) => store.delete(it.chave).catch(() => {})))
   }
 
-  return json({ pronto: false, movidas, restam: velhas.length - lote.length, grupos: porGrupo.size, ms: Date.now() - t0 })
+  return json({ pronto: false, movidas, restam: velhas.length - lote.length, ultima: lote[lote.length - 1], grupos: porGrupo.size, ms: Date.now() - t0 })
 }
 
 export const config = { path: '/api/migrar-contadores' }
