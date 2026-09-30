@@ -27,3 +27,7 @@ node_modules/
 prompts-ugc.md
 gerar-fotos.py
 __pycache__/
+
+# Material de teste que nao vai pro ar (entrou uma vez por "git add -A")
+relato-agua.html
+img/relato-agua/
