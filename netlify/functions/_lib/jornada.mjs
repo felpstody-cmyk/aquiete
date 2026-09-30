@@ -93,16 +93,14 @@ export async function lerComportamento() {
     const listas = await Promise.all(
       dias.map((d) => store.list({ prefix: `${d}/` }).catch(() => ({ blobs: [] })))
     )
-    // Transição: o que foi gravado antes da chave com data não tem barra
-    // no nome. Entra em quantidade limitada pra não repetir o estouro, e
-    // some sozinho conforme envelhece.
-    let legado = []
-    try {
-      const todas = await store.list()
-      legado = (todas.blobs || []).filter((b) => !b.key.includes('/')).slice(0, 300)
-    } catch { /* sem o histórico velho é melhor que 504 */ }
-
-    const blobs = listas.flatMap((l) => l.blobs || []).concat(legado).slice(0, TETO_SESSOES)
+    // Aqui existia uma ponte pras chaves gravadas antes de 24/09, quando
+    // elas ainda não tinham a data no nome. Ela fazia um store.list() sem
+    // prefixo — a listagem do armazenamento inteiro — que é exatamente o
+    // que esta função tinha acabado de parar de fazer por causar 504.
+    // Medido em 30/09: 7,9s só nessa listagem, pra devolver 2 sessões.
+    // As chaves velhas já saíram da janela de DIAS_LIDOS, então a ponte
+    // não entregava mais nada e só custava.
+    const blobs = listas.flatMap((l) => l.blobs || []).slice(0, TETO_SESSOES)
 
     await Promise.all(blobs.map(async (b) => {
       const r = await store.get(b.key, { type: 'json' }).catch(() => null)

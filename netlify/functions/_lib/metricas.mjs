@@ -31,10 +31,39 @@ export function diaBR(quando) {
   return `${p.year}-${p.month}-${p.day}`
 }
 
+/**
+ * Chaves de três partes — "cidade:DIA:sao-paulo", "origem:DIA:google" —
+ * criavam UMA chave por valor por dia. Cada cidade nova que entrava no
+ * site virava uma chave a mais, pra sempre: em 22 dias foram 3032, e
+ * `lerContadores` fazia uma leitura individual em cada uma. Treze
+ * segundos só nisso, e o painel morria de 504.
+ *
+ * Agora essas viram UM registro por tipo por dia — "g:cidade:DIA" com
+ * { "sao-paulo": 12, "chapeco": 4 } dentro. A leitura cai de milhares
+ * pra dezenas, e para de crescer com o número de cidades.
+ *
+ * O preço é que duas visitas no mesmo segundo, no mesmo dia, podem
+ * perder uma contagem ao gravar por cima. Já era assim antes (`contar`
+ * sempre foi ler-somar-gravar); o que muda é a janela, de por-cidade
+ * pra por-dia. Com o volume da loja isso é raro e custa uma cidade a
+ * menos num gráfico, nunca um pedido.
+ */
+function agrupavel(chave) {
+  const p = String(chave).split(':')
+  return p.length >= 3 ? { grupo: `g:${p[0]}:${p[1]}`, item: p.slice(2).join(':') } : null
+}
+
 /** Soma 1 na chave do dia. Ex.: "visita:2026-09-06". */
 export async function contar(chave) {
   try {
     const store = await loja()
+    const g = agrupavel(chave)
+    if (g) {
+      const atual = (await store.get(g.grupo, { type: 'json' }).catch(() => null)) || {}
+      atual[g.item] = (Number(atual[g.item]) || 0) + 1
+      await store.setJSON(g.grupo, atual)
+      return
+    }
     const atual = Number(await store.get(chave)) || 0
     await store.set(chave, String(atual + 1))
   } catch { /* silêncio proposital */ }
@@ -49,21 +78,48 @@ export async function contar(chave) {
 export async function marcar(chave) {
   try {
     const store = await loja()
+    const g = agrupavel(chave)
+    if (g) {
+      const atual = (await store.get(g.grupo, { type: 'json' }).catch(() => null)) || {}
+      atual[g.item] = Date.now()
+      await store.setJSON(g.grupo, atual)
+      return
+    }
     await store.set(chave, String(Date.now()))
   } catch { /* silêncio proposital */ }
 }
 
-/** Devolve { "visita:2026-09-06": 12, "checkout:2026-09-06": 3, ... } */
+/**
+ * Devolve { "visita:2026-09-06": 12, "cidade:2026-09-06:chapeco": 4, ... }
+ *
+ * O painel continua recebendo o formato antigo, chave a chave: quem lê
+ * não precisa saber que por baixo virou registro agrupado.
+ */
 export async function lerContadores() {
   const saida = {}
   try {
     const store = await loja()
     const { blobs } = await store.list()
-    await Promise.all(
-      blobs.map(async (b) => {
-        saida[b.key] = Number(await store.get(b.key)) || 0
-      })
-    )
+
+    const grupos = []
+    const soltas = []
+    for (const b of blobs) {
+      if (b.key.startsWith('g:')) grupos.push(b.key)
+      // Chave de três partes sem o "g:" é do formato antigo. Fica onde
+      // está e não é lida: é ela que derrubava o painel, e o conteúdo
+      // dela já foi transferido pros grupos.
+      else if (b.key.split(':').length === 2) soltas.push(b.key)
+    }
+
+    await Promise.all([
+      ...soltas.map(async (k) => { saida[k] = Number(await store.get(k)) || 0 }),
+      ...grupos.map(async (k) => {
+        const d = await store.get(k, { type: 'json' }).catch(() => null)
+        if (!d) return
+        const base = k.slice(2)            // "g:cidade:DIA" -> "cidade:DIA"
+        for (const item of Object.keys(d)) saida[`${base}:${item}`] = Number(d[item]) || 0
+      }),
+    ])
   } catch { /* sem métricas é melhor que erro 500 */ }
   return saida
 }
