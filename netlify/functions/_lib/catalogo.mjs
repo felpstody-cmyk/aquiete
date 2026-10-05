@@ -17,7 +17,7 @@
 export const KITS = {
   '1': { rotulo: '1 unidade',  unidades: 1, preco:  94.43, frete: 14.99 },
   '2': { rotulo: '2 unidades', unidades: 2, preco:  94.43, frete: 14.99 },
-  '4': { rotulo: '4 unidades', unidades: 4, preco: 188.87, frete: 0 },
+  '4': { rotulo: '4 unidades', unidades: 4, preco: 177.67, frete: 0 },
 }
 
 export const METODOS = new Set(['pix', 'card', 'boleto'])
