@@ -15,9 +15,9 @@
  * pra cair redondos depois do desconto.
  */
 export const KITS = {
-  '1': { rotulo: '1 unidade',  unidades: 1, preco:  94.43, frete: 14.99 },
-  '2': { rotulo: '2 unidades', unidades: 2, preco:  94.43, frete: 14.99 },
-  '4': { rotulo: '4 unidades', unidades: 4, preco: 177.67, frete: 0 },
+  '1': { rotulo: '1 unidade',  unidades: 1, preco:  69.99, frete: 14.99 },
+  '2': { rotulo: '2 unidades', unidades: 2, preco: 129.90, frete: 0 },
+  '4': { rotulo: '4 unidades', unidades: 4, preco: 199.90, frete: 0 },
 }
 
 export const METODOS = new Set(['pix', 'card', 'boleto'])
@@ -30,7 +30,9 @@ export const METODOS = new Set(['pix', 'card', 'boleto'])
  * assim os pedidos antigos continuam explicáveis.
  */
 export const CUPONS = {
-  PRIMEIRA10: { percentual: 0.10, rotulo: '10% na primeira compra', ativo: true },
+  // Desligado em 05/10: a oferta passou a ser o proprio compre-1-leve-2,
+  // e dar 10% por cima dela comia a margem duas vezes.
+  PRIMEIRA10: { percentual: 0.10, rotulo: '10% na primeira compra', ativo: false },
 
   // Desligado — era so para o teste de compra real do dono.
   TESTEAQ0821: { percentual: 1.00, rotulo: 'Pedido de teste', ativo: false },

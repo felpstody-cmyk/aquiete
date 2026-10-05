@@ -1295,7 +1295,7 @@ body::after{
 <a class="skip" href="#main">Pular para o conteúdo</a>
 
 <!-- Promoção de primeira compra: mesmo texto e mesmo relógio da oferta.html -->
-<p class="promo-faixa"><span>10% OFF</span> já aplicado no seu pedido<span id="contaCupom" hidden> · termina hoje em <b>00:00:00</b></span></p>
+<p class="promo-faixa"><span>COMPRE 1, LEVE 2</span> com frete grátis<span id="contaCupom" hidden> · termina hoje em <b>00:00:00</b></span></p>
 
 <!-- Pontos de navegação — some junto com o realce se data-focus sair -->
 <nav class="secnav" aria-label="Seções da página">
@@ -1954,45 +1954,44 @@ body::after{
 
         <!-- ⚠️ PREENCHER: preços, economia e o data-checkout de cada kit.
              O botão de compra troca de link conforme a opção escolhida. -->
-        <p class="promo-aviso"><b>10% OFF de primeira compra</b> já descontado nos preços abaixo</p>
+        <p class="promo-aviso"><b>Compre 1, leve 2</b> ou <b>compre 2, leve 4</b> — com frete grátis</p>
 
         <div class="kits" role="radiogroup" aria-label="Escolha a quantidade">
 
           <label class="kit" data-sel>
             <input type="radio" name="kit" value="1" checked
-                   data-checkout="checkout.html?kit=1&amp;cupom=PRIMEIRA10" data-parcel="ou parcelado no cartão">
+                   data-checkout="checkout.html?kit=1" data-parcel="ou parcelado no cartão">
             <span class="kit__mark" aria-hidden="true"></span>
             <span class="kit__main">
               <span class="kit__qty">1 unidade</span>
               <span class="kit__desc">Para conhecer · frete calculado no checkout</span>
             </span>
             <span class="kit__cost">
-              <span class="kit__price">R$ 84,99</span>
-              <span class="kit__unit kit__de">R$ 94,43</span>
+              <span class="kit__price">R$ 69,99</span>
+              <span class="kit__unit">+ frete</span>
             </span>
           </label>
 
           <label class="kit kit--featured">
             <input type="radio" name="kit" value="2"
-                   data-checkout="checkout.html?kit=2&amp;cupom=PRIMEIRA10" data-parcel="ou parcelado no cartão">
+                   data-checkout="checkout.html?kit=2" data-parcel="ou parcelado no cartão">
             <span class="kit__tags" aria-hidden="true">
               <span class="kit__tag kit__tag--soft">Mais escolhido</span>
             </span>
             <span class="kit__mark" aria-hidden="true"></span>
             <span class="kit__main">
               <span class="kit__qty">Compre 1, leve 2</span>
-              <span class="kit__desc">Paga por 1, leva 2. Mesmo preço do frasco avulso.</span>
+              <span class="kit__desc">Economize R$ 25 e não paga frete</span>
             </span>
             <span class="kit__cost">
-              <span class="kit__price">R$ 42,50 <small>cada</small></span>
-              <span class="kit__unit">R$ 84,99 + frete</span>
-              <span class="kit__unit kit__de">R$ 169,98</span>
+              <span class="kit__price">R$ 129,90</span>
+              <span class="kit__unit kit__de">R$ 139,98</span>
             </span>
           </label>
 
           <label class="kit kit--featured">
             <input type="radio" name="kit" value="4"
-                   data-checkout="checkout.html?kit=4&amp;cupom=PRIMEIRA10" data-parcel="ou parcelado no cartão">
+                   data-checkout="checkout.html?kit=4" data-parcel="ou parcelado no cartão">
             <span class="kit__tags" aria-hidden="true">
               <span class="kit__tag kit__tag--soft">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 17V5a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h1"/><path d="M14 8h4.5a1 1 0 0 1 .8.4l3.5 4.6V17a1 1 0 0 1-1 1h-1"/><circle cx="6" cy="18" r="2.2"/><circle cx="17.5" cy="18" r="2.2"/></svg>
@@ -2003,12 +2002,11 @@ body::after{
             <span class="kit__mark" aria-hidden="true"></span>
             <span class="kit__main">
               <span class="kit__qty">Compre 2, leve 4</span>
-              <span class="kit__desc">Paga por 2, leva 4. E o frete sai de graça.</span>
+              <span class="kit__desc">Economize R$ 95 e não paga frete</span>
             </span>
             <span class="kit__cost">
-              <span class="kit__price">R$ 39,98 <small>cada</small></span>
-              <span class="kit__unit">R$ 159,90 · frete grátis</span>
-              <span class="kit__unit kit__de">R$ 339,96</span>
+              <span class="kit__price">R$ 199,90</span>
+              <span class="kit__unit kit__de">R$ 279,96</span>
             </span>
           </label>
 
@@ -2017,13 +2015,13 @@ body::after{
 
         <!-- href vem do kit selecionado; o padrão abaixo é o de 1 unidade -->
         <div class="relogio" id="relogioOferta" hidden>
-          <span class="relogio__t">Seu desconto de 10% termina em</span>
+          <span class="relogio__t">A oferta compre 1, leve 2 termina em</span>
           <b>00:00:00</b>
           <span class="relogio__s">O cupom vale até a virada do dia</span>
         </div>
 
-        <a class="btn btn--primary btn--pulse btn--block" href="checkout.html?kit=1&amp;cupom=PRIMEIRA10" id="buy" data-cta="oferta">
-          Quero o meu com 10% OFF
+        <a class="btn btn--primary btn--pulse btn--block" href="checkout.html?kit=1" id="buy" data-cta="oferta">
+          Quero o compre 1, leve 2
           <span class="btn__sub">Compra 100% segura · Pix, cartão ou boleto</span>
         </a>
 
@@ -2159,15 +2157,11 @@ body::after{
     <button class="consent__x" type="button" id="ckX" aria-label="Fechar">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
     </button>
-    <p class="consent__eyebrow">Presente de boas-vindas</p>
-    <p class="consent__t">10% na primeira compra</p>
-    <button class="consent__code" type="button" id="ckCode">
-      <span class="consent__code-v">PRIMEIRA10</span>
-      <span class="consent__code-a" id="ckCopy">copiar</span>
-    </button>
+    <p class="consent__eyebrow">Enquanto a oferta estiver no ar</p>
+    <p class="consent__t">Compre 1, leve 2</p>
     <form class="consent__form" id="ckForm" novalidate>
       <input id="ckMail" type="email" name="email" autocomplete="email"
-             placeholder="seu@email.com" aria-label="Seu e-mail para guardar o cupom">
+             placeholder="seu@email.com" aria-label="Seu e-mail para avisarmos">
       <button class="consent__bt" type="submit">Guardar</button>
     </form>
     <p class="consent__msg" id="ckMsg" role="status"></p>
@@ -2491,7 +2485,7 @@ body::after{
      Passo 1 pergunta sobre cookies; qualquer resposta revela o cupom no
      mesmo bloco. O e-mail é opcional e vai para o Netlify Forms. */
   (function(){
-    var CODIGO = 'PRIMEIRA10';
+    var CODIGO = '';
     var caixa = d.getElementById('consent');
     if (!caixa) return;
 
