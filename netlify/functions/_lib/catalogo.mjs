@@ -5,10 +5,19 @@
  * sempre. Sem isso, qualquer pessoa abre o console e compra por R$ 1.
  */
 
+/*
+ * Oferta "compre 1, leve 2": o kit de 2 custa o mesmo que o de 1 e o frete
+ * dele e gratis. O de 1 existe so como ancora — ninguem deve escolher ele,
+ * e e isso que faz a oferta ficar obvia na pagina.
+ *
+ * Os valores aqui sao ANTES do cupom. Com o PRIMEIRA10 viram
+ * 99,90 / 99,90 / 179,90, que sao os numeros que o cliente ve. Escolhidos
+ * pra cair redondos depois do desconto.
+ */
 export const KITS = {
-  '1': { rotulo: '1 unidade',  unidades: 1, preco:  84.90, frete: 14.99 },
-  '2': { rotulo: '2 unidades', unidades: 2, preco: 149.90, frete: 0 },
-  '4': { rotulo: '4 unidades', unidades: 4, preco: 259.90, frete: 0 },
+  '1': { rotulo: '1 unidade',  unidades: 1, preco: 111.00, frete: 14.99 },
+  '2': { rotulo: '2 unidades', unidades: 2, preco: 111.00, frete: 0 },
+  '4': { rotulo: '4 unidades', unidades: 4, preco: 199.89, frete: 0 },
 }
 
 export const METODOS = new Set(['pix', 'card', 'boleto'])
