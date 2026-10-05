@@ -6,16 +6,16 @@
  */
 
 /*
- * Oferta "compre 1, leve 2": o kit de 2 custa o mesmo que o de 1 e o frete
- * dele e gratis. O de 1 existe so como ancora — ninguem deve escolher ele,
- * e e isso que faz a oferta ficar obvia na pagina.
+ * Oferta: o segundo frasco sai por R$ 14,91. O kit de 2 custa R$ 99,90 e
+ * o avulso R$ 84,99, entao levar o segundo custa quase nada — e e essa
+ * diferenca, posta lado a lado, que faz a pessoa subir de kit.
  *
  * Os valores aqui sao ANTES do cupom. Com o PRIMEIRA10 viram
- * 99,90 / 99,90 / 179,90, que sao os numeros que o cliente ve. Escolhidos
+ * 84,99 / 99,90 / 179,90, que sao os numeros que o cliente ve. Escolhidos
  * pra cair redondos depois do desconto.
  */
 export const KITS = {
-  '1': { rotulo: '1 unidade',  unidades: 1, preco: 111.00, frete: 14.99 },
+  '1': { rotulo: '1 unidade',  unidades: 1, preco:  94.43, frete: 14.99 },
   '2': { rotulo: '2 unidades', unidades: 2, preco: 111.00, frete: 0 },
   '4': { rotulo: '4 unidades', unidades: 4, preco: 199.89, frete: 0 },
 }
