@@ -1960,7 +1960,7 @@ body::after{
 
           <label class="kit" data-sel>
             <input type="radio" name="kit" value="1" checked
-                   data-checkout="checkout.html?kit=1" data-parcel="ou parcelado no cartão">
+                   data-checkout="checkout.html?kit=1" data-parcel="ou parcelado no cartão" data-rotulo="Quero 1 frasco">
             <span class="kit__mark" aria-hidden="true"></span>
             <span class="kit__main">
               <span class="kit__qty">1 unidade</span>
@@ -1974,7 +1974,7 @@ body::after{
 
           <label class="kit kit--featured">
             <input type="radio" name="kit" value="2"
-                   data-checkout="checkout.html?kit=2" data-parcel="ou parcelado no cartão">
+                   data-checkout="checkout.html?kit=2" data-parcel="ou parcelado no cartão" data-rotulo="Quero o compre 1, leve 2">
             <span class="kit__tags" aria-hidden="true">
               <span class="kit__tag kit__tag--soft">Mais escolhido</span>
             </span>
@@ -1991,7 +1991,7 @@ body::after{
 
           <label class="kit kit--featured">
             <input type="radio" name="kit" value="4"
-                   data-checkout="checkout.html?kit=4" data-parcel="ou parcelado no cartão">
+                   data-checkout="checkout.html?kit=4" data-parcel="ou parcelado no cartão" data-rotulo="Quero o compre 2, leve 4">
             <span class="kit__tags" aria-hidden="true">
               <span class="kit__tag kit__tag--soft">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 17V5a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h1"/><path d="M14 8h4.5a1 1 0 0 1 .8.4l3.5 4.6V17a1 1 0 0 1-1 1h-1"/><circle cx="6" cy="18" r="2.2"/><circle cx="17.5" cy="18" r="2.2"/></svg>
@@ -2021,7 +2021,7 @@ body::after{
         </div>
 
         <a class="btn btn--primary btn--pulse btn--block" href="checkout.html?kit=1" id="buy" data-cta="oferta">
-          Quero o compre 1, leve 2
+          <span id="buyTxt">Quero o compre 1, leve 2</span>
           <span class="btn__sub">Compra 100% segura · Pix, cartão ou boleto</span>
         </a>
 
@@ -2460,6 +2460,9 @@ body::after{
       });
       buy.setAttribute('href', input.dataset.checkout || '#');
       buy.dataset.kit = input.value;
+      // O botao confirma o kit escolhido em vez de empurrar sempre o mesmo.
+      var rot = d.getElementById('buyTxt');
+      if (rot && input.dataset.rotulo) rot.textContent = input.dataset.rotulo;
       if(parcel && input.dataset.parcel) parcel.textContent = input.dataset.parcel;
     };
     kits.forEach(function(i){ i.addEventListener('change',function(){ pickKit(i) }) });

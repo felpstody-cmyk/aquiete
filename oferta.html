@@ -437,7 +437,7 @@ p.centro{margin:0}
       <span style="font-size:.74rem;color:#8A5A62">A oferta vale até a virada do dia</span>
     </div>
 
-    <a class="btn" href="checkout.html?kit=2" data-compra data-cta="venda-kits" id="btnOferta">Quero o compre 1, leve 2<small>Pix, cartão ou boleto · compra segura</small></a>
+    <a class="btn" href="checkout.html?kit=2" data-compra data-cta="venda-kits" id="btnOferta"><span data-rotulo>Quero o compre 1, leve 2</span><small>Pix, cartão ou boleto · compra segura</small></a>
 
     <div class="selos">
       <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 17V5a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h1"/><path d="M14 8h4.5a1 1 0 0 1 .8.4l3.5 4.6V17a1 1 0 0 1-1 1h-1"/><circle cx="6" cy="18" r="2.2"/><circle cx="17.5" cy="18" r="2.2"/></svg>Envio em até 2 dias úteis</span>
@@ -454,7 +454,7 @@ p.centro{margin:0}
     <h2 class="sec-h">Você já sabe quanto custa ficar sem.</h2>
     <p>Custa a reunião que você saiu no meio com a desculpa de buscar água. A noite em que o coração disparou às três da manhã e você ficou contando as horas de sono que ainda sobravam. O lugar cheio que você evitou. O “tá tudo bem” dito com a mão gelada.</p>
     <p class="solto">Você pode fechar essa página e torcer pra próxima crise ser leve. Ou pode estar com ele no bolso quando ela vier.</p>
-    <a class="btn meio-cta" href="checkout.html?kit=2" data-compra data-cta="venda-meio">Garantir o meu agora<small>Compre 1, leve 2 · frete grátis</small></a>
+    <a class="btn meio-cta" href="checkout.html?kit=2" data-compra data-cta="venda-meio">Garantir o meu agora<small>Pix, cartão ou boleto · compra segura</small></a>
   </div>
 </section>
 
@@ -662,7 +662,7 @@ p.centro{margin:0}
     <span class="olho">Seu kit tá separado</span>
     <h2>Da próxima vez que apertar, você vai ter o que fazer.</h2>
     <p>Seu pedido: <b id="finalKit">2 frascos com frete grátis</b> por <b id="finalPreco">R$ 129,90</b>.</p>
-    <a class="btn" href="checkout.html?kit=2" data-compra data-cta="venda-final" id="btnFinal">Quero o compre 1, leve 2<small>Pix, cartão ou boleto</small></a>
+    <a class="btn" href="checkout.html?kit=2" data-compra data-cta="venda-final" id="btnFinal"><span data-rotulo>Quero o compre 1, leve 2</span><small>Pix, cartão ou boleto</small></a>
     <p class="aviso">O Aquiete é um floral de uso pontual e não substitui acompanhamento nem medicação prescrita.</p>
   </div>
 </section>
@@ -740,9 +740,9 @@ p.centro{margin:0}
     } catch (e) { /* contador nunca pode quebrar a página de venda */ }
   })();
   var KITS = {
-    '1': { dock: '1 frasco · + frete',      preco: 'R$ 84,98',  final: '1 frasco (+ frete de R$ 14,99)' },
-    '2': { dock: 'Compre 1, leve 2 · + frete', preco: 'R$ 129,90', final: 'Compre 1, leve 2 (2 frascos) com frete grátis' },
-    '4': { dock: 'Compre 2, leve 4 · frete grátis', preco: 'R$ 199,90', final: 'Compre 2, leve 4 (4 frascos) com frete grátis' }
+    '1': { dock: '1 frasco · + frete',      preco: 'R$ 84,98',  final: '1 frasco (+ frete de R$ 14,99)', botao: 'Quero 1 frasco' },
+    '2': { dock: 'Compre 1, leve 2 · frete grátis', preco: 'R$ 129,90', final: 'Compre 1, leve 2 (2 frascos) com frete grátis', botao: 'Quero o compre 1, leve 2' },
+    '4': { dock: 'Compre 2, leve 4 · frete grátis', preco: 'R$ 199,90', final: 'Compre 2, leve 4 (4 frascos) com frete grátis', botao: 'Quero o compre 2, leve 4' }
   };
 
   /* O botão da faixa do topo fica sempre no kit de 2 (é o que o texto dela
@@ -753,12 +753,14 @@ p.centro{margin:0}
   }
   function atualizar(){
     var id = kitAtual(), k = KITS[id];
-    var href = 'checkout.html?kit=' + id + '&cupom=' + CUPOM;
+    var href = 'checkout.html?kit=' + id + (CUPOM ? '&cupom=' + CUPOM : '');
     d.querySelectorAll('[data-compra]').forEach(function(a){ a.href = href; });
     d.getElementById('dockNome').textContent = k.dock;
     d.getElementById('dockPreco').textContent = k.preco;
     d.getElementById('finalKit').textContent = k.final;
     d.getElementById('finalPreco').textContent = k.preco;
+    // O botao confirma o que a pessoa escolheu, em vez de empurrar sempre o mesmo kit.
+    d.querySelectorAll('[data-rotulo]').forEach(function(el){ el.textContent = k.botao; });
   }
   d.querySelectorAll('input[name="kit"]').forEach(function(r){ r.addEventListener('change', atualizar); });
   atualizar();
