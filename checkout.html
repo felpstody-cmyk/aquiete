@@ -691,6 +691,24 @@ img,svg{display:block;max-width:100%}
 
     var botaoCompra = d.querySelector('button.btn[type="submit"]');
 
+    /* Teste de 06/10: formulario inteiro aberto de uma vez.
+       A hipotese e que ver so um quadrado de Nome e CPF, sem mais nada
+       embaixo, parece pagina quebrada ou golpe — e o painel mostra 7
+       pessoas que abriram o checkout e nao digitaram nada.
+       Trocar para false volta ao passo a passo, que e o padrao que
+       costuma converter melhor em loja ja conhecida. */
+    var ETAPAS_ABERTAS = true;
+
+    if (ETAPAS_ABERTAS) {
+      // Nada a travar: as tres etapas ja estao visiveis no HTML. Some com
+      // os "Continuar" e libera o botao de compra. A validacao do envio
+      // confere os 9 campos, entao abrir tudo nao deixa passar pedido
+      // incompleto.
+      d.querySelectorAll('[data-seguir]').forEach(function(b){ b.hidden = true; });
+      if (botaoCompra) botaoCompra.removeAttribute('data-esperando');
+      return;
+    }
+
     // Estado inicial: 2 e 3 fechadas, botoes de seguir a mostra.
     etapas[1].setAttribute('data-travada','');
     etapas[2].setAttribute('data-travada','');
