@@ -8,6 +8,7 @@
  */
 
 import { montarPedido, validarCliente, ErroDeEntrada } from './_lib/catalogo.mjs'
+import { conferir } from './_lib/melhorenvio.mjs'
 import { obterGateway, ErroDeGateway } from './_lib/gateways/index.mjs'
 import { enviar, htmlAguardando } from './_lib/email.mjs'
 import { marcarCarrinhoComPedido, guardarCliqueDoPedido } from './_lib/metricas.mjs'
@@ -37,7 +38,14 @@ export default async (req) => {
 
     // Ordem importa: valida antes de gastar chamada de API
     // O CEP entra aqui porque o frete do Norte depende dele (ver catalogo.mjs).
-    const pedido = montarPedido(corpo.kit, corpo.metodo, corpo.cupom, corpo.cliente?.cep)
+    // Se o cliente escolheu um servico de entrega, a cotacao e refeita
+    // AGORA, no servidor. O preco que o navegador mandou nunca e usado:
+    // sem isso da pra escolher SEDEX na tela e pagar PAC na cobranca.
+    // Falha na cotacao nao derruba o pedido, cai na tabela fixa.
+    const envio = corpo.envio
+      ? await conferir(corpo.kit, corpo.cliente?.cep, corpo.envio).catch(() => null)
+      : null
+    const pedido = montarPedido(corpo.kit, corpo.metodo, corpo.cupom, corpo.cliente?.cep, envio)
     const cliente = validarCliente(corpo.cliente)
     const referencia = gerarReferencia()
 

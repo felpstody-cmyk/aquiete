@@ -15,9 +15,12 @@
  * pra cair redondos depois do desconto.
  */
 export const KITS = {
-  '1': { rotulo: '1 unidade',  unidades: 1, preco:  69.99, frete: 14.99 },
-  '2': { rotulo: '2 unidades', unidades: 2, preco: 129.90, frete: 0 },
-  '4': { rotulo: '4 unidades', unidades: 4, preco: 199.90, frete: 0 },
+  '1': { rotulo: '1 unidade',  unidades: 1, preco:  69.99, frete: 14.99,
+         caixa: { altura: 11, largura:  9, comprimento:  6, peso: 0.15 } },
+  '2': { rotulo: '2 unidades', unidades: 2, preco: 129.90, frete: 0,
+         caixa: { altura: 16, largura: 11, comprimento:  7, peso: 0.28 } },
+  '4': { rotulo: '4 unidades', unidades: 4, preco: 199.90, frete: 0,
+         caixa: { altura: 20, largura: 15, comprimento:  9, peso: 0.52 } },
 }
 
 export const METODOS = new Set(['pix', 'card', 'boleto'])
@@ -79,7 +82,12 @@ export function freteDoKit(kit, cep) {
 }
 
 /** Monta o pedido a partir do id do kit. Lança se o kit não existir. */
-export function montarPedido(kitId, metodo, codigoCupom, cep) {
+/**
+ * `envio` e a opcao ja CONFERIDA no Melhor Envio por quem chamou — nunca
+ * o que o navegador mandou. Sem ela, cai na tabela fixa de sempre, que e
+ * o que mantem a loja vendendo se a integracao estiver fora.
+ */
+export function montarPedido(kitId, metodo, codigoCupom, cep, envio = null) {
   const kit = KITS[String(kitId)]
   if (!kit) throw new ErroDeEntrada(`Kit inválido: ${kitId}`)
   if (!METODOS.has(metodo)) throw new ErroDeEntrada(`Método inválido: ${metodo}`)
@@ -87,7 +95,7 @@ export function montarPedido(kitId, metodo, codigoCupom, cep) {
   const cupom = acharCupom(codigoCupom)
   const centavos = (v) => Number(v.toFixed(2))
   const desconto = cupom ? centavos(kit.preco * cupom.percentual) : 0
-  const frete = freteDoKit(kit, cep)
+  const frete = envio ? centavos(envio.preco) : freteDoKit(kit, cep)
 
   return {
     kitId: String(kitId),
@@ -97,6 +105,9 @@ export function montarPedido(kitId, metodo, codigoCupom, cep) {
     cupom: cupom?.codigo ?? null,
     desconto,
     frete,
+    // Guardado pra etiqueta: na hora de postar ele precisa saber qual
+    // servico o cliente pagou, nao so quanto.
+    envio: envio ? { id: envio.id, nome: envio.nome, empresa: envio.empresa, prazo: envio.prazo } : null,
     total: centavos(kit.preco - desconto + frete),
   }
 }
