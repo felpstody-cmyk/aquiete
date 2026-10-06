@@ -727,6 +727,27 @@ img,svg{display:block;max-width:100%}
       // incompleto.
       d.querySelectorAll('[data-seguir]').forEach(function(b){ b.hidden = true; });
       if (botaoCompra) botaoCompra.removeAttribute('data-esperando');
+
+      /* Sem o "Continuar", nada avisava que a etapa acabou. A gota do fio
+         passa a escorrer quando os campos obrigatorios da etapa estao
+         todos preenchidos: e o aviso de progresso, sem botao e sem
+         empurrar a tela de lugar enquanto a pessoa digita. Uma vez por
+         etapa, pra nao virar pisca-pisca. */
+      etapas.forEach(function(etapa, i) {
+        var proxima = etapas[i + 1];
+        if (!proxima) return;
+        var campos = Array.prototype.slice.call(
+          etapa.querySelectorAll('input[required]:not([type=radio])'));
+        if (!campos.length) return;
+        var jaAvisou = false;
+        function conferir() {
+          if (jaAvisou) return;
+          if (!campos.every(function(c){ return c.value.trim(); })) return;
+          jaAvisou = true;
+          pingar(proxima.querySelector('.step__gota'));
+        }
+        campos.forEach(function(c){ c.addEventListener('blur', conferir); });
+      });
       return;
     }
 
