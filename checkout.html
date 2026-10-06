@@ -121,6 +121,13 @@ img,svg{display:block;max-width:100%}
   from{opacity:0;transform:translateY(14px)}
   to{opacity:1;transform:none}
 }
+/* Botao de fechar no fim da etapa de pagamento. */
+.btn--fecha{margin-top:var(--s5);width:100%}
+@media (min-width:900px){
+  /* No desktop o resumo fica do lado, com o botao dele sempre a vista:
+     dois botoes iguais na mesma dobra viram ruido. */
+  .btn--fecha{display:none}
+}
 /* O "Continuar" e secundario: quem tem que gritar e o botao de comprar. */
 .btn--seguir{
   min-height:50px;font-size:1rem;
@@ -495,6 +502,15 @@ img,svg{display:block;max-width:100%}
             </div>
           </div></div>
         </div>
+
+        <!-- Segundo botao, no fim do fluxo. No celular o resumo (e o botao
+             dele) fica depois de tudo; quem acabou de escolher o pagamento
+             tem que conseguir finalizar sem procurar. Mesmo form, mesmo
+             submit: os dois disparam a mesma validacao. -->
+        <button class="btn btn--fecha" type="submit">
+          Finalizar compra
+          <small data-btn-sub>Pagamento via Pix</small>
+        </button>
       </section>
     </div>
 
@@ -510,7 +526,7 @@ img,svg{display:block;max-width:100%}
               <span class="item__t" id="itemT">1 unidade</span>
               <span class="item__s" id="itemS">Frasco de 30 ml · uso sublingual</span>
             </div>
-            <span class="item__p" id="itemP">R$ 97,00</span>
+            <span class="item__p" id="itemP">R$ 129,90</span>
           </div>
 
           <div class="cupom">
@@ -525,23 +541,23 @@ img,svg{display:block;max-width:100%}
           </div>
 
           <div class="lines">
-            <div><span>Subtotal</span> <span id="sub">R$ 111,00</span></div>
+            <div><span>Subtotal</span> <span id="sub">R$ 129,90</span></div>
             <div id="linhaDesc" hidden><span>Desconto</span> <span id="desc">— R$ 0,00</span></div>
-            <div><span>Frete</span> <span id="frete">R$ 14,99</span></div>
+            <div><span>Frete</span> <span id="frete">Grátis</span></div>
             <p class="frete-nota" id="freteNota" hidden>Frete grátis não vale para a sua região: o envio para o Norte é feito por transportadora e sai por R$ 19,99.</p>
           </div>
 
           <div class="total">
             <span>Total</span>
             <div style="text-align:right">
-              <strong id="total">R$ 99,89</strong>
+              <strong id="total">R$ 129,90</strong>
               <div class="total__note" id="parc">à vista no Pix</div>
             </div>
           </div>
 
           <button class="btn" type="submit">
             Finalizar compra
-            <small id="btnSub">Pagamento via Pix</small>
+            <small data-btn-sub>Pagamento via Pix</small>
           </button>
 
           <ul class="trust">
@@ -582,11 +598,16 @@ img,svg{display:block;max-width:100%}
   var d = document;
   var brl = function(n){ return 'R$ ' + n.toFixed(2).replace('.', ','); };
 
-  /* ---------- Catálogo. Bater com o index.html ---------- */
+  /* ---------- Catálogo ----------
+     Espelho de netlify/functions/_lib/catalogo.mjs, só para desenhar a
+     tela. Quem cobra é o servidor.
+     MUDOU O PREÇO LÁ? MUDA AQUI TAMBÉM. Em 05/10 os preços novos foram
+     só para o servidor e esta tabela ficou para trás: o checkout exibia
+     R$ 149,90 no kit de 2 enquanto a cobrança saía R$ 129,90. */
   var KITS = {
-    '1': { rotulo: '1 unidade',  preco:  84.90, frete: 14.99 },
-    '2': { rotulo: '2 unidades', preco: 149.90, frete: 0 },
-    '4': { rotulo: '4 unidades', preco: 259.90, frete: 0 }
+    '1': { rotulo: '1 unidade',  preco:  69.99, frete: 14.99 },
+    '2': { rotulo: '2 unidades', preco: 129.90, frete: 0 },
+    '4': { rotulo: '4 unidades', preco: 199.90, frete: 0 }
   };
   var kitId = new URLSearchParams(location.search).get('kit');
   if (!KITS[kitId]) kitId = '1';
@@ -880,7 +901,7 @@ img,svg{display:block;max-width:100%}
     Object.keys(painel).forEach(function(k){
       if (painel[k]) painel[k].toggleAttribute('data-open', k === input.value);
     });
-    el('btnSub').textContent = subs[input.value][0];
+    d.querySelectorAll('[data-btn-sub]').forEach(function(x){ x.textContent = subs[input.value][0]; });
     el('parc').textContent   = subs[input.value][1];
   }
   pagos.forEach(function(i){ i.addEventListener('change', function(){ escolher(i); }); });
@@ -943,13 +964,19 @@ img,svg{display:block;max-width:100%}
      dele — é o que impede alguém de comprar por R$ 1 pelo console.     */
   // [type=submit] e obrigatorio: os botoes "Continuar" tambem sao .btn
   // e vem antes no documento, entao um seletor generico pegaria o errado.
-  var botao = d.querySelector('button.btn[type="submit"]'), rotuloBotao = botao.innerHTML;
+  // Sao dois: o do resumo e o do fim da etapa de pagamento. Travar so um
+  // deixaria o outro clicavel durante o processamento, e o cliente geraria
+  // duas cobrancas.
+  var botoes = Array.prototype.slice.call(d.querySelectorAll('button.btn[type="submit"]'));
+  var rotulos = botoes.map(function(b){ return b.innerHTML; });
 
   function travar(travado, texto){
-    botao.disabled = travado;
-    botao.style.opacity = travado ? .65 : '';
-    botao.style.cursor  = travado ? 'wait' : '';
-    botao.innerHTML = travado ? (texto || 'Processando…') : rotuloBotao;
+    botoes.forEach(function(b, i){
+      b.disabled = travado;
+      b.style.opacity = travado ? .65 : '';
+      b.style.cursor  = travado ? 'wait' : '';
+      b.innerHTML = travado ? (texto || 'Processando…') : rotulos[i];
+    });
   }
 
   /* Conversao do Google: dispara SO quando o pagamento cai.
