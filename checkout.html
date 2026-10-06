@@ -283,6 +283,9 @@ img,svg{display:block;max-width:100%}
 .total__note{font-size:.75rem;color:var(--ink-3);text-align:right;margin-top:.2rem}
 .frete-nota{font-size:.75rem;line-height:1.45;color:var(--brand-700);background:var(--brand-100);border-radius:var(--r-sm);padding:.5rem .6rem;margin-top:.4rem}
 .frete-nota[hidden]{display:none}
+/* Dica cinza abaixo do campo. Vira mensagem de erro quando precisa. */
+.field small.dica{color:var(--ink-3);font-size:.8125rem}
+.field input[aria-invalid="true"] ~ small.dica{color:var(--brand-700)}
 /* `hidden` e so uma dica: qualquer `display` no elemento ganha dele. O
    .btn e inline-flex, entao o "Continuar" continuava na tela mesmo
    escondido pelo JS — e foi por isso que o checkout aberto parecia nao
@@ -386,7 +389,11 @@ img,svg{display:block;max-width:100%}
           <div class="field">
             <label for="cpf">CPF</label>
             <input id="cpf" name="cpf" inputmode="numeric" autocomplete="off" placeholder="000.000.000-00" maxlength="14" required>
-            <small></small>
+            <!-- CPF sem motivo declarado e onde mora a desconfianca de quem nao
+                 compra online sempre. A nota precisa dele de qualquer jeito;
+                 dizer isso custa uma linha. O texto some quando aparece erro,
+                 pra nao brigar com a mensagem de validacao. -->
+            <small class="dica">usado só pra emitir a nota do pedido</small>
           </div>
         </div>
 
@@ -980,9 +987,14 @@ img,svg{display:block;max-width:100%}
   /* ---------- Validação ---------- */
   function erro(campo, msg){
     var s = campo.parentElement.querySelector('small');
+    // Campos com dica fixa (o CPF explica pra que serve) guardam o texto
+    // original na primeira passada: sem isso a validação apagaria a dica
+    // e ela nunca mais voltaria.
+    if (s.classList.contains('dica') && s.dataset.dica === undefined) s.dataset.dica = s.textContent;
+    var vazio = s.dataset.dica !== undefined ? s.dataset.dica : '';
     // data-erro guarda o motivo pro relatório de "onde travou" (ver aqTravou).
     if (msg) { campo.setAttribute('aria-invalid','true'); campo.setAttribute('data-erro', msg); s.textContent = msg; s.setAttribute('data-err',''); }
-    else     { campo.removeAttribute('aria-invalid'); campo.removeAttribute('data-erro'); s.textContent = ''; s.removeAttribute('data-err'); }
+    else     { campo.removeAttribute('aria-invalid'); campo.removeAttribute('data-erro'); s.textContent = vazio; s.removeAttribute('data-err'); }
     return !msg;
   }
   /* Erro de CPF quase sempre é dígito a menos ou dígito trocado, e as duas

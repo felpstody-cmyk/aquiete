@@ -286,11 +286,6 @@ td.sel,th.sel{width:34px;padding-right:0}
   </div>
 
   <div class="card">
-    <h3>Histórico <span class="tag" id="historicoTag">dia a dia, desde a abertura da loja</span></h3>
-    <div class="tw"><table id="tbHistorico"></table></div>
-  </div>
-
-  <div class="card">
     <h3>Comportamento no site <span class="tag">até onde rolou, quanto tempo ficou e o que clicou — pessoa por pessoa</span></h3>
     <div class="filtros pagfiltro" id="comportamentoFiltro"></div>
     <div class="body" style="display:flex;gap:20px;flex-wrap:wrap" id="comportamentoResumo"></div>
@@ -1397,62 +1392,6 @@ function renderEtapasCheckout(base){
     : '');
 }
 
-/**
- * Histórico dia a dia, sem prazo de validade.
- *
- * Vem dos resumos diários: um registro pequeno por dia, fechado de
- * madrugada, guardado pra sempre. O detalhe pessoa por pessoa fica só nos
- * últimos dias porque ler milhares de sessões a cada sincronização é o
- * que derrubava a função — mas os NÚMEROS de todo dia ficam aqui.
- */
-function renderHistorico(){
-  var lista = (remotos.resumos || []).slice();
-  var m = remotos.metricas || {};
-
-  // Os contadores de visita e checkout nunca foram apagados, então o
-  // histórico deles vale desde o primeiro dia — inclusive de antes de o
-  // resumo de comportamento existir.
-  var dias = {};
-  Object.keys(m).forEach(function(k){
-    var p = k.split(':');
-    if ((p[0] === 'visita' || p[0] === 'checkout' || p[0] === 'carrinho') && p[1]) {
-      if (!dias[p[1]]) dias[p[1]] = { dia:p[1] };
-      dias[p[1]][p[0]] = (dias[p[1]][p[0]] || 0) + (Number(m[k]) || 0);
-    }
-  });
-  lista.forEach(function(r){
-    if (!dias[r.dia]) dias[r.dia] = { dia:r.dia };
-    // Resumo sem sessão nenhuma é dia que o resumo não conseguiu medir —
-    // as sessões de antes de 24/09/2026 foram gravadas sem a data na
-    // chave, então o resumo não as enxerga. Mostrar 0 ali seria dizer
-    // "ninguém entrou", que é diferente de "não foi medido".
-    if (r.sessoes > 0) dias[r.dia].resumo = r;
-  });
-
-  var ordem = Object.keys(dias).sort().reverse();
-  el('historicoTag').textContent = ordem.length
-    ? ordem.length + ' dia' + (ordem.length===1?'':'s') + ' guardado' + (ordem.length===1?'':'s') + ' · de ' +
-      dataBR(ordem[ordem.length-1]) + ' até ' + dataBR(ordem[0])
-    : 'ainda sem histórico';
-
-  el('tbHistorico').innerHTML = ordem.length
-    ? '<thead><tr><th>Dia</th><th class="num">Visitas</th><th class="num">Checkouts</th>' +
-      '<th class="num">Carrinhos</th><th class="num">Digitou</th><th class="num">Chegou no pgto</th>' +
-      '<th class="num">Sem gesto</th></tr></thead><tbody>' +
-      ordem.slice(0, 120).map(function(d){
-        var x = dias[d], r = x.resumo;
-        var vazio = '<span style="color:var(--ink-3)">—</span>';
-        return '<tr><td style="white-space:nowrap">'+dataBR(d)+'</td>' +
-          '<td class="num">'+(x.visita||0)+'</td>' +
-          '<td class="num">'+(x.checkout||0)+'</td>' +
-          '<td class="num">'+(x.carrinho||0)+'</td>' +
-          '<td class="num">'+(r ? r.digitou : vazio)+'</td>' +
-          '<td class="num">'+(r ? r.chegouPagamento : vazio)+'</td>' +
-          '<td class="num">'+(r && r.semGesto ? '<span style="color:var(--bad)">'+r.semGesto+'</span>' : (r ? 0 : vazio))+'</td></tr>';
-      }).join('') + '</tbody>'
-    : '<tbody><tr><td class="vazio">Sincronize pra ver o histórico.</td></tr></tbody>';
-}
-
 function renderComportamento(){
   var c = remotos.comportamento || { porPagina:{}, sessoes:[] };
   // O servidor guarda sessão de comportamento por até 30 dias corridos (não
@@ -1563,7 +1502,6 @@ function renderPainel(){
   renderMarco100k();
   renderComportamento();
   renderCaixa();
-  renderHistorico();
   el('painelPeriodo').textContent = (function(){
     if (!periodo) return 'Todos os períodos';
     if (periodoModo === 'hoje') return 'Hoje (' + dataBR(periodo.inicio) + ')';
