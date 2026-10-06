@@ -88,6 +88,30 @@ img,svg{display:block;max-width:100%}
 }
 .step__head h2{font-size:1.1875rem}
 
+/* ---------- Etapa concluida ----------
+   Sem os botoes de "Continuar", nada dizia que uma parte acabou. A gota
+   que escorria era pequena demais pra se notar no celular. Aqui o aviso
+   e de estado, nao de animacao: a bolinha vira um certo e o fio ate a
+   proxima etapa enche de rosa. Fica assim, entao serve tambem pra quem
+   voltou pra conferir o que ja preencheu. */
+.step[data-feita] .step__n{
+  background:linear-gradient(140deg,#2F7D5B,#246046);
+  font-size:0;
+}
+.step[data-feita] .step__n::after{
+  content:"";width:11px;height:6px;margin-top:-3px;
+  border-left:2.5px solid #fff;border-bottom:2.5px solid #fff;
+  rotate:-45deg;
+}
+/* O fio cheio desenha por cima do vazio, crescendo de cima pra baixo. */
+.step[data-feita] + .step::after{
+  content:"";position:absolute;pointer-events:none;
+  left:calc(var(--s5) + 14px);top:calc(var(--s4) * -1);
+  width:2px;height:var(--s4);background:var(--brand);
+  transform-origin:top;animation:fio-enche .45s var(--ease) both;
+}
+@keyframes fio-enche{ from{transform:scaleY(0)} to{transform:scaleY(1)} }
+
 /* ---------- A gota entre as etapas ----------
    O fio liga o circulo de uma etapa ao da proxima, e a gota escorre por
    ele quando a etapa entra na tela. Alinhado ao centro do circulo:
@@ -259,6 +283,11 @@ img,svg{display:block;max-width:100%}
 .total__note{font-size:.75rem;color:var(--ink-3);text-align:right;margin-top:.2rem}
 .frete-nota{font-size:.75rem;line-height:1.45;color:var(--brand-700);background:var(--brand-100);border-radius:var(--r-sm);padding:.5rem .6rem;margin-top:.4rem}
 .frete-nota[hidden]{display:none}
+/* `hidden` e so uma dica: qualquer `display` no elemento ganha dele. O
+   .btn e inline-flex, entao o "Continuar" continuava na tela mesmo
+   escondido pelo JS — e foi por isso que o checkout aberto parecia nao
+   ter mudado nada. Regra global pra nao morder de novo. */
+[hidden]{display:none !important}
 
 /* ---------- Botão ---------- */
 .btn{
@@ -733,20 +762,40 @@ img,svg{display:block;max-width:100%}
          todos preenchidos: e o aviso de progresso, sem botao e sem
          empurrar a tela de lugar enquanto a pessoa digita. Uma vez por
          etapa, pra nao virar pisca-pisca. */
+      /* Enter anda pro proximo campo em vez de enviar. Num formulario
+         inteiro na tela, Enter no meio do endereco mandava o pedido pela
+         metade e a pessoa levava nove mensagens de erro de uma vez. No
+         ultimo campo ele deixa enviar, que e o que se espera ali. */
+      var ordem = Array.prototype.slice.call(
+        d.querySelectorAll('#form input:not([type=radio]):not([type=hidden])'));
+      ordem.forEach(function(campo, i) {
+        campo.addEventListener('keydown', function(ev) {
+          if (ev.key !== 'Enter') return;
+          var proximo = ordem[i + 1];
+          if (!proximo) return;
+          ev.preventDefault();
+          proximo.focus();
+          proximo.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        });
+      });
+
       etapas.forEach(function(etapa, i) {
         var proxima = etapas[i + 1];
         if (!proxima) return;
         var campos = Array.prototype.slice.call(
           etapa.querySelectorAll('input[required]:not([type=radio])'));
         if (!campos.length) return;
-        var jaAvisou = false;
         function conferir() {
-          if (jaAvisou) return;
-          if (!campos.every(function(c){ return c.value.trim(); })) return;
-          jaAvisou = true;
-          pingar(proxima.querySelector('.step__gota'));
+          var completa = campos.every(function(c){ return c.value.trim(); });
+          var antes = etapa.hasAttribute('data-feita');
+          etapa.toggleAttribute('data-feita', completa);
+          // A gota so escorre na virada, nao a cada tecla.
+          if (completa && !antes) pingar(proxima.querySelector('.step__gota'));
         }
-        campos.forEach(function(c){ c.addEventListener('blur', conferir); });
+        campos.forEach(function(c){
+          c.addEventListener('blur', conferir);
+          c.addEventListener('input', conferir);
+        });
       });
       return;
     }
