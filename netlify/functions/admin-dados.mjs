@@ -12,6 +12,7 @@
 import { lerContadores, lerAtivos, lerTodosCarrinhos, lerCarrinhosAbandonados, lerConversoesGoogle } from './_lib/metricas.mjs'
 import { lerComportamento, lerResumos } from './_lib/jornada.mjs'
 import { KITS, FRETE_NORTE } from './_lib/catalogo.mjs'
+import { lerEstadoZap } from './_lib/zapvigia.mjs'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -89,7 +90,7 @@ export default async (req) => {
   if (req.headers.get('x-admin-token') !== esperado) return json({ erro: 'Token inválido' }, 401)
 
   try {
-    const [cobrancas, clientes, metricas, ativos, carrinhos, comportamento, conversoesGoogle, resumos] = await Promise.all([
+    const [cobrancas, clientes, metricas, ativos, carrinhos, comportamento, conversoesGoogle, resumos, zap] = await Promise.all([
       tudo('/payments'),
       tudo('/customers'),
       lerContadores(),
@@ -100,6 +101,10 @@ export default async (req) => {
       // Um registro por dia, desde a abertura da loja. É de onde sai o
       // histórico longo sem precisar ler o bruto de meses.
       lerResumos(),
+      // Leitura de blob, nao chamada na WAME: quem pergunta pra WAME e o
+      // vigia, de 10 em 10 minutos. Abrir o painel nao pode custar uma
+      // chamada externa — foi assim que ele comecou a dar 504 antes.
+      lerEstadoZap(),
     ])
 
     // Uma leitura só do Blobs: a lista de abandonados sai da lista completa.
@@ -149,6 +154,7 @@ export default async (req) => {
       comportamento,
       conversoesGoogle,
       resumos,
+      zap,
       // Preço vem daqui, do mesmo lugar que o checkout cobra. O painel
       // tinha a própria cópia em Ajustes e ela ficou pra trás: carrinho
       // de 2 unidades aparecia como R$ 169,00 quando a loja cobrava

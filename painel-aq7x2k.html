@@ -15,6 +15,10 @@
   --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 26px -18px rgba(0,0,0,.7);
 }
 *{box-sizing:border-box;margin:0;padding:0}
+/* O atributo hidden e so uma SUGESTAO: qualquer display no elemento ganha
+   dele. Um elemento com hidden e style="display:flex" fica visivel, e o
+   bug nao aparece no codigo, aparece na tela. Isto resolve de uma vez. */
+[hidden]{display:none !important}
 body{background:var(--bg);color:var(--ink);font:15px/1.5 "Segoe UI",system-ui,Arial,sans-serif}
 button,input,select,textarea{font:inherit;color:inherit}
 
@@ -166,6 +170,9 @@ td.sel,th.sel{width:34px;padding-right:0}
   <div class="sp"></div>
   <div id="sinc"><span class="dot" id="dot"></span><span id="sincTxt">nunca sincronizado</span>
     <button class="btn mini" id="btnSinc">Sincronizar</button></div>
+  <div id="zapStatus" hidden style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-3);white-space:nowrap">
+    <span id="zapDot" style="width:8px;height:8px;border-radius:50%;background:var(--ink-3);display:inline-block"></span>
+    <span id="zapTxt"></span></div>
   <div class="perbox">
     <button class="btn sec mini" id="btnPerHoje">Hoje</button>
     <button class="btn sec mini" id="btnPerOntem">Ontem</button>
@@ -189,6 +196,7 @@ td.sel,th.sel{width:34px;padding-right:0}
 <main>
 
 <p id="avisoAmbiente" hidden style="margin:0 0 16px;padding:14px 16px;border-radius:12px;background:var(--bad-bg);color:var(--bad);font-weight:700;line-height:1.45"></p>
+<p id="avisoZap" hidden style="margin:0 0 16px;padding:14px 16px;border-radius:12px;background:var(--bad-bg);color:var(--bad);font-weight:700;line-height:1.45"></p>
 <p id="avisoPendente" hidden style="margin:0 0 16px;padding:14px 16px;border-radius:12px;background:var(--bad-bg);color:var(--bad);font-weight:700;line-height:1.45"></p>
 
 <section class="view on" id="v-painel">
@@ -709,7 +717,7 @@ var manuais = ler(K.ped, []);
 // "Entregue" quem marca e voce). Chave e o id do pedido, valor e o status novo.
 var statusManual = ler(K.sta, {});
 var selecionados = {};
-var remotos = ler(K.rem, { pedidos:[], metricas:{}, ativos:[], abandonados:[], carrinhos:[], conversoesGoogle:[], ambiente:'', comportamento:{ porPagina:{}, sessoes:[] }, resumos:[], precos:null });
+var remotos = ler(K.rem, { pedidos:[], metricas:{}, ativos:[], abandonados:[], carrinhos:[], conversoesGoogle:[], ambiente:'', comportamento:{ porPagina:{}, sessoes:[] }, resumos:[], precos:null, zap:null });
 var despesas = ler(K.desp, null);
 var lotes   = ler(K.est, []);
 var cfg     = ler(K.cfg, {});
@@ -884,7 +892,7 @@ function sincronizar(silencioso){
   ])
     .then(function(res){
       var d = res[0], estadoNuvem = res[1];
-      remotos = { pedidos: d.pedidos||[], metricas: d.metricas||{}, ativos: d.ativos||[], abandonados: d.abandonados||[], carrinhos: d.carrinhos||[], conversoesGoogle: d.conversoesGoogle||[], ambiente: d.ambiente||'', comportamento: d.comportamento||{ porPagina:{}, sessoes:[] }, resumos: d.resumos||[], precos: d.precos||null };
+      remotos = { pedidos: d.pedidos||[], metricas: d.metricas||{}, ativos: d.ativos||[], abandonados: d.abandonados||[], carrinhos: d.carrinhos||[], conversoesGoogle: d.conversoesGoogle||[], ambiente: d.ambiente||'', comportamento: d.comportamento||{ porPagina:{}, sessoes:[] }, resumos: d.resumos||[], precos: d.precos||null, zap: d.zap||null };
       sincEm = new Date().toISOString();
       gravar(K.rem, remotos); gravar(K.sinc, sincEm);
 
@@ -2557,7 +2565,52 @@ function renderAmbiente(){
     + 'Os Pix gerados não podem ser pagos por ninguém. Troque ASAAS_AMBIENTE para "producao" no Netlify.';
 }
 
-function render(){ renderAmbiente(); renderPainel(); renderAoVivo(); renderPedidos(); renderAbandonados(); renderCarrinhos(); renderConversoes(); renderClientes(); renderEstoque(); renderDesp(); renderRel(); }
+/* Estado do WhatsApp da loja.
+ *
+ * Quem pergunta pra WAME e o vigia la no servidor, de 10 em 10 minutos.
+ * Aqui so se le o que ele deixou guardado — abrir o painel nao dispara
+ * chamada externa nenhuma.
+ *
+ * Quando esta tudo certo isto e so uma pastilha discreta no cabecalho.
+ * Quando cai vira faixa vermelha, porque loja muda sem ninguem saber foi
+ * exatamente o problema que isto existe pra resolver. */
+function renderZap(){
+  var z = remotos.zap, pastilha = el('zapStatus'), faixa = el('avisoZap');
+  if (!pastilha || !faixa) return;
+
+  if (!z) { pastilha.hidden = true; faixa.hidden = true; return; }
+
+  var quando = z.em ? dataHoraBR(z.em) : '';
+  pastilha.hidden = false;
+
+  if (z.conectado) {
+    el('zapDot').style.background = 'var(--ok, #2e9e5b)';
+    el('zapTxt').textContent = 'zap conectado';
+    pastilha.title = 'Ultima confirmacao: ' + quando;
+    faixa.hidden = true;
+    return;
+  }
+
+  if (z.incerto) {
+    el('zapDot').style.background = 'var(--ink-3)';
+    el('zapTxt').textContent = 'zap: sem resposta';
+    pastilha.title = 'Nao consegui falar com a WAME em ' + quando + '. Pode ser passageiro.';
+    faixa.hidden = true;
+    return;
+  }
+
+  el('zapDot').style.background = 'var(--bad)';
+  el('zapTxt').textContent = 'zap caiu';
+  pastilha.title = '';
+  faixa.hidden = false;
+  faixa.textContent = 'O WhatsApp da loja esta DESCONECTADO desde '
+    + (z.caiuEm ? dataHoraBR(z.caiuEm) : quando)
+    + '. Os pedidos e os e-mails seguem normais, mas nenhum zap esta saindo. '
+    + 'Religue pelo celular: WhatsApp Business > Configuracoes > Dispositivos conectados > '
+    + 'Conectar um dispositivo. O codigo de pareamento foi junto na notificacao.';
+}
+
+function render(){ renderAmbiente(); renderZap(); renderPainel(); renderAoVivo(); renderPedidos(); renderAbandonados(); renderCarrinhos(); renderConversoes(); renderClientes(); renderEstoque(); renderDesp(); renderRel(); }
 el('p_data').value = hoje(); el('d_data').value = hoje(); el('l_data').value = hoje();
 el('l_custo').value = cfg.custo;
 el('p_kit').onchange();

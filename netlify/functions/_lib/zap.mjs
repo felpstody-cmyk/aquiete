@@ -103,6 +103,69 @@ export async function enviarZap({ telefone, texto }) {
   }
 }
 
+/* ==================== saude da conexao ====================
+ * A sessao do WhatsApp e um dispositivo conectado, igual ao WhatsApp Web.
+ * Ela cai: blip de rede, instancia descarregada no provedor, ou o proprio
+ * WhatsApp deslogando o aparelho. As duas primeiras o restart resolve
+ * sozinho; a ultima so com alguem segurando o celular — isso e uma regra
+ * do WhatsApp, nenhum provedor burla.
+ *
+ * Estas tres chamadas so existem na WAME. Nos outros provedores devolvem
+ * "nao sei checar", que o vigia trata como "nao mexe".
+ */
+
+async function chamarInstancia(caminho, metodo = 'GET', corpo = null) {
+  if (!zapAtivo()) return { ok: false, erro: 'ZAP_KEY nao configurada' }
+  const { provedor, base, key } = config()
+  if (provedor !== 'wame') return { ok: false, erro: 'provedor sem checagem de conexao' }
+  if (!base) return { ok: false, erro: 'falta ZAP_URL' }
+  try {
+    const r = await fetch(`${base}/${key}${caminho}`, {
+      method: metodo,
+      headers: corpo ? { 'Content-Type': 'application/json' } : undefined,
+      body: corpo ? JSON.stringify(corpo) : undefined,
+      signal: AbortSignal.timeout ? AbortSignal.timeout(10000) : undefined,
+    })
+    const dados = await r.json().catch(() => ({}))
+    if (!r.ok) return { ok: false, erro: `HTTP ${r.status}`, dados }
+    return { ok: true, dados }
+  } catch (e) {
+    return { ok: false, erro: e.message }
+  }
+}
+
+/** O chip da loja ainda esta conectado? Chamada barata, feita pra isso. */
+export async function estadoZap() {
+  const r = await chamarInstancia('/instance/health')
+  if (!r.ok) return { sabe: false, conectado: false, erro: r.erro }
+  const i = r.dados?.instance || {}
+  return {
+    sabe: true,
+    conectado: Boolean(i.connected && i.phoneConnected),
+    numero: String(i.user?.id || '').split(':')[0] || '',
+  }
+}
+
+/** Religa a instancia SEM pedir QR. Resolve a maioria das quedas. */
+export async function reiniciarZap() {
+  const r = await chamarInstancia('/instance/restart', 'POST')
+  return { ok: r.ok, erro: r.erro }
+}
+
+/**
+ * Codigo de 8 caracteres pra digitar no celular, quando so o religar nao
+ * resolveu. Melhor que QR aqui: nao exige estar na frente do computador.
+ */
+export async function codigoPareamento(telefone) {
+  const numero = numeroZap(telefone)
+  if (!numero) return { ok: false, erro: 'telefone invalido' }
+  const r = await chamarInstancia('/instance/pairing-code', 'POST', { phoneNumber: numero })
+  if (!r.ok) return { ok: false, erro: r.erro }
+  const d = r.dados || {}
+  const codigo = d.code || d.pairingCode || d.pairing_code || d.codigo || ''
+  return { ok: Boolean(codigo), codigo: String(codigo), erro: codigo ? null : 'resposta sem codigo' }
+}
+
 /* ============================ os textos ============================
  * Voz da loja, mas escrita como gente escreve. Frase curta, sem
  * travessão e sem "prezado cliente" — o que chega no WhatsApp com cara
