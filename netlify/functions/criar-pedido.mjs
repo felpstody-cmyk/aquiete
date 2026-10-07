@@ -14,6 +14,7 @@ import { enviar, htmlAguardando } from './_lib/email.mjs'
 import { marcarCarrinhoComPedido, guardarCliqueDoPedido } from './_lib/metricas.mjs'
 import { notificarPedidoGerado, podeNotificar } from './_lib/notificar.mjs'
 import { enviarZap, textoPixGerado, textoPixCodigo } from './_lib/zap.mjs'
+import { registrarZap } from './_lib/zaplog.mjs'
 import { geoDe } from './_lib/geo.mjs'
 
 const json = (dados, status = 200) =>
@@ -87,7 +88,25 @@ export default async (req) => {
     // que perseguir. A trava e por pessoa, nao por referencia: quem gera o
     // Pix, fecha e gera de novo cria duas referencias diferentes, e nao ha
     // motivo pro celular tocar duas vezes pelo mesmo cliente.
-    if (pedido.metodo !== 'card' && await podeNotificar('pedido:' + cliente.email, 30)) {
+    // Guardado antes do if pra poder registrar TAMBEM quando o zap nao e
+    // tentado. Era aqui que a investigacao morria: sem isto, "nao recebi"
+    // podia ser telefone invalido, sessao caida, erro da API ou a trava de
+    // 30 minutos, e nao havia como saber qual.
+    const podeZap = pedido.metodo !== 'card' && await podeNotificar('pedido:' + cliente.email, 30)
+    if (!podeZap) {
+      registrarZap({
+        referencia,
+        nome: cliente.nome,
+        telefone: cliente.telefone,
+        etapa: 'nao tentou',
+        resultado: {
+          enviado: false,
+          erro: pedido.metodo === 'card' ? 'metodo cartao' : 'trava de 30 min pro mesmo e-mail',
+        },
+      }).catch(() => {})
+    }
+
+    if (podeZap) {
       notificarPedidoGerado({
         nome: cliente.nome,
         telefone: cliente.telefone,
@@ -112,7 +131,15 @@ export default async (req) => {
           total: pedido.total,
           payload: codigoPix,
         }),
-      }).catch(() => {})
+      })
+        .then(async (r) => {
+          await registrarZap({
+            referencia, nome: cliente.nome, telefone: cliente.telefone,
+            etapa: 'pix gerado', resultado: r,
+          })
+          return r
+        })
+        .catch(() => {})
 
       // O copia-e-cola NAO sai aqui. Vai depois do e-mail, la embaixo.
       // Duas mensagens no mesmo instante e padrao de robo, e e o tipo de
@@ -163,10 +190,14 @@ export default async (req) => {
     // dois derruba o pedido se falhar.
     if (codigoDepois) {
       await codigoDepois.antes
-      await enviarZap({
+      const r = await enviarZap({
         telefone: codigoDepois.telefone,
         texto: textoPixCodigo(codigoDepois.codigo),
-      }).catch(() => {})
+      }).catch((e) => ({ enviado: false, erro: String(e?.message || e) }))
+      await registrarZap({
+        referencia, nome: cliente.nome, telefone: codigoDepois.telefone,
+        etapa: 'codigo do pix', resultado: r,
+      })
     }
 
     return json({

@@ -13,6 +13,7 @@ import { lerContadores, lerAtivos, lerTodosCarrinhos, lerCarrinhosAbandonados, l
 import { lerComportamento, lerResumos } from './_lib/jornada.mjs'
 import { KITS, FRETE_NORTE } from './_lib/catalogo.mjs'
 import { lerEstadoZap } from './_lib/zapvigia.mjs'
+import { lerZapLog } from './_lib/zaplog.mjs'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -90,7 +91,7 @@ export default async (req) => {
   if (req.headers.get('x-admin-token') !== esperado) return json({ erro: 'Token inválido' }, 401)
 
   try {
-    const [cobrancas, clientes, metricas, ativos, carrinhos, comportamento, conversoesGoogle, resumos, zap] = await Promise.all([
+    const [cobrancas, clientes, metricas, ativos, carrinhos, comportamento, conversoesGoogle, resumos, zap, zapLog] = await Promise.all([
       tudo('/payments'),
       tudo('/customers'),
       lerContadores(),
@@ -105,6 +106,7 @@ export default async (req) => {
       // vigia, de 10 em 10 minutos. Abrir o painel nao pode custar uma
       // chamada externa — foi assim que ele comecou a dar 504 antes.
       lerEstadoZap(),
+      lerZapLog(),
     ])
 
     // Uma leitura só do Blobs: a lista de abandonados sai da lista completa.
@@ -155,6 +157,7 @@ export default async (req) => {
       conversoesGoogle,
       resumos,
       zap,
+      zapLog,
       // Preço vem daqui, do mesmo lugar que o checkout cobra. O painel
       // tinha a própria cópia em Ajustes e ela ficou pra trás: carrinho
       // de 2 unidades aparecia como R$ 169,00 quando a loja cobrava
