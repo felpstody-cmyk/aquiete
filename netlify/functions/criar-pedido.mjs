@@ -100,7 +100,11 @@ export default async (req) => {
       // E o zap pro cliente, sozinho, no mesmo segundo. A mesma trava
       // cobre os dois: um POST repetido nao manda dois zaps pra pessoa.
       const codigoPix = cobranca.pix?.payload || null
-      enviarZap({
+
+      // Sai sem await: roda em paralelo com o e-mail aqui embaixo, pra nao
+      // somar tempo na tela de quem esta comprando. A promessa fica guardada
+      // porque a segunda mensagem SO pode sair depois desta terminar.
+      const primeiraMsg = enviarZap({
         telefone: cliente.telefone,
         texto: textoPixGerado({
           nome: cliente.nome,
@@ -110,11 +114,12 @@ export default async (req) => {
         }),
       }).catch(() => {})
 
-      // O copia-e-cola NAO sai aqui. Fica guardado e vai depois do e-mail,
-      // la embaixo, de proposito: duas mensagens no mesmo instante e padrao
-      // de robo e e o tipo de coisa que faz o WhatsApp derrubar a sessao do
-      // dispositivo conectado. O tempo do e-mail vira o respiro entre elas.
-      if (codigoPix && cliente.telefone) codigoDepois = { telefone: cliente.telefone, codigo: codigoPix }
+      // O copia-e-cola NAO sai aqui. Vai depois do e-mail, la embaixo.
+      // Duas mensagens no mesmo instante e padrao de robo, e e o tipo de
+      // coisa que faz o WhatsApp derrubar a sessao do dispositivo.
+      if (codigoPix && cliente.telefone) {
+        codigoDepois = { telefone: cliente.telefone, codigo: codigoPix, antes: primeiraMsg }
+      }
     }
 
     // Manda o codigo por e-mail para quem vai pagar depois. Sem isto, quem
@@ -145,10 +150,19 @@ export default async (req) => {
       }
     }
 
-    // Agora sim o copia-e-cola do Pix, sozinho numa mensagem. Com await
-    // porque e a ultima coisa antes da resposta: sem ele a funcao pode ser
-    // congelada no meio do envio. Nunca derruba o pedido se falhar.
+    // Agora sim o copia-e-cola do Pix, sozinho numa mensagem.
+    //
+    // O await na primeira mensagem e o que garante a ORDEM. Na primeira
+    // versao eu contava com o tempo do e-mail pra separar as duas, e o
+    // codigo chegou ANTES do texto: se a WAME demora 2s pra aceitar a
+    // primeira e o e-mail sai em 300ms, a segunda ultrapassa. Ordem de
+    // chegada nao se garante com tempo, se garante esperando.
+    //
+    // O segundo await e porque isto e a ultima coisa antes da resposta:
+    // sem ele a funcao pode ser congelada no meio do envio. Nenhum dos
+    // dois derruba o pedido se falhar.
     if (codigoDepois) {
+      await codigoDepois.antes
       await enviarZap({
         telefone: codigoDepois.telefone,
         texto: textoPixCodigo(codigoDepois.codigo),
