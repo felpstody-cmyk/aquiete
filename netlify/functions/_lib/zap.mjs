@@ -11,11 +11,14 @@
  * Com o chip da loja o prejuízo de um ban é R$15 e um domingo perdido.
  *
  * Variáveis no painel do Netlify:
- *   ZAP_PROVEDOR  "wame" (padrão) ou "zapi"
- *   ZAP_KEY       a chave da instância (wame) ou o id da instância (zapi)
- *   ZAP_TOKEN     só a Z-API usa
+ *   ZAP_PROVEDOR  "wame" (padrão), "zapi" ou "evolution"
+ *   ZAP_KEY       wame: a chave da instância
+ *                 zapi: o id da instância
+ *                 evolution: o NOME da instância que você criou
+ *   ZAP_TOKEN     zapi: o token · evolution: a AUTHENTICATION_API_KEY
  *   ZAP_CLIENT    só a Z-API usa (Client-Token da conta)
- *   ZAP_URL       base do serviço, se for diferente do padrão
+ *   ZAP_URL       base do serviço. Obrigatória no evolution, porque aí o
+ *                 servidor é o seu e só você sabe o endereço dele.
  *
  * Sem ZAP_KEY isto vira no-op: ninguém recebe zap e o site segue
  * mandando e-mail exatamente como mandava antes. Nenhuma função quebra
@@ -23,9 +26,17 @@
  * de a conta existir.
  */
 
+/* A base de cada servico. O painel do provedor mostra a URL da SUA
+ * instancia; se for diferente destas, e so botar em ZAP_URL que o
+ * padrao daqui e ignorado.
+ * A WAME trocou o site de api-wa.me pra wame.api.br, mas o SERVIDOR
+ * da instancia continua em us.api-wa.me — foi conferido no painel da
+ * conta da Aquiete em 07/10/2026. O site novo documenta outro host;
+ * vale o que o painel mostra. */
 const BASE_PADRAO = {
   wame: 'https://us.api-wa.me',
   zapi: 'https://api.z-api.io',
+  evolution: '',            // sem padrão: o servidor é o do dono
 }
 
 /** Só os dígitos com 55 na frente, do jeito que os serviços querem. */
@@ -42,7 +53,8 @@ export function zapAtivo() {
 
 function config() {
   const provedor = (process.env.ZAP_PROVEDOR || 'wame').toLowerCase()
-  const base = (process.env.ZAP_URL || BASE_PADRAO[provedor] || BASE_PADRAO.wame).replace(/\/+$/, '')
+  const padrao = BASE_PADRAO[provedor] ?? BASE_PADRAO.wame
+  const base = String(process.env.ZAP_URL || padrao).replace(/\/+$/, '')
   return { provedor, base, key: process.env.ZAP_KEY }
 }
 
@@ -58,15 +70,20 @@ export async function enviarZap({ telefone, texto }) {
   if (!zapAtivo()) return { enviado: false, erro: 'ZAP_KEY não configurada' }
 
   const { provedor, base, key } = config()
+  if (!base) return { enviado: false, erro: 'falta ZAP_URL' }
 
   let url, corpo, headers = { 'Content-Type': 'application/json' }
-  if (provedor === 'zapi') {
+  if (provedor === 'evolution') {
+    url = `${base}/message/sendText/${key}`
+    corpo = { number: to, text: texto }
+    headers.apikey = process.env.ZAP_TOKEN || ''
+  } else if (provedor === 'zapi') {
     url = `${base}/instances/${key}/token/${process.env.ZAP_TOKEN}/send-text`
     corpo = { phone: to, message: texto }
     if (process.env.ZAP_CLIENT) headers['Client-Token'] = process.env.ZAP_CLIENT
   } else {
     url = `${base}/${key}/message/text`
-    corpo = { to, text: texto }
+    corpo = { to, text: texto, provider: 'whatsapp' }
   }
 
   try {
