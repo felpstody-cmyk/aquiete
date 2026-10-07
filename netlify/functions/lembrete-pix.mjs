@@ -7,7 +7,7 @@
  */
 
 import { enviar, htmlLembretePix } from './_lib/email.mjs'
-import { enviarZap, textoLembretePix } from './_lib/zap.mjs'
+import { enviarZap, textoLembretePix, textoPixCodigo } from './_lib/zap.mjs'
 
 const BASES = {
   sandbox: 'https://api-sandbox.asaas.com/v3',
@@ -75,10 +75,16 @@ export default async () => {
       // Zap antes do e-mail: é onde a pessoa olha. Se falhar, o e-mail
       // ainda sai — os dois juntos, porque não dá pra saber qual ela vê.
       if (cliente.mobilePhone || cliente.phone) {
+        const paraZap = cliente.mobilePhone || cliente.phone
         await enviarZap({
-          telefone: cliente.mobilePhone || cliente.phone,
+          telefone: paraZap,
           texto: textoLembretePix({ nome: cliente.name, total: p.value, payload }),
         }).catch(() => {})
+        // Igual ao primeiro toque: o copia-e-cola vai sozinho na mensagem
+        // seguinte, senao copiar a mensagem leva a conversa junto.
+        if (payload) {
+          await enviarZap({ telefone: paraZap, texto: textoPixCodigo(payload) }).catch(() => {})
+        }
       }
 
       try {

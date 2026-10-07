@@ -114,14 +114,32 @@ const primeiroNome = (n) => String(n ?? '').trim().split(' ')[0] || ''
 const oi = (nome) => (primeiroNome(nome) ? `Oi, ${primeiroNome(nome)}!` : 'Oi!')
 
 /** Na hora que o Pix é gerado. */
-export function textoPixGerado({ nome, descricao, total }) {
+export function textoPixGerado({ nome, descricao, total, payload }) {
+  const fim = payload
+    ? 'Te mando o código do Pix na mensagem de baixo: é só copiar e colar no app do banco. Vence em 24h.'
+    : 'Se travou alguma coisa na hora de pagar, é só responder aqui que a gente resolve. O código vence em 24h.'
   return [
     `${oi(nome)} Aqui é da Aquiete 🌿`,
     '',
     `Seu pedido tá reservado (${descricao || 'Aquiete'}, ${brl(total)}), só falta o Pix cair.`,
     '',
-    'Se travou alguma coisa na hora de pagar, é só responder aqui que a gente resolve. O código vence em 24h.',
+    fim,
   ].join('\n')
+}
+
+/**
+ * O copia-e-cola do Pix, SOZINHO numa mensagem.
+ *
+ * Tem que ir separado mesmo. No WhatsApp, copiar uma mensagem copia o
+ * texto inteiro dela: se o codigo vier junto com a conversa, a pessoa
+ * cola tudo no app do banco e o banco recusa. Sozinho, ela segura o
+ * dedo, copia e cola limpo.
+ *
+ * O QR nao vai como imagem de proposito. Quem recebe isto esta olhando
+ * o proprio celular e nao tem como escanear a propria tela.
+ */
+export function textoPixCodigo(payload) {
+  return String(payload || '').trim()
 }
 
 /** Umas horas depois, se o Pix continua sem pagar. */
@@ -129,9 +147,9 @@ export function textoLembretePix({ nome, total, payload }) {
   return [
     `${oi(nome)} Passando só pra lembrar: seu Pix de ${brl(total)} ainda não caiu.`,
     '',
-    'Se tu perdeu o código, é esse aqui, é só copiar e colar no app do banco:',
-    '',
-    payload || '(o código foi pro seu e-mail também)',
+    payload
+      ? 'Mandei o código aqui embaixo de novo, é só copiar e colar no app do banco.'
+      : 'O código foi pro teu e-mail também.',
     '',
     'Qualquer dúvida antes de pagar, manda aqui.',
   ].join('\n')

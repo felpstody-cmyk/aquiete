@@ -13,7 +13,7 @@ import { obterGateway, ErroDeGateway } from './_lib/gateways/index.mjs'
 import { enviar, htmlAguardando } from './_lib/email.mjs'
 import { marcarCarrinhoComPedido, guardarCliqueDoPedido } from './_lib/metricas.mjs'
 import { notificarPedidoGerado, podeNotificar } from './_lib/notificar.mjs'
-import { enviarZap, textoPixGerado } from './_lib/zap.mjs'
+import { enviarZap, textoPixGerado, textoPixCodigo } from './_lib/zap.mjs'
 import { geoDe } from './_lib/geo.mjs'
 
 const json = (dados, status = 200) =>
@@ -95,14 +95,24 @@ export default async (req) => {
 
       // E o zap pro cliente, sozinho, no mesmo segundo. A mesma trava
       // cobre os dois: um POST repetido nao manda dois zaps pra pessoa.
+      const codigoPix = cobranca.pix?.payload || null
       enviarZap({
         telefone: cliente.telefone,
         texto: textoPixGerado({
           nome: cliente.nome,
           descricao: pedido.descricao,
           total: pedido.total,
+          payload: codigoPix,
         }),
-      }).catch(() => {})
+      })
+        // O codigo vai numa segunda mensagem, encadeada e nao em paralelo:
+        // disparar as duas juntas pode entregar fora de ordem e a pessoa
+        // ve o codigo antes de entender o que e.
+        .then(() => codigoPix && enviarZap({
+          telefone: cliente.telefone,
+          texto: textoPixCodigo(codigoPix),
+        }))
+        .catch(() => {})
     }
 
     // Manda o codigo por e-mail para quem vai pagar depois. Sem isto, quem
