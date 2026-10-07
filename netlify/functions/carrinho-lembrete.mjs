@@ -29,10 +29,7 @@ export default async () => {
       if (c.etapa === 0 && c.telefone) {
         await enviarZap({
           telefone: c.telefone,
-          texto: textoCarrinhoParado({
-            nome: c.nome,
-            descricao: c.kit ? `${c.kit} ${c.kit === 1 ? 'unidade' : 'unidades'}` : '',
-          }),
+          texto: textoCarrinhoParado({ nome: c.nome }),
         }).catch(() => {})
       }
 

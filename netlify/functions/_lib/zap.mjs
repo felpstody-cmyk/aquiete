@@ -228,16 +228,26 @@ export function textoLembretePix({ nome, total, payload }) {
   ].join('\n')
 }
 
-/** Quem digitou os dados e sumiu antes de gerar pagamento. */
-export function textoCarrinhoParado({ nome, descricao }) {
+/**
+ * Quem digitou os dados e sumiu antes de gerar pagamento.
+ *
+ * Texto ditado pelo Felipe. Trata por "você" e não por "tu": o cliente
+ * é de todo o Brasil, não de Santa Catarina.
+ *
+ * O link leva utm_source/utm_medium pra venda recuperada aparecer como
+ * recuperada no painel. Sem isso ela entra como "direto" e ninguém fica
+ * sabendo que foi o zap que trouxe a pessoa de volta.
+ */
+export function textoCarrinhoParado({ nome }) {
+  const primeiro = primeiroNome(nome)
   return [
-    `${oi(nome)} Aqui é da Aquiete.`,
+    primeiro ? `Oi, ${primeiro}, tudo bem?` : 'Oi, tudo bem?',
     '',
-    `Vi que tu montou o pedido aqui${descricao ? ` (${descricao})` : ''} e parou no meio do caminho.`,
+    'Vi que você iniciou seu pedido aqui no site, colocou suas informações, mas não finalizou.',
     '',
-    'Deu algum problema no pagamento, ou ficou alguma dúvida sobre o produto?',
+    'Ficou com alguma dúvida sobre o produto, ou deu algum problema no pagamento?',
     '',
-    'Pode perguntar por aqui que a gente responde. Teu carrinho continua guardado: https://aquieteagora.com.br/oferta.html',
+    'Caso queira retomar, o link está aqui: https://aquieteagora.com.br/oferta?utm_source=whatsapp&utm_medium=carrinho',
   ].join('\n')
 }
 
