@@ -128,6 +128,16 @@ export function textoPixGerado({ nome, descricao, total, payload }) {
 }
 
 /**
+ * Pausa entre dois envios pro mesmo numero.
+ *
+ * Mandar duas mensagens no mesmo instante e padrao de robo. Em API nao
+ * oficial isso nao da "erro": o WhatsApp simplesmente derruba a sessao do
+ * dispositivo conectado, a loja fica muda e ninguem percebe. So use onde
+ * dá pra esperar (funcao agendada), nunca no meio do checkout.
+ */
+export const pausa = (ms = 2500) => new Promise((r) => setTimeout(r, ms))
+
+/**
  * O copia-e-cola do Pix, SOZINHO numa mensagem.
  *
  * Tem que ir separado mesmo. No WhatsApp, copiar uma mensagem copia o

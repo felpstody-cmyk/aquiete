@@ -78,6 +78,10 @@ export default async (req) => {
       total: pedido.total,
     }).catch(() => {})
 
+    // Preenchido so se o zap do "pedido reservado" for disparado; e lido
+    // depois do e-mail, pra mandar o copia-e-cola numa segunda mensagem.
+    let codigoDepois = null
+
     // "Toc toc" na hora, com o botao de chamar no zap ja pronto. Cartao
     // fica de fora: ali a pessoa ja esta na tela de pagamento e nao ha o
     // que perseguir. A trava e por pessoa, nao por referencia: quem gera o
@@ -104,15 +108,13 @@ export default async (req) => {
           total: pedido.total,
           payload: codigoPix,
         }),
-      })
-        // O codigo vai numa segunda mensagem, encadeada e nao em paralelo:
-        // disparar as duas juntas pode entregar fora de ordem e a pessoa
-        // ve o codigo antes de entender o que e.
-        .then(() => codigoPix && enviarZap({
-          telefone: cliente.telefone,
-          texto: textoPixCodigo(codigoPix),
-        }))
-        .catch(() => {})
+      }).catch(() => {})
+
+      // O copia-e-cola NAO sai aqui. Fica guardado e vai depois do e-mail,
+      // la embaixo, de proposito: duas mensagens no mesmo instante e padrao
+      // de robo e e o tipo de coisa que faz o WhatsApp derrubar a sessao do
+      // dispositivo conectado. O tempo do e-mail vira o respiro entre elas.
+      if (codigoPix && cliente.telefone) codigoDepois = { telefone: cliente.telefone, codigo: codigoPix }
     }
 
     // Manda o codigo por e-mail para quem vai pagar depois. Sem isto, quem
@@ -141,6 +143,16 @@ export default async (req) => {
         // Falha de e-mail nunca derruba um pedido que ja foi criado.
         console.error('[criar-pedido] e-mail de cobranca falhou:', e.message)
       }
+    }
+
+    // Agora sim o copia-e-cola do Pix, sozinho numa mensagem. Com await
+    // porque e a ultima coisa antes da resposta: sem ele a funcao pode ser
+    // congelada no meio do envio. Nunca derruba o pedido se falhar.
+    if (codigoDepois) {
+      await enviarZap({
+        telefone: codigoDepois.telefone,
+        texto: textoPixCodigo(codigoDepois.codigo),
+      }).catch(() => {})
     }
 
     return json({

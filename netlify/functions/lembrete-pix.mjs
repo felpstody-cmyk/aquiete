@@ -7,7 +7,7 @@
  */
 
 import { enviar, htmlLembretePix } from './_lib/email.mjs'
-import { enviarZap, textoLembretePix, textoPixCodigo } from './_lib/zap.mjs'
+import { enviarZap, textoLembretePix, textoPixCodigo, pausa } from './_lib/zap.mjs'
 
 const BASES = {
   sandbox: 'https://api-sandbox.asaas.com/v3',
@@ -82,7 +82,11 @@ export default async () => {
         }).catch(() => {})
         // Igual ao primeiro toque: o copia-e-cola vai sozinho na mensagem
         // seguinte, senao copiar a mensagem leva a conversa junto.
+        // Aqui dá pra esperar de verdade antes de mandar: isto roda de hora
+        // em hora, sem ninguem olhando a tela, e duas mensagens coladas sao
+        // o que faz o WhatsApp derrubar a sessao.
         if (payload) {
+          await pausa(2500)
           await enviarZap({ telefone: paraZap, texto: textoPixCodigo(payload) }).catch(() => {})
         }
       }
