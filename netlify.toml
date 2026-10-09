@@ -33,6 +33,14 @@
   to = "/oferta.html"
   status = 200
 
+# Advertorial: artigo que informa primeiro e so entao leva pra oferta.
+# Fica fora do bloqueio-geo de proposito enquanto esta em revisao, pra
+# dar pra abrir daqui de Chapeco.
+[[redirects]]
+  from = "/motivos"
+  to = "/motivos.html"
+  status = 200
+
 # ------------------------------------------------------------
 #  VARIÁVEIS DE AMBIENTE
 #  Configure em: Site configuration > Environment variables.

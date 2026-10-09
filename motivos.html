@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<title>6 motivos pelos quais quem convive com ansiedade está trocando o "esperar passar" por três gotas</title>
+<style>
+  :root{
+    --papel:#FFFFFF; --fundo:#F4F1EF;
+    --tinta:#1A1A1A; --tinta2:#3D3A38; --tinta3:#8B8582;
+    --coral:#C4485B; --coral-fundo:#FCEFF1; --coral-escuro:#9E3346;
+    --linha:#E6E1DE;
+    color-scheme: light;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  [hidden]{display:none !important}
+  html{-webkit-text-size-adjust:100%}
+  body{background:var(--fundo);color:var(--tinta);
+       font:17px/1.7 -apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  .folha{max-width:700px;margin:0 auto;background:var(--papel);min-height:100vh}
+
+  .marca{border-bottom:1px solid var(--linha);padding:13px 20px;
+         display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .marca .nome{font:800 15px/1 sans-serif;letter-spacing:-.01em}
+  .marca .nome span{color:var(--coral)}
+  .marca .selo{font:700 10px/1 sans-serif;letter-spacing:.09em;color:#6B6562;
+               background:#F0ECEA;border:1px solid var(--linha);border-radius:4px;
+               padding:5px 7px;white-space:nowrap}
+  .trilha{padding:12px 20px 0;font:12px/1 sans-serif;color:var(--tinta3)}
+  .trilha b{color:var(--coral);font-weight:600}
+
+  .cabeca{padding:14px 20px 0}
+  h1{font:800 31px/1.22 Georgia,"Times New Roman",serif;letter-spacing:-.015em;margin:10px 0 12px}
+  .linha-fina{font:400 18px/1.5 Georgia,serif;color:var(--tinta2);margin-bottom:20px}
+  .autoria{display:flex;align-items:center;justify-content:space-between;gap:12px;
+           padding:14px 0;border-top:1px solid var(--linha);border-bottom:1px solid var(--linha);
+           font:12.5px/1.4 sans-serif;color:var(--tinta3)}
+  .autoria b{color:var(--tinta2);font-weight:600}
+
+  /* ---------- espaços de imagem ---------- */
+  .img{margin:22px 0;border-radius:12px;overflow:hidden;position:relative;
+       background:repeating-linear-gradient(135deg,#F3EBE8 0 14px,#EDE2DE 14px 28px);
+       display:flex;align-items:center;justify-content:center;padding:22px;
+       border:1px dashed #D9C8C3}
+  .img.capa{aspect-ratio:3/2;margin-top:20px}
+  .img.larga{aspect-ratio:16/9}
+  .img.quadro{aspect-ratio:1/1;max-width:300px;margin-left:auto;margin-right:auto}
+  .img .legenda{font:600 12.5px/1.55 sans-serif;color:#8E7D79;text-align:center;max-width:92%}
+  .img .legenda b{display:block;color:var(--coral);font-size:11px;letter-spacing:.09em;
+                  text-transform:uppercase;margin-bottom:6px}
+
+  .corpo{padding:24px 20px 0}
+  .corpo p{margin-bottom:18px;color:var(--tinta2)}
+  .corpo p b,.corpo strong{color:var(--tinta);font-weight:700}
+  .solta{font:700 21px/1.45 Georgia,serif;color:var(--tinta);
+         margin:26px 0;padding:0 0 0 18px;border-left:4px solid var(--coral)}
+
+  .tres{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:24px 0 10px}
+  .tres div{background:var(--coral-fundo);border-radius:11px;padding:14px 10px;text-align:center}
+  .tres b{display:block;font:800 15px/1.2 sans-serif;color:var(--coral);margin-bottom:5px}
+  .tres span{font:11.5px/1.35 sans-serif;color:var(--tinta2)}
+
+  .motivo{border-top:1px solid var(--linha);padding:28px 0 6px}
+  .motivo .etiqueta{display:inline-block;font:800 10.5px/1 sans-serif;letter-spacing:.09em;
+      color:var(--coral);background:var(--coral-fundo);border-radius:4px;padding:6px 8px;margin-bottom:12px}
+  .motivo h2{font:800 24px/1.3 Georgia,serif;margin:0 0 14px;letter-spacing:-.01em}
+  .motivo h2 i{font-style:normal;color:var(--coral)}
+
+  .linkcompra{display:block;margin:22px 0;font:700 17px/1.45 sans-serif;
+      color:var(--coral);text-decoration:underline;text-underline-offset:3px}
+  .linkcompra::before{content:"→ "}
+
+  .caixa{background:#FBF8F7;border:1px solid var(--linha);border-radius:12px;padding:18px 20px;margin:22px 0}
+  .caixa p:last-child{margin-bottom:0}
+  .caixa .tit{font:800 12px/1 sans-serif;letter-spacing:.07em;color:var(--tinta3);
+              text-transform:uppercase;margin-bottom:10px}
+
+  /* ---------- depoimentos ---------- */
+  .vozes{padding:30px 20px 0}
+  .vozes h2{font:800 23px/1.3 Georgia,serif;margin-bottom:16px}
+  .cartao{border:1px solid var(--linha);border-radius:12px;padding:18px;margin-bottom:12px;
+          background:#fff}
+  .cartao .tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+  .cartao .tagzinha{font:700 10px/1 sans-serif;letter-spacing:.05em;background:var(--coral-fundo);
+       color:var(--coral);border-radius:99px;padding:5px 8px}
+  .cartao .fala{font:17px/1.6 Georgia,serif;color:var(--tinta);margin-bottom:10px}
+  .cartao .quem{font:12.5px/1 sans-serif;color:var(--tinta3)}
+  .vazio{border:1px dashed #D9C8C3;border-radius:12px;padding:22px;text-align:center;
+         background:repeating-linear-gradient(135deg,#FBF6F5 0 14px,#F6EFED 14px 28px)}
+  .vazio b{display:block;font:800 11px/1 sans-serif;letter-spacing:.09em;color:var(--coral);
+           text-transform:uppercase;margin-bottom:8px}
+  .vazio p{font:14px/1.6 sans-serif;color:#8E7D79;margin:0}
+
+  .oferta{margin:34px 0 0;border-top:3px solid var(--coral);background:#FBF8F7;padding:26px 20px 30px}
+  .oferta h2{font:800 25px/1.3 Georgia,serif;margin:0 0 6px;text-align:center}
+  .oferta .sub0{text-align:center;font:14px/1.5 sans-serif;color:var(--tinta3);margin-bottom:18px}
+  .selos{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:0 0 20px}
+  .selo2{font:700 11px/1 sans-serif;background:#fff;border:1px solid var(--linha);
+         border-radius:99px;padding:8px 11px;color:var(--tinta2)}
+  .kits{display:grid;gap:11px;margin-bottom:18px}
+  .kit{background:#fff;border:1.5px solid var(--linha);border-radius:12px;padding:15px 17px;
+       display:flex;justify-content:space-between;align-items:center;gap:12px;position:relative}
+  .kit.dest{border-color:var(--coral);box-shadow:0 2px 14px rgba(196,72,91,.15)}
+  .kit .rot{font:700 15px/1.35 sans-serif}
+  .kit .sub{font:12.5px/1.3 sans-serif;color:var(--tinta3);margin-top:3px}
+  .kit .preco{text-align:right;white-space:nowrap}
+  .kit .preco b{font:800 19px/1 sans-serif;color:var(--coral);display:block}
+  .kit .preco s{font:13px/1 sans-serif;color:var(--tinta3);
+       text-decoration-thickness:1px;text-decoration-color:rgba(139,133,130,.6)}
+  .fita{position:absolute;top:-10px;left:15px;background:var(--coral);color:#fff;
+        font:700 10px/1 sans-serif;letter-spacing:.06em;padding:5px 9px;border-radius:99px}
+  .botao{display:block;text-align:center;background:var(--coral);color:#fff;
+         font:800 17px/1 sans-serif;padding:19px;border-radius:99px;text-decoration:none;
+         box-shadow:0 4px 14px rgba(196,72,91,.3)}
+  .sob{text-align:center;font:13px/1.6 sans-serif;color:var(--tinta3);margin-top:14px}
+
+  .faq{padding:30px 20px 0}
+  .faq h2{font:800 23px/1.3 Georgia,serif;margin-bottom:16px}
+  .faq .q{font:700 16px/1.45 sans-serif;color:var(--tinta);margin-bottom:6px}
+  .faq .a{font:16px/1.65 sans-serif;color:var(--tinta2);margin-bottom:18px}
+
+  .fecho{padding:30px 20px 0;text-align:center}
+  .fecho p{font:19px/1.55 Georgia,serif;color:var(--tinta);margin-bottom:18px}
+
+  .rodape{padding:24px 20px 40px;font:12px/1.7 sans-serif;color:var(--tinta3);
+          border-top:1px solid var(--linha);margin-top:30px}
+
+  @media (max-width:560px){
+    h1{font-size:26px} .linha-fina{font-size:16.5px}
+    .corpo,.faq,.vozes,.fecho{padding-left:17px;padding-right:17px}
+    .cabeca,.marca,.trilha{padding-left:17px;padding-right:17px}
+    .tres{grid-template-columns:1fr;gap:8px}
+    .tres div{display:flex;align-items:center;gap:10px;text-align:left;padding:12px 14px}
+    .tres b{margin:0;white-space:nowrap}
+  }
+</style>
+</head>
+<body>
+<div class="folha">
+
+  <div class="marca">
+    <div class="nome">aquiete<span> · histórias</span></div>
+    <div class="selo">CONTEÚDO DA MARCA</div>
+  </div>
+  <div class="trilha">Histórias &nbsp;›&nbsp; <b>Ansiedade</b></div>
+
+  <div class="cabeca">
+    <h1>6 motivos pelos quais quem convive com ansiedade está trocando o "esperar passar" por três gotas</h1>
+    <p class="linha-fina">Crise de ansiedade não avisa que vem. E tudo que existe pra ela
+       age em semanas ou tem tarja. <b>Pro momento em que ela está acontecendo,
+       nunca fizeram nada.</b></p>
+    <div class="autoria">
+      <div><b>Felipe</b>, que mandou fazer o Aquiete · 8 de outubro de 2026</div>
+      <div>4 min</div>
+    </div>
+    <div class="img capa"><div class="legenda"><b>Imagem de capa · 3:2</b>
+      Mulher sentada na beira da cama, de manhã cedo, luz de janela.
+      Mão no peito. Foto de celular, nada de estúdio.</div></div>
+  </div>
+
+  <div class="corpo">
+    <p>Vamos falar de ansiedade. Dela mesma, sem rodeio.</p>
+    <p>Quem tem crise de ansiedade conhece o minuto exato em que ela chega. O calor
+       subindo, o coração acelerando sem motivo, a cabeça repetindo <i>agora não</i>.</p>
+    <p>E conhece também a lista do que dizem pra fazer. Respira fundo. Conta até dez.
+       Toma uma água. Senta e espera passar.</p>
+    <p>E passa, né. Sempre passa.</p>
+    <p><b>Só que volta.</b> E ninguém nunca explicou direito o que fazer <i>durante</i>.</p>
+    <p>Eu passei meses atrás de uma resposta pra isso. O que eu encontrei no caminho
+       me surpreendeu mais do que a solução.</p>
+
+    <div class="tres">
+      <div><b>Sem tarja</b><span>não é medicamento</span></div>
+      <div><b>3 gotas</b><span>sublingual, discreto</span></div>
+      <div><b>Na crise</b><span>não é de uso diário</span></div>
+    </div>
+
+    <div class="motivo">
+      <span class="etiqueta">O VAZIO DO MEIO</span>
+      <h2><i>1.</i> Porque tudo chega tarde demais ou pesado demais</h2>
+      <p>Procurei em farmácia, em loja de produto natural, na internet.</p>
+      <p>E aí eu vi uma coisa que não consegui mais desver: tudo que existe pra
+         ansiedade está num de dois lados.</p>
+      <p>De um lado, <b>o que age no longo prazo</b>. Chá, hábito, terapia,
+         exercício, dormir cedo. Funciona, e leva semanas.</p>
+      <p>Do outro, <b>o que age rápido e tem tarja</b>. Também funciona, e cobra
+         um preço que muita gente não quer pagar.</p>
+      <p class="solta">Entre a crise e o alívio, não tem nada.</p>
+      <div class="img larga"><div class="legenda"><b>Imagem 1 · 16:9</b>
+        Diagrama simples em duas colunas: de um lado chá e terapia com "semanas",
+        do outro um comprimido com "tarja". No meio, um vão vazio.</div></div>
+      <p>Esse espaço ficou vazio e não é maldade de ninguém. É que ele é pequeno
+         demais pra interessar a indústria e rápido demais pra terapia alcançar.</p>
+      <p>Quando eu entendi isso, parei de procurar e mandei fazer.</p>
+      <p>E é isso que explica por que nada do que você já tentou serviu pra
+         <b>aquele</b> momento. Não é que você não conseguiu.
+         <b>É que ninguém tinha feito nada pra ali.</b></p>
+    </div>
+
+    <div class="motivo">
+      <span class="etiqueta">ONDE E QUANDO</span>
+      <h2><i>2.</i> Porque crise de ansiedade não escolhe hora nem lugar</h2>
+      <p>Ela vem na fila do mercado, no trânsito, no meio de uma reunião, às três
+         da manhã.</p>
+      <p>São três gotas embaixo da língua. Sem água. Sem sair da sala. Sem ter que
+         explicar pra ninguém o que você está fazendo.</p>
+      <p>Isso parece detalhe e não é. Repara: quase tudo que as pessoas tentam na
+         hora da crise exige sair dali. Ir no banheiro, ir pro carro, dar uma
+         volta no quarteirão.</p>
+      <p>E nem sempre dá pra sair.</p>
+      <div class="img larga"><div class="legenda"><b>Imagem 2 · 16:9</b>
+        O frasco dentro de uma bolsa aberta, junto com chave e carteira.
+        Luz natural, mesa de casa.</div></div>
+    </div>
+
+    <a class="linkcompra" href="https://aquieteagora.com.br/oferta?utm_source=advertorial&utm_medium=motivos&utm_campaign=6-motivos">Ver o Aquiete e os kits disponíveis</a>
+
+    <div class="motivo">
+      <span class="etiqueta">O QUE ELE NÃO TEM</span>
+      <h2><i>3.</i> Porque quem tem ansiedade quase sempre diz a mesma frase</h2>
+      <p>Toda vez que eu puxava esse assunto, aparecia a mesma coisa. E quase
+         nunca era sobre o remédio em si.</p>
+      <div class="caixa">
+        <div class="tit">o medo que mais aparece</div>
+        <p>"Eu não quero parar de sentir. Eu quero parar de <i>sofrer</i>."</p>
+      </div>
+      <p>Por isso eu fiz do jeito que fiz. O Aquiete é um composto floral. Não tem
+         tarja, não cria dependência e não foi feito pra anestesiar nada.</p>
+      <p>Ele não apaga o que você sente. Nunca foi essa a ideia.</p>
+    </div>
+
+    <div class="motivo">
+      <span class="etiqueta">O HÁBITO</span>
+      <h2><i>4.</i> Porque de nada adianta se ficar na gaveta</h2>
+      <p>Isso aqui eu demorei pra entender.</p>
+      <p>Não adianta a melhor coisa do mundo se ela mora na gaveta da cozinha e a
+         crise de ansiedade acontece na fila do banco.</p>
+      <p>Por isso o frasco é pequeno. Cabe na bolsa, na mochila, no porta-luvas.
+         Não derrama e não precisa de geladeira.</p>
+      <p>E o que eu mais escuto de quem usa nem é sobre o efeito. É sobre isso
+         aqui: <b>ter alguma coisa pra fazer além de esperar.</b></p>
+      <div class="img quadro"><div class="legenda"><b>Imagem 3 · 1:1</b>
+        O frasco na mão, em close. Dá pra ler o rótulo.</div></div>
+    </div>
+
+    <a class="linkcompra" href="https://aquieteagora.com.br/oferta?utm_source=advertorial&utm_medium=motivos&utm_campaign=6-motivos">Ver preço e frete</a>
+
+    <div class="motivo">
+      <span class="etiqueta">EXPECTATIVA</span>
+      <h2><i>5.</i> Porque eu não vou te prometer que resolve</h2>
+      <p>Aqui eu vou ser direto, porque é onde quase todo anúncio exagera e eu não
+         quero fazer isso contigo.</p>
+      <p>O Aquiete não trata ansiedade. Não substitui acompanhamento profissional,
+         não cura nada e não vai fazer a crise deixar de existir.</p>
+      <p class="solta">Ele serve pros vinte minutos em que está acontecendo.</p>
+      <p>Se você procura uma coisa que resolva de vez, não é aqui, e eu prefiro te
+         falar isso agora do que você descobrir depois.</p>
+      <p>Mas se você procura alguma coisa pra ter na bolsa, é exatamente isso.</p>
+    </div>
+
+    <div class="motivo">
+      <span class="etiqueta">QUEM FEZ</span>
+      <h2><i>6.</i> Porque foi feito por quem procurou e não achou</h2>
+      <p>Isso não nasceu de estudo de mercado. Nasceu de eu procurar uma coisa que
+         não existia e me cansar de não achar.</p>
+      <p>Dava pra comprar pronto, botar meu rótulo por cima e vender. Muita gente
+         faz isso e ninguém ficaria sabendo.</p>
+      <p>Eu fui numa farmácia de manipulação aqui em Chapecó e mandei fazer. Em
+         lote, com rótulo próprio. Floral de Bach não é invenção minha, existe há
+         quase cem anos; o que eu fiz foi mandar formular pensando no momento em
+         que aperta.</p>
+      <p>É uma marca pequena, com um produto só. Talvez seja por isso que ele é
+         tão específico: eu fiz pra um momento, não pra um mercado.</p>
+      <div class="img larga"><div class="legenda"><b>Imagem 4 · 16:9</b>
+        Bancada da farmácia de manipulação, frascos em lote, rótulo sendo colado.
+        Luz de ambiente real, sem produção.</div></div>
+    </div>
+  </div>
+
+  <div class="vozes">
+    <h2>O que dizem quem já usa</h2>
+    <div class="vazio">
+      <b>espaço reservado</b>
+      <p>Três cartões de depoimento entram aqui, com tag de assunto, a fala e o
+         primeiro nome. Hoje está vazio de propósito: entra quando existirem
+         clientes de verdade, ou o vídeo da gravação de sexta ocupa este lugar.</p>
+    </div>
+  </div>
+
+  <div class="oferta" id="oferta">
+    <h2>Aquiete</h2>
+    <p class="sub0">Composto floral de Bach sublingual · 30 ml</p>
+    <div class="selos">
+      <div class="selo2">Manipulado em farmácia</div>
+      <div class="selo2">Sem tarja</div>
+      <div class="selo2">Não cria dependência</div>
+    </div>
+    <div class="kits">
+      <div class="kit">
+        <div><div class="rot">1 frasco</div><div class="sub">+ frete R$ 14,99</div></div>
+        <div class="preco"><b>R$ 69,99</b><s>R$ 89,90</s></div>
+      </div>
+      <div class="kit dest">
+        <div class="fita">MAIS ESCOLHIDO</div>
+        <div><div class="rot">Compre 1, leve 2</div><div class="sub">frete grátis</div></div>
+        <div class="preco"><b>R$ 129,90</b><s>R$ 179,80</s></div>
+      </div>
+      <div class="kit">
+        <div><div class="rot">Compre 2, leve 4</div><div class="sub">frete grátis</div></div>
+        <div class="preco"><b>R$ 199,90</b><s>R$ 339,96</s></div>
+      </div>
+    </div>
+    <a class="botao" href="https://aquieteagora.com.br/oferta?utm_source=advertorial&utm_medium=motivos&utm_campaign=6-motivos">ESCOLHER O MEU</a>
+    <p class="sob">Frete grátis a partir de 2 frascos · Envio em até 2 dias úteis</p>
+  </div>
+
+  <div class="faq">
+    <h2>Perguntas que chegam sempre</h2>
+    <div class="q">Em quanto tempo faz efeito?</div>
+    <div class="a">É de uso no momento, não de uso contínuo. A sensação varia de
+       pessoa pra pessoa e ninguém deveria te prometer um cronômetro.</div>
+    <div class="q">Posso tomar junto com meu remédio?</div>
+    <div class="a">Floral não tem tarja, mas quem toma medicação contínua deve
+       conversar com quem acompanha o caso antes de incluir qualquer coisa nova.</div>
+    <div class="q">Dá sono?</div>
+    <div class="a">Não foi feito pra dormir. É pro momento em que aperta,
+       inclusive no meio do dia e no meio do trabalho.</div>
+    <div class="q">Quanto dura um frasco?</div>
+    <div class="a">Depende de quantas vezes você precisar usar, e isso muda muito
+       de pessoa pra pessoa.</div>
+  </div>
+
+  <div class="fecho">
+    <p>A crise vai acontecer de novo. Isso não está em questão.</p>
+    <p><b>A única pergunta é se, na próxima vez, você vai ter alguma coisa na bolsa
+       ou vai fazer o que sempre fez.</b></p>
+    <a class="botao" href="https://aquieteagora.com.br/oferta?utm_source=advertorial&utm_medium=motivos&utm_campaign=6-motivos" style="max-width:420px;margin:0 auto">QUERO TER NA BOLSA</a>
+  </div>
+
+  <div class="rodape">
+    Aquiete é um composto floral. Não é medicamento, não trata nem cura doenças e
+    não substitui acompanhamento profissional. Produto natural manipulado em
+    farmácia, sob encomenda.
+    <br><br>© 2026 Aquiete · Chapecó/SC
+  </div>
+
+</div>
+</body>
+</html>
