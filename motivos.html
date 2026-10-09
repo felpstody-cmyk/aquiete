@@ -24,7 +24,16 @@
   .faixatopo{background:var(--coral);color:#fff;text-align:center;
        font:600 12.5px/1.5 sans-serif;letter-spacing:.04em;padding:10px 16px}
   .topo{border-bottom:1px solid var(--linha);padding:18px 0 16px;text-align:center}
-  .topo .logo{height:60px;width:auto;display:block;margin:0 auto}
+  .topo .logo{display:inline-flex;align-items:center;gap:11px;text-decoration:none}
+  .topo .logo svg{flex:none}
+  .topo .palavra{font:400 31px/1 Georgia,"Iowan Old Style","Palatino Linotype",serif;
+      color:#3B2B29;letter-spacing:.01em}
+  .topo .tag{font:500 9.5px/1 sans-serif;letter-spacing:.34em;color:#8B6F6C;
+      align-self:flex-end;padding-bottom:4px}
+  @media (max-width:560px){
+    .topo .palavra{font-size:26px}
+    .topo .tag{display:none}
+  }
 
   /* ---------- hero em duas colunas ---------- */
   .hero{background:var(--fundo);padding:44px 0 50px}
@@ -200,7 +209,16 @@
 <body>
 
 <div class="faixatopo">FRETE GRÁTIS A PARTIR DE 2 FRASCOS · ENVIO EM ATÉ 2 DIAS ÚTEIS</div>
-<div class="topo"><img src="/logo-aquiete.svg" alt="Aquiete — Gotas Florais" class="logo"></div>
+<div class="topo">
+  <a class="logo" href="/" aria-label="Aquiete — Gotas Florais">
+    <svg viewBox="-1 -1 26 40" width="26" height="39" aria-hidden="true">
+      <path d="M12 .6c3.6 7.6 11 17.8 11 26a11 11 0 0 1-22 0c0-8.2 7.4-18.4 11-26Z" fill="#D4536E"/>
+      <ellipse cx="8.1" cy="23.6" rx="2.2" ry="3.5" fill="#fff" fill-opacity=".38" transform="rotate(-12 8.1 23.6)"/>
+    </svg>
+    <span class="palavra">aquiete</span>
+    <span class="tag">GOTAS FLORAIS</span>
+  </a>
+</div>
 
 <!-- ============ HERO ============ -->
 <div class="hero">
