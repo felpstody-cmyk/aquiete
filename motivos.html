@@ -113,6 +113,67 @@
   .notas sup{color:var(--coral);font-weight:700}
   .rodape{padding:22px 0 46px;font:12px/1.75 sans-serif;color:var(--tinta3)}
 
+
+  /* imagem em cartao, menor e com fundo suave */
+  .img{border-radius:18px;padding:22px;border:1px dashed #D5C9D4;
+       background:repeating-linear-gradient(135deg,#F1EBF0 0 16px,#EAE2EA 16px 32px)}
+  .img.larga{aspect-ratio:4/3}
+  .tira{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .tira .q{aspect-ratio:3/4;border-radius:10px;border:1px dashed #D5C9D4;
+     background:repeating-linear-gradient(135deg,#F1EBF0 0 12px,#EAE2EA 12px 24px);
+     display:flex;align-items:flex-end;justify-content:center;padding:8px;
+     font:700 10px/1.2 sans-serif;color:#8C7F90;text-align:center}
+
+  /* banda de largura total */
+  .banda{background:var(--fundo);padding:52px 0;text-align:center}
+  .banda h2{font:800 30px/1.25 sans-serif;letter-spacing:-.02em;margin-bottom:14px}
+
+  /* bloco de oferta rico */
+  .loja{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:start}
+  .selogrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+  .selogrid div{background:#fff;border:1px solid var(--linha);border-radius:12px;
+     padding:12px 8px;text-align:center;font:700 10.5px/1.3 sans-serif;color:var(--tinta2)}
+  .galeria{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+  .galeria div{aspect-ratio:1/1;border-radius:9px;border:1px dashed #D5C9D4;
+     background:repeating-linear-gradient(135deg,#F1EBF0 0 10px,#EAE2EA 10px 20px)}
+  .checklist{list-style:none;margin:0 0 20px;padding:0}
+  .checklist li{position:relative;padding-left:30px;margin-bottom:12px;
+     font:16px/1.5 sans-serif;color:var(--tinta2)}
+  .checklist li::before{content:"✓";position:absolute;left:0;top:0;
+     color:#fff;background:var(--coral);width:20px;height:20px;border-radius:50%;
+     font:700 11px/20px sans-serif;text-align:center}
+  .tituloofer{font:800 12px/1 sans-serif;letter-spacing:.1em;color:var(--coral);
+     text-transform:uppercase;text-align:center;margin-bottom:14px}
+
+  /* cartoes de depoimento */
+  .cartao{border:1px solid var(--linha);border-radius:14px;padding:20px;background:#fff;
+     text-align:left}
+  .cartao .topo2{display:flex;justify-content:space-between;align-items:baseline;
+     gap:8px;margin-bottom:6px}
+  .cartao .nome2{font:700 14px/1.3 sans-serif}
+  .cartao .verif{font:600 10.5px/1 sans-serif;color:var(--coral)}
+  .cartao .estrelas{color:#E8A33D;font-size:13px;margin-bottom:10px}
+  .cartao .tituloz{font:700 15.5px/1.4 sans-serif;margin-bottom:8px}
+  .cartao .fala2{font:15px/1.6 sans-serif;color:var(--tinta2);margin-bottom:12px}
+  .cartao .pilulas{display:flex;gap:6px;flex-wrap:wrap}
+  .cartao .pil{font:700 10px/1 sans-serif;background:var(--coral-fundo);color:var(--coral);
+     border-radius:99px;padding:6px 9px}
+
+  /* faq sanfona */
+  details{border-bottom:1px solid var(--linha)}
+  details summary{list-style:none;cursor:pointer;padding:17px 30px 17px 0;position:relative;
+     font:700 16.5px/1.45 sans-serif;color:var(--tinta)}
+  details summary::-webkit-details-marker{display:none}
+  details summary::after{content:"⌄";position:absolute;right:4px;top:15px;
+     color:var(--tinta3);font-size:19px;transition:transform .15s}
+  details[open] summary::after{transform:rotate(180deg)}
+  details .resp{padding:0 0 18px;font:16px/1.65 sans-serif;color:var(--tinta2)}
+
+  @media (max-width:860px){
+    .loja{grid-template-columns:1fr;gap:26px}
+    .tira{grid-template-columns:repeat(2,1fr)}
+  }
+
   @media (max-width:860px){
     .limite{padding:0 18px}
     .hero{padding:30px 0 36px}
@@ -192,9 +253,15 @@
          Sem ninguém perceber.</p>
     </div>
     <div class="arte">
-      <div class="img larga"><div class="legenda"><b>Foto 2 · 4:3</b>
-        O frasco dentro de uma bolsa aberta, junto com chave e carteira,
-        em cima de uma mesa. Luz natural.</div></div>
+      <div class="tira">
+        <div class="q">NO MERCADO</div>
+        <div class="q">NO TRÂNSITO</div>
+        <div class="q">NA REUNIÃO</div>
+        <div class="q">ÀS 3 DA MANHÃ</div>
+      </div>
+      <p style="margin-top:12px;font:600 12.5px/1.5 sans-serif;color:#8B8694">
+        Quatro fotos dos lugares onde a crise acontece, em retrato.
+        Nenhuma com o produto.</p>
     </div>
   </div>
 </div>
@@ -300,56 +367,106 @@
 </div>
 
 <!-- ============ PROVA SOCIAL ============ -->
-<div class="vozes">
+<div class="banda">
   <div class="limite">
-    <h2>O que dizem quem já usa</h2>
-    <div class="cartoes">
-      <div class="vazio"><b>reservado</b><p>Cartão de depoimento com nome, estrelas e
-        duas tags de assunto.</p></div>
-      <div class="vazio"><b>reservado</b><p>Entra quando existirem clientes de verdade.
-        Até lá fica vazio, de propósito.</p></div>
-      <div class="vazio"><b>reservado</b><p>O vídeo gravado em casa também pode ocupar
-        este espaço.</p></div>
+    <h2>Quem já tem na bolsa</h2>
+    <div class="vazio" style="max-width:620px;margin:0 auto">
+      <b>banda de prova social — reservada</b>
+      <p>Aqui vai a contagem de clientes, a nota e um depoimento em destaque.
+         Fica vazio até existir gente de verdade: número inventado em página de
+         saúde volta como processo, não como reprovação de anúncio.</p>
     </div>
   </div>
 </div>
 
 <!-- ============ KITS ============ -->
 <div class="oferta" id="oferta">
-  <div class="limite">
-    <h2>Aquiete</h2>
-    <p class="sub0">Composto floral de Bach sublingual · 30 ml</p>
-    <div class="kits">
-      <div class="kit">
-        <div class="rot">1 frasco</div>
-        <div class="sub">+ frete R$ 14,99</div>
-        <div class="grande">R$ 69,99</div>
-        <s>R$ 89,90</s>
-        <div class="porun">R$ 69,99 por frasco</div>
+  <div class="limite loja">
+
+    <div>
+      <div class="selogrid">
+        <div>MANIPULADO<br>EM FARMÁCIA</div>
+        <div>SEM<br>TARJA</div>
+        <div>NÃO CRIA<br>DEPENDÊNCIA</div>
+        <div>SUBLINGUAL<br>3 GOTAS</div>
+        <div>LOTE COM<br>RÓTULO PRÓPRIO</div>
+        <div>ENVIO EM<br>2 DIAS ÚTEIS</div>
       </div>
-      <div class="kit dest">
-        <div class="fita">MAIS ESCOLHIDO</div>
-        <div class="rot">Compre 1, leve 2</div>
-        <div class="sub">frete grátis</div>
-        <div class="grande">R$ 129,90</div>
-        <s>R$ 179,80</s>
-        <div class="porun">R$ 64,95 por frasco</div>
+      <div class="img" style="aspect-ratio:1/1"><div class="legenda">
+        <b>Foto principal do produto · 1:1</b>
+        Os dois frascos em fundo claro, vistos de cima, com algumas
+        flores secas ao lado. É a única foto da página que pode ser
+        bem produzida.</div></div>
+      <div class="galeria"><div></div><div></div><div></div><div></div></div>
+      <p style="margin-top:10px;font:600 12px/1.5 sans-serif;color:#8B8694">
+        Quatro miniaturas: rótulo de perto, o conta-gotas, o frasco na bolsa
+        e a bancada da manipulação.</p>
+    </div>
+
+    <div>
+      <h2 style="text-align:left;font-size:30px;margin-bottom:4px">AQUIETE.</h2>
+      <p class="sub0" style="text-align:left;margin-bottom:20px">
+        Composto floral de Bach sublingual · 30 ml</p>
+      <ul class="checklist">
+        <li>Feito pros <b>vinte minutos em que a crise está acontecendo</b>,
+            não pro mês que vem.</li>
+        <li>Três gotas embaixo da língua. Sem água, sem levantar,
+            sem ninguém perceber.</li>
+        <li>Sem tarja e sem dependência. <b>Não anestesia nada.</b></li>
+        <li>Manipulado em farmácia, em Chapecó, com rótulo próprio.</li>
+      </ul>
+
+      <div class="tituloofer">escolha o seu kit</div>
+      <div class="kits">
+        <div class="kit">
+          <div class="rot">1 frasco</div>
+          <div class="sub">+ frete R$ 14,99</div>
+          <div class="grande">R$ 69,99</div>
+          <s>R$ 89,90</s>
+          <div class="porun">R$ 69,99 por frasco</div>
+        </div>
+        <div class="kit dest">
+          <div class="fita">MAIS ESCOLHIDO</div>
+          <div class="rot">Compre 1, leve 2</div>
+          <div class="sub">frete grátis</div>
+          <div class="grande">R$ 129,90</div>
+          <s>R$ 179,80</s>
+          <div class="porun">R$ 64,95 por frasco</div>
+        </div>
+        <div class="kit">
+          <div class="fita" style="background:#5B6B7A">+ FRETE GRÁTIS</div>
+          <div class="rot">Compre 2, leve 4</div>
+          <div class="sub">frete grátis</div>
+          <div class="grande">R$ 199,90</div>
+          <s>R$ 339,96</s>
+          <div class="porun">R$ 49,98 por frasco</div>
+        </div>
       </div>
-      <div class="kit">
-        <div class="rot">Compre 2, leve 4</div>
-        <div class="sub">frete grátis</div>
-        <div class="grande">R$ 199,90</div>
-        <s>R$ 339,96</s>
-        <div class="porun">R$ 49,98 por frasco</div>
+
+      <div class="meio">
+        <a class="botao" style="display:block" href="https://aquieteagora.com.br/oferta?utm_source=advertorial&utm_medium=motivos&utm_campaign=6-motivos">ADICIONAR AO CARRINHO</a>
+        <div class="confia">
+          <div>✓ Compra segura</div>
+          <div>✓ Pix ou cartão em até 12x</div>
+          <div>✓ Envio em até 2 dias úteis</div>
+        </div>
       </div>
     </div>
-    <div class="meio">
-      <a class="botao" href="https://aquieteagora.com.br/oferta?utm_source=advertorial&utm_medium=motivos&utm_campaign=6-motivos">Escolher o meu</a>
-      <div class="confia">
-        <div>✓ Compra segura</div>
-        <div>✓ Pix ou cartão em até 12x</div>
-        <div>✓ Envio em até 2 dias úteis</div>
-      </div>
+
+  </div>
+</div>
+
+<!-- ============ DEPOIMENTOS ============ -->
+<div class="vozes">
+  <div class="limite">
+    <h2>O que dizem quem já usa</h2>
+    <div class="cartoes">
+      <div class="vazio"><b>cartão 1 — reservado</b><p>Nome, idade, "comprador
+        verificado", estrelas, um título em negrito, a fala e duas tags.</p></div>
+      <div class="vazio"><b>cartão 2 — reservado</b><p>Entra quando existirem
+        clientes de verdade.</p></div>
+      <div class="vazio"><b>cartão 3 — reservado</b><p>O vídeo gravado em casa
+        também pode ocupar este espaço.</p></div>
     </div>
   </div>
 </div>
@@ -357,29 +474,37 @@
 <!-- ============ FAQ ============ -->
 <div class="limite">
   <div class="faq">
-    <h2>Perguntas que chegam sempre</h2>
-    <div class="q">Em quanto tempo faz efeito?</div>
-    <div class="a">É de uso no momento, não de uso contínuo. A sensação varia de pessoa pra
-      pessoa e ninguém deveria te prometer um cronômetro.</div>
-    <div class="q">Posso tomar junto com meu remédio?</div>
-    <div class="a">Floral não tem tarja, mas quem toma medicação contínua deve conversar com
-      quem acompanha o caso antes de incluir qualquer coisa nova.</div>
-    <div class="q">Dá sono?</div>
-    <div class="a">Não foi feito pra dormir. É pro momento em que aperta, inclusive no meio
-      do dia e no meio do trabalho.</div>
-    <div class="q">Quanto dura um frasco?</div>
-    <div class="a">Depende de quantas vezes você precisar usar, e isso muda muito de pessoa
-      pra pessoa.</div>
+    <h2>Perguntas frequentes</h2>
+    <details><summary>Em quanto tempo faz efeito?</summary>
+      <div class="resp">É de uso no momento, não de uso contínuo. A sensação varia de pessoa pra pessoa e ninguém deveria te prometer um cronômetro.</div></details>
+    <details><summary>Posso tomar junto com meu remédio?</summary>
+      <div class="resp">Floral não tem tarja, mas quem toma medicação contínua deve conversar com quem acompanha o caso antes de incluir qualquer coisa nova.</div></details>
+    <details><summary>Isso substitui terapia ou acompanhamento?</summary>
+      <div class="resp">Não, e não foi feito pra isso. Ele serve pro momento da crise; o resto continua sendo com quem cuida de você.</div></details>
+    <details><summary>Dá sono?</summary>
+      <div class="resp">Não foi feito pra dormir. É pro momento em que aperta, inclusive no meio do dia e no meio do trabalho.</div></details>
+    <details><summary>Quanto dura um frasco?</summary>
+      <div class="resp">Depende de quantas vezes você precisar usar, e isso muda muito de pessoa pra pessoa.</div></details>
+    <details><summary>Como chega e em quanto tempo?</summary>
+      <div class="resp">Envio em até 2 dias úteis depois da confirmação do pagamento, em embalagem discreta. Frete grátis a partir de 2 frascos.</div></details>
   </div>
 </div>
 
 <!-- ============ FECHO ============ -->
 <div class="fecho">
-  <div class="limite">
+  <div class="limite grade" style="text-align:left">
+    <div class="arte">
+      <div class="img" style="aspect-ratio:1/1"><div class="legenda">
+        <b>Diagrama de fechamento · 1:1</b>
+        Três círculos que se cruzam, com o frasco no meio:
+        NA HORA · SEM TARJA · NA BOLSA.</div></div>
+    </div>
+    <div class="texto">
     <h2>A crise vai acontecer de novo.</h2>
     <p>Isso não está em questão. A única pergunta é se, na próxima vez,<br>
        você vai ter alguma coisa na bolsa ou vai respirar fundo e esperar.</p>
     <a class="botao" href="https://aquieteagora.com.br/oferta?utm_source=advertorial&utm_medium=motivos&utm_campaign=6-motivos">Quero ter na bolsa</a>
+    </div>
   </div>
 </div>
 
