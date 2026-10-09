@@ -21,6 +21,22 @@
        font:17px/1.7 -apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
   .folha{max-width:700px;margin:0 auto;background:var(--papel);min-height:100vh}
 
+  .faixatopo{background:var(--coral);color:#fff;text-align:center;
+       font:700 12.5px/1.4 sans-serif;letter-spacing:.02em;padding:9px 16px}
+  .heroprod{padding:20px 20px 0;text-align:center}
+  .heroprod .nomeprod{font:800 34px/1 Georgia,serif;letter-spacing:-.02em;margin-bottom:14px}
+  .heroprod .nomeprod span{color:var(--coral)}
+  .cedo{display:block;max-width:420px;margin:20px auto 4px;text-align:center;
+     background:var(--coral);color:#fff;font:800 16px/1 sans-serif;padding:17px;
+     border-radius:99px;text-decoration:none;box-shadow:0 4px 14px rgba(196,72,91,.28)}
+  .ctameio{border-top:1px solid var(--linha);border-bottom:1px solid var(--linha);
+     padding:22px 0;margin:28px 0 0;text-align:center}
+  .ctameio .frase{font:700 17px/1.45 Georgia,serif;margin-bottom:14px}
+  .confia{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:16px}
+  .confia div{font:600 11.5px/1.3 sans-serif;color:var(--tinta3)}
+  .porun{font:700 12px/1 sans-serif;color:var(--coral);margin-top:5px}
+  .notas{padding:0 20px;font:11.5px/1.7 sans-serif;color:var(--tinta3)}
+  .notas sup{color:var(--coral);font-weight:700}
   .marca{border-bottom:1px solid var(--linha);padding:13px 20px;
          display:flex;align-items:center;justify-content:space-between;gap:12px}
   .marca .nome{font:800 15px/1 sans-serif;letter-spacing:-.01em}
@@ -140,11 +156,21 @@
 <body>
 <div class="folha">
 
+  <div class="faixatopo">FRETE GRÁTIS A PARTIR DE 2 FRASCOS · ENVIO EM ATÉ 2 DIAS ÚTEIS</div>
+
   <div class="marca">
     <div class="nome">aquiete<span> · histórias</span></div>
     <div class="selo">CONTEÚDO DA MARCA</div>
   </div>
   <div class="trilha">Histórias &nbsp;›&nbsp; <b>Ansiedade</b></div>
+
+  <div class="heroprod">
+    <div class="nomeprod">Aqui<span>ete</span></div>
+    <div class="img quadro" style="margin:0 auto 4px"><div class="legenda">
+      <b>Hero do produto · 1:1</b>
+      Os dois frascos lado a lado em fundo claro, vistos de cima.
+      É a única foto da página que pode ser bem produzida.</div></div>
+  </div>
 
   <div class="cabeca">
     <h1>6 motivos pelos quais quem convive com ansiedade está trocando o "esperar passar" por três gotas</h1>
@@ -170,6 +196,8 @@
     <p><b>Só que volta.</b> E ninguém nunca explicou direito o que fazer <i>durante</i>.</p>
     <p>Eu passei meses atrás de uma resposta pra isso. O que eu encontrei no caminho
        me surpreendeu mais do que a solução.</p>
+
+    <a class="cedo" href="https://aquieteagora.com.br/oferta?utm_source=advertorial&utm_medium=motivos&utm_campaign=6-motivos">VER OS KITS E PREÇOS</a>
 
     <div class="tres">
       <div><b>Sem tarja</b><span>não é medicamento</span></div>
@@ -229,6 +257,19 @@
       <p>Por isso eu fiz do jeito que fiz. O Aquiete é um composto floral. Não tem
          tarja, não cria dependência e não foi feito pra anestesiar nada.</p>
       <p>Ele não apaga o que você sente. Nunca foi essa a ideia.</p>
+      <div class="img larga"><div class="legenda"><b>Imagem 3 · 16:9</b>
+        Mulher rindo numa conversa, em casa. A ideia é mostrar sentimento
+        preservado, não calma artificial.</div></div>
+    </div>
+
+    <div class="ctameio">
+      <div class="frase">Três gotas, na hora em que aperta.</div>
+      <a class="cedo" href="https://aquieteagora.com.br/oferta?utm_source=advertorial&utm_medium=motivos&utm_campaign=6-motivos" style="margin-top:0">VER OS KITS E PREÇOS</a>
+      <div class="confia">
+        <div>✓ Manipulado em farmácia</div>
+        <div>✓ Frete grátis a partir de 2</div>
+        <div>✓ Pix ou cartão</div>
+      </div>
     </div>
 
     <div class="motivo">
@@ -258,6 +299,9 @@
       <p>Se você procura uma coisa que resolva de vez, não é aqui, e eu prefiro te
          falar isso agora do que você descobrir depois.</p>
       <p>Mas se você procura alguma coisa pra ter na bolsa, é exatamente isso.</p>
+      <div class="img larga"><div class="legenda"><b>Imagem 5 · 16:9</b>
+        O rótulo em close, com a frase de uso legível: três gotas
+        embaixo da língua.</div></div>
     </div>
 
     <div class="motivo">
@@ -300,20 +344,27 @@
     <div class="kits">
       <div class="kit">
         <div><div class="rot">1 frasco</div><div class="sub">+ frete R$ 14,99</div></div>
-        <div class="preco"><b>R$ 69,99</b><s>R$ 89,90</s></div>
+        <div class="preco"><b>R$ 69,99</b><s>R$ 89,90</s>
+          <div class="porun">R$ 69,99 por frasco</div></div>
       </div>
       <div class="kit dest">
         <div class="fita">MAIS ESCOLHIDO</div>
         <div><div class="rot">Compre 1, leve 2</div><div class="sub">frete grátis</div></div>
-        <div class="preco"><b>R$ 129,90</b><s>R$ 179,80</s></div>
+        <div class="preco"><b>R$ 129,90</b><s>R$ 179,80</s>
+          <div class="porun">R$ 64,95 por frasco</div></div>
       </div>
       <div class="kit">
         <div><div class="rot">Compre 2, leve 4</div><div class="sub">frete grátis</div></div>
-        <div class="preco"><b>R$ 199,90</b><s>R$ 339,96</s></div>
+        <div class="preco"><b>R$ 199,90</b><s>R$ 339,96</s>
+          <div class="porun">R$ 49,98 por frasco</div></div>
       </div>
     </div>
     <a class="botao" href="https://aquieteagora.com.br/oferta?utm_source=advertorial&utm_medium=motivos&utm_campaign=6-motivos">ESCOLHER O MEU</a>
-    <p class="sob">Frete grátis a partir de 2 frascos · Envio em até 2 dias úteis</p>
+    <div class="confia" style="margin-top:18px">
+      <div>✓ Compra segura</div>
+      <div>✓ Pix ou cartão em até 12x</div>
+      <div>✓ Envio em até 2 dias úteis</div>
+    </div>
   </div>
 
   <div class="faq">
@@ -332,11 +383,24 @@
        de pessoa pra pessoa.</div>
   </div>
 
+  <div class="corpo" style="padding-top:0">
+    <div class="img quadro"><div class="legenda"><b>Imagem de fechamento · 1:1</b>
+      O frasco sozinho, fundo limpo, com três marcadores apontando:
+      3 gotas · sublingual · cabe na bolsa.</div></div>
+  </div>
+
   <div class="fecho">
     <p>A crise vai acontecer de novo. Isso não está em questão.</p>
     <p><b>A única pergunta é se, na próxima vez, você vai ter alguma coisa na bolsa
        ou vai fazer o que sempre fez.</b></p>
     <a class="botao" href="https://aquieteagora.com.br/oferta?utm_source=advertorial&utm_medium=motivos&utm_campaign=6-motivos" style="max-width:420px;margin:0 auto">QUERO TER NA BOLSA</a>
+  </div>
+
+  <div class="notas" style="margin-top:26px">
+    <sup>1</sup> Floral de Bach é um preparado natural usado desde os anos 1930.
+    Não possui registro como medicamento e não há promessa de resultado clínico.<br>
+    <sup>2</sup> Prazo de envio contado em dias úteis a partir da confirmação do
+    pagamento. Frete grátis válido para pedidos de 2 frascos ou mais.
   </div>
 
   <div class="rodape">
