@@ -184,6 +184,36 @@
       text-transform:uppercase;margin-bottom:9px}
   .etapa p{font:15.5px/1.55 sans-serif;color:var(--tinta2);margin:0}
   .etapa p b{color:var(--tinta)}
+
+  /* comentarios */
+  .coment{border:1px solid var(--linha);border-radius:14px;padding:18px 20px;margin-bottom:12px;
+     background:#fff}
+  .coment .quem3{font:700 14.5px/1.3 sans-serif;margin-bottom:2px}
+  .coment .quando3{font:12px/1.3 sans-serif;color:var(--tinta3);margin-bottom:9px}
+  .coment .texto3{font:16px/1.65 sans-serif;color:var(--tinta2)}
+  .coment .loja3{margin:13px 0 0 0;padding:13px 15px;background:var(--coral-fundo);
+     border-radius:11px}
+  .coment .loja3 b{display:block;font:700 12px/1 sans-serif;color:var(--coral);
+     margin-bottom:6px}
+  .coment .loja3 p{font:15px/1.6 sans-serif;color:var(--tinta2);margin:0}
+  .semcoment{font:16px/1.7 sans-serif;color:var(--tinta3);text-align:center;
+     padding:26px 20px;border:1px dashed var(--linha);border-radius:14px}
+  .formc{margin-top:18px;border:1px solid var(--linha);border-radius:14px;padding:20px;
+     background:#FBF9FB}
+  .formc label{display:block;font:700 12.5px/1 sans-serif;color:var(--tinta2);
+     margin-bottom:7px}
+  .formc input,.formc textarea{width:100%;border:1px solid var(--linha);border-radius:10px;
+     padding:13px 14px;font:16px/1.5 sans-serif;color:var(--tinta);background:#fff;
+     margin-bottom:14px;font-family:inherit}
+  .formc textarea{min-height:110px;resize:vertical}
+  .formc input:focus,.formc textarea:focus{outline:2px solid var(--coral);outline-offset:1px}
+  .formc button{background:var(--coral);color:#fff;border:0;border-radius:99px;
+     font:600 15.5px/1 sans-serif;padding:16px 30px;cursor:pointer}
+  .formc button[disabled]{opacity:.55;cursor:default}
+  .avisoc{margin-top:12px;font:14.5px/1.6 sans-serif;color:var(--tinta2)}
+  .avisoc.ok{color:#2E7D5B} .avisoc.ruim{color:var(--coral)}
+  .regrac{font:13px/1.6 sans-serif;color:var(--tinta3);margin-top:10px}
+
   @media (max-width:860px){ .linhatempo{grid-template-columns:1fr} }
 
   @media (max-width:860px){
@@ -517,20 +547,97 @@
   </div>
 </div>
 
-<!-- ============ DEPOIMENTOS ============ -->
+<!-- ============ COMENTARIOS ============ -->
 <div class="vozes">
-  <div class="limite">
-    <h2>O que dizem quem já usa</h2>
-    <div class="cartoes">
-      <div class="vazio"><b>cartão 1 — reservado</b><p>Nome, idade, "comprador
-        verificado", estrelas, um título em negrito, a fala e duas tags.</p></div>
-      <div class="vazio"><b>cartão 2 — reservado</b><p>Entra quando existirem
-        clientes de verdade.</p></div>
-      <div class="vazio"><b>cartão 3 — reservado</b><p>Três cartões é o padrão. Dois ficam
-        vazios até existirem clientes.</p></div>
+  <div class="limite" style="max-width:760px">
+    <h2>Comentários</h2>
+    <div id="listac"><div class="semcoment">Carregando…</div></div>
+
+    <div class="formc">
+      <label for="cnome">Como você quer ser chamada</label>
+      <input id="cnome" maxlength="40" autocomplete="name" placeholder="Seu primeiro nome">
+      <label for="ctexto">Seu comentário</label>
+      <textarea id="ctexto" maxlength="600" placeholder="Conte sua experiência ou faça uma pergunta."></textarea>
+      <button id="cenviar" type="button">Enviar comentário</button>
+      <div class="avisoc" id="caviso" hidden></div>
+      <p class="regrac">Todo comentário passa por leitura antes de aparecer aqui.
+         Não publicamos seu e-mail nem seu telefone, porque a gente não pede nenhum dos dois.</p>
     </div>
   </div>
 </div>
+
+<script>
+(function(){
+  var PAGINA = 'motivos';
+  var lista = document.getElementById('listac');
+  var aviso = document.getElementById('caviso');
+  var botao = document.getElementById('cenviar');
+
+  function quando(ts){
+    var min = Math.max(0, Math.round((Date.now() - ts) / 60000));
+    if (min < 60) return min <= 1 ? 'agora há pouco' : min + ' min atrás';
+    if (min < 48 * 60) return Math.round(min / 60) + 'h atrás';
+    return Math.round(min / 1440) + ' dias atrás';
+  }
+  function limpo(t){
+    var d = document.createElement('div'); d.textContent = t; return d.innerHTML;
+  }
+
+  function desenhar(cs){
+    if (!cs.length) {
+      lista.innerHTML = '<div class="semcoment">Ainda não tem comentário por aqui. ' +
+        'Se você usa o Aquiete, o seu pode ser o primeiro.</div>';
+      return;
+    }
+    lista.innerHTML = cs.map(function(c){
+      return '<div class="coment">' +
+        '<div class="quem3">' + limpo(c.nome) + '</div>' +
+        '<div class="quando3">' + quando(c.em) + '</div>' +
+        '<div class="texto3">' + limpo(c.texto) + '</div>' +
+        (c.resposta ? '<div class="loja3"><b>Resposta da Aquiete</b><p>' +
+            limpo(c.resposta) + '</p></div>' : '') +
+        '</div>';
+    }).join('');
+  }
+
+  fetch('/api/comentario?pagina=' + PAGINA)
+    .then(function(r){ return r.json(); })
+    .then(function(d){ desenhar(d.comentarios || []); })
+    .catch(function(){ lista.innerHTML = ''; });
+
+  botao.onclick = function(){
+    var nome = document.getElementById('cnome').value.trim();
+    var texto = document.getElementById('ctexto').value.trim();
+    aviso.hidden = false; aviso.className = 'avisoc';
+    if (!nome) { aviso.className = 'avisoc ruim'; aviso.textContent = 'Diga como quer ser chamada.'; return; }
+    if (texto.length < 3) { aviso.className = 'avisoc ruim'; aviso.textContent = 'Escreva seu comentário.'; return; }
+
+    botao.disabled = true; aviso.textContent = 'Enviando…';
+    fetch('/api/comentario', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pagina: PAGINA, nome: nome, texto: texto })
+    })
+    .then(function(r){ return r.json().then(function(j){ return { ok: r.ok, j: j }; }); })
+    .then(function(res){
+      if (!res.ok) {
+        botao.disabled = false;
+        aviso.className = 'avisoc ruim';
+        aviso.textContent = res.j.erro || 'Não consegui enviar. Tenta de novo.';
+        return;
+      }
+      aviso.className = 'avisoc ok';
+      aviso.textContent = 'Recebido, obrigado. Seu comentário aparece aqui depois da leitura.';
+      document.getElementById('ctexto').value = '';
+    })
+    .catch(function(){
+      botao.disabled = false;
+      aviso.className = 'avisoc ruim';
+      aviso.textContent = 'Não consegui enviar. Tenta de novo.';
+    });
+  };
+})();
+</script>
 
 <!-- ============ FAQ ============ -->
 <div class="limite">
