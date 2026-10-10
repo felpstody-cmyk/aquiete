@@ -104,6 +104,7 @@ export default async (request, context) => {
 export const config = {
   path: [
     '/', '/index.html', '/oferta', '/oferta.html', '/checkout', '/checkout.html', '/termos', '/termos.html',
+    '/motivos', '/motivos.html', '/psiquiatra', '/psiquiatra.html',
     '/api/criar-pedido', '/api/carrinho',
   ],
 }
