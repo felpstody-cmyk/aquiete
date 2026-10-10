@@ -13,9 +13,20 @@
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);font:18px/1.6 Georgia,"Times New Roman",serif}
-  .bar{background:var(--faixa);color:var(--muted);text-align:center;font:600 12px/1 system-ui,sans-serif;padding:10px 16px;letter-spacing:.06em}
-  header{display:flex;justify-content:center;padding:14px 16px;border-bottom:1px solid var(--line)}
-  header img{height:52px;width:auto}
+  .bar{background:linear-gradient(90deg,#C4485B,#9E3346);color:#fff;text-align:center;
+       font:600 11.5px/1 system-ui,sans-serif;padding:11px 16px;letter-spacing:.26em;
+       text-transform:uppercase}
+  .bar span{display:inline-flex;align-items:center;gap:11px}
+  .bar i{width:5px;height:7px;border-radius:50% 50% 50% 50% / 62% 62% 38% 38%;
+       background:rgba(255,255,255,.72);display:inline-block}
+  header{display:flex;justify-content:center;padding:17px 16px 15px;
+       border-bottom:1px solid var(--line);background:#fff}
+  .marcalogo{display:inline-flex;align-items:center;gap:11px;text-decoration:none}
+  .marcalogo svg{flex:none}
+  .marcalogo .palavra{font:400 32px/1 Georgia,"Iowan Old Style","Palatino Linotype",serif;
+       color:#3B2B29;letter-spacing:.012em}
+  .marcalogo .tagline{font:500 9.5px/1 system-ui,sans-serif;letter-spacing:.34em;
+       color:#8B6F6C;align-self:flex-end;padding-bottom:4px}
   main{max-width:680px;margin:0 auto;padding:24px 16px 64px}
   .tag{font:700 12px system-ui,sans-serif;color:var(--accent);text-transform:uppercase;letter-spacing:.08em}
   h1{font-size:30px;line-height:1.2;margin:8px 0 14px}
@@ -84,7 +95,40 @@
      background:var(--accent);color:#fff;font:700 9.5px/1 system-ui,sans-serif;
      letter-spacing:.05em;padding:5px 10px;border-radius:99px}
   .kitc:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  /* comentarios de verdade, com aprovacao */
+  .cnovo{margin-top:22px;border-top:1px solid var(--line);padding-top:20px}
+  .cnovo h4{font:700 16px/1.3 system-ui,sans-serif;margin:0 0 12px}
+  .creal{display:flex;gap:11px;padding:14px 0;border-bottom:1px solid var(--line)}
+  .creal .bola{flex:none;width:38px;height:38px;border-radius:50%;display:grid;
+     place-items:center;color:#fff;font:700 14px/1 system-ui,sans-serif;user-select:none}
+  .creal .corpo{flex:1;min-width:0}
+  .creal .nm{font:700 14px/1.3 system-ui,sans-serif;color:#385898}
+  .creal .qd{font:12px/1.3 system-ui,sans-serif;color:var(--muted);margin:1px 0 6px}
+  .creal .tx{font:15px/1.5 system-ui,sans-serif;color:var(--ink)}
+  .creal .rsp{margin-top:9px;background:var(--soft);border-radius:11px;padding:11px 13px}
+  .creal .rsp b{display:block;font:700 11.5px/1 system-ui,sans-serif;color:var(--accent);
+     margin-bottom:5px}
+  .creal .rsp p{margin:0;font:14.5px/1.55 system-ui,sans-serif;color:var(--ink)}
+  .fc{margin-top:18px;background:#fbf9fb;border:1px solid var(--line);border-radius:12px;
+     padding:18px;font-family:system-ui,sans-serif}
+  .fc label{display:block;font:700 12.5px/1 system-ui,sans-serif;color:var(--ink);margin-bottom:7px}
+  .fc input,.fc textarea{width:100%;border:1px solid var(--line);border-radius:9px;
+     padding:12px 13px;font:16px/1.5 system-ui,sans-serif;color:var(--ink);background:#fff;
+     margin-bottom:13px;font-family:inherit}
+  .fc textarea{min-height:100px;resize:vertical}
+  .fc input:focus,.fc textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
+  .fc button{background:var(--accent);color:#fff;border:0;border-radius:99px;
+     font:700 15px/1 system-ui,sans-serif;padding:15px 28px;cursor:pointer}
+  .fc button[disabled]{opacity:.55;cursor:default}
+  .fcaviso{margin-top:11px;font:14px/1.55 system-ui,sans-serif}
+  .fcaviso.ok{color:var(--green)} .fcaviso.ruim{color:var(--accent-dark)}
+  .fcregra{font:12.5px/1.55 system-ui,sans-serif;color:var(--muted);margin:9px 0 0}
+
   @media (max-width:480px){
+    .bar{letter-spacing:.18em;font-size:10.5px;padding:10px 14px}
+    .marcalogo .palavra{font-size:27px}
+    .marcalogo .tagline{display:none}
     h1{font-size:25px}
     body{font-size:17px}
     .offer .deal{font-size:27px}
@@ -94,8 +138,18 @@
 </style>
 </head>
 <body>
-<div class="bar">SAÚDE &amp; BEM-ESTAR</div>
-<header><img src="logo-aquiete.svg" alt="Aquiete — Gotas Florais" width="260" height="200"></header>
+<div class="bar"><span><i></i>Saúde &amp; Bem-estar<i></i></span></div>
+<header>
+  <a class="marcalogo" href="/" aria-label="Aquiete — Gotas Florais">
+    <svg viewBox="-1 -1 26 40" width="27" height="40" aria-hidden="true">
+      <path d="M12 .6c3.6 7.6 11 17.8 11 26a11 11 0 0 1-22 0c0-8.2 7.4-18.4 11-26Z" fill="#D4536E"/>
+      <ellipse cx="8.1" cy="23.6" rx="2.2" ry="3.5" fill="#fff" fill-opacity=".38"
+               transform="rotate(-12 8.1 23.6)"/>
+    </svg>
+    <span class="palavra">aquiete</span>
+    <span class="tagline">GOTAS FLORAIS</span>
+  </a>
+</header>
 <main>
 
 <div class="note">Rascunho para leitura. O que está entre colchetes é seu pra preencher (números).</div>
@@ -241,6 +295,21 @@
   <div class="c"><div class="av"></div><div><div class="bubble"><div class="name">Ema Ferreira</div>Eu e meu marido vivemos ansiosos. Isso ajuda com crise de pânico também?</div><div class="acts">Curtir · Responder</div></div></div>
   <div class="c reply"><div class="av"></div><div><div class="bubble"><div class="name">Lourdes Carvalho</div>Me ajuda sim! Tô usando há 3 meses e é o que eu pego na hora que o coração dispara. É super fácil de usar, não dá sono e não tive nenhum daqueles efeitos chatos do remédio que eu tomava antes.</div><div class="acts">Curtir · Responder</div></div></div>
   <div class="c"><div class="av"></div><div><div class="bubble"><div class="name">Débora Paiva</div>Dei pra minha irmã porque ela vivia tendo crise no trabalho e agora ela não para de falar disso kkkk. Diz que não sai mais de casa sem o frasco na bolsa.</div><div class="acts">Curtir · Responder</div></div></div>
+
+  <div class="cnovo">
+    <h4>Deixe o seu</h4>
+    <div id="listac"></div>
+    <div class="fc">
+      <label for="cnome">Como você quer ser chamada</label>
+      <input id="cnome" maxlength="40" autocomplete="name" placeholder="Seu primeiro nome">
+      <label for="ctexto">Seu comentário</label>
+      <textarea id="ctexto" maxlength="600" placeholder="Conte sua experiência ou faça uma pergunta."></textarea>
+      <button id="cenviar" type="button">Enviar comentário</button>
+      <div class="fcaviso" id="caviso" hidden></div>
+      <p class="fcregra">Todo comentário é lido antes de aparecer aqui.
+         Não pedimos e não publicamos e-mail nem telefone.</p>
+    </div>
+  </div>
 </section>
 
 </main>
@@ -293,6 +362,78 @@
   });
 
   pintar();
+})();
+</script>
+
+<script>
+/* Comentarios de verdade: /api/comentario. Nada aparece antes de ser
+   aprovado no painel. Sem foto de proposito: inicial em circulo, com a
+   cor saindo do proprio nome, pra nao precisar de login nem upload. */
+(function(){
+  var PAGINA = 'psiquiatra';
+  var lista = document.getElementById('listac');
+  var aviso = document.getElementById('caviso');
+  var botao = document.getElementById('cenviar');
+  if (!lista || !botao) return;
+
+  var CORES = ['#C4485B','#9E3346','#7C5B86','#3F6B8C','#2E7D5B','#B4571A','#6B6B8C'];
+  function inicial(n){
+    var t = (n || '?').trim().split(/\s+/);
+    return (t[0].charAt(0) + (t.length > 1 ? t[t.length-1].charAt(0) : '')).toUpperCase();
+  }
+  function cor(n){
+    var soma = 0; n = n || '';
+    for (var i = 0; i < n.length; i++) soma = (soma + n.charCodeAt(i) * (i + 7)) % 9973;
+    return CORES[soma % CORES.length];
+  }
+  function quando(ts){
+    var m = Math.max(0, Math.round((Date.now() - ts) / 60000));
+    if (m < 60) return m <= 1 ? 'agora há pouco' : m + ' min atrás';
+    if (m < 2880) return Math.round(m / 60) + 'h atrás';
+    return Math.round(m / 1440) + ' dias atrás';
+  }
+  function limpo(t){ var d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
+  fetch('/api/comentario?pagina=' + PAGINA)
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      var cs = d.comentarios || [];
+      lista.innerHTML = cs.map(function(c){
+        return '<div class="creal">' +
+          '<div class="bola" style="background:' + cor(c.nome) + '" aria-hidden="true">' +
+            limpo(inicial(c.nome)) + '</div>' +
+          '<div class="corpo"><div class="nm">' + limpo(c.nome) + '</div>' +
+          '<div class="qd">' + quando(c.em) + '</div>' +
+          '<div class="tx">' + limpo(c.texto) + '</div>' +
+          (c.resposta ? '<div class="rsp"><b>Resposta da Aquiete</b><p>' +
+              limpo(c.resposta) + '</p></div>' : '') +
+          '</div></div>';
+      }).join('');
+    })
+    .catch(function(){});
+
+  botao.onclick = function(){
+    var nome = document.getElementById('cnome').value.trim();
+    var texto = document.getElementById('ctexto').value.trim();
+    aviso.hidden = false; aviso.className = 'fcaviso';
+    if (!nome) { aviso.className = 'fcaviso ruim'; aviso.textContent = 'Diga como quer ser chamada.'; return; }
+    if (texto.length < 3) { aviso.className = 'fcaviso ruim'; aviso.textContent = 'Escreva seu comentário.'; return; }
+    botao.disabled = true; aviso.textContent = 'Enviando…';
+    fetch('/api/comentario', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pagina: PAGINA, nome: nome, texto: texto })
+    })
+    .then(function(r){ return r.json().then(function(j){ return { ok: r.ok, j: j }; }); })
+    .then(function(res){
+      if (!res.ok) { botao.disabled = false; aviso.className = 'fcaviso ruim';
+        aviso.textContent = res.j.erro || 'Não consegui enviar. Tenta de novo.'; return; }
+      aviso.className = 'fcaviso ok';
+      aviso.textContent = 'Recebido, obrigado. Seu comentário aparece aqui depois da leitura.';
+      document.getElementById('ctexto').value = '';
+    })
+    .catch(function(){ botao.disabled = false; aviso.className = 'fcaviso ruim';
+      aviso.textContent = 'Não consegui enviar. Tenta de novo.'; });
+  };
 })();
 </script>
 </body>
