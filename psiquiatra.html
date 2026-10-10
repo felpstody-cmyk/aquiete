@@ -125,6 +125,44 @@
   .fcaviso.ok{color:var(--green)} .fcaviso.ruim{color:var(--accent-dark)}
   .fcregra{font:12.5px/1.55 system-ui,sans-serif;color:var(--muted);margin:9px 0 0}
 
+
+  /* ---- coluna lateral (so no computador) ---- */
+  .comlateral{max-width:1180px;margin:0 auto;display:grid;
+     grid-template-columns:minmax(0,1fr) 330px;gap:40px;align-items:start}
+  .comlateral > main{margin:0;max-width:720px}
+  .lateral{position:sticky;top:18px;padding:22px 0 60px}
+  .lat{background:#fff;border:1px solid var(--line);border-radius:14px;
+     padding:20px;margin-bottom:14px}
+  .lat h3{font:700 21px/1.3 system-ui,sans-serif;text-align:center;margin:0 0 4px}
+  .lat h3 em{font-style:normal;color:var(--accent)}
+  .lat .sub{font:13.5px/1.5 system-ui,sans-serif;color:var(--muted);
+     text-align:center;margin:0 0 16px}
+  .latfoto{aspect-ratio:1/1;border-radius:12px;border:2px dashed #e3b3bd;
+     background:var(--soft);display:grid;place-items:center;text-align:center;
+     padding:16px;font:600 12.5px/1.5 system-ui,sans-serif;color:var(--accent-dark);
+     margin-bottom:16px}
+  .latbtn{display:block;text-align:center;background:var(--green);color:#fff;
+     text-decoration:none;border-radius:11px;padding:16px 14px;
+     font:800 16px/1.3 system-ui,sans-serif}
+  .latbtn small{display:block;font-weight:500;font-size:12.5px;opacity:.92;margin-top:4px}
+  .latselos{list-style:none;margin:16px 0 0;padding:0}
+  .latselos li{position:relative;padding:7px 0 7px 26px;
+     font:14px/1.45 system-ui,sans-serif;color:var(--ink)}
+  .latselos li:before{content:"✓";position:absolute;left:0;top:7px;
+     color:var(--green);font-weight:700}
+  .latnota{font:12px/1.5 system-ui,sans-serif;color:var(--muted);
+     text-align:center;margin:12px 0 0}
+  .latav h4{font:700 15px/1.3 system-ui,sans-serif;text-align:center;margin:0 0 12px}
+  .latav .linha{display:flex;align-items:center;gap:9px;margin-bottom:7px;
+     font:12.5px/1 system-ui,sans-serif;color:var(--muted)}
+  .latav .barra{flex:1;height:9px;border-radius:99px;background:#eceaef;overflow:hidden}
+  .latav .barra i{display:block;height:100%;background:var(--star);border-radius:99px}
+
+  @media (max-width:1023px){
+    .comlateral{display:block}
+    .lateral{display:none}
+  }
+
   @media (max-width:480px){
     .bar{letter-spacing:.18em;font-size:10.5px;padding:10px 14px}
     .marcalogo .palavra{font-size:27px}
@@ -150,6 +188,7 @@
     <span class="tagline">GOTAS FLORAIS</span>
   </a>
 </header>
+<div class="comlateral">
 <main>
 
 
@@ -313,6 +352,31 @@
 </section>
 
 </main>
+
+<aside class="lateral">
+  <div class="lat">
+    <h3>Pra hora em que <em>aperta</em></h3>
+    <p class="sub">3 gotas embaixo da língua</p>
+    <div class="latfoto">FOTO DO PRODUTO<br>os dois frascos, fundo claro</div>
+    <a class="latbtn" data-ir href="checkout.html?kit=2&amp;utm_source=advertorial&amp;utm_medium=psiquiatra&amp;utm_campaign=psiquiatra">
+      <span data-rotulo>Quero o compre 1, leve 2</span>
+      <small>Pix, cartão ou boleto · frete grátis</small>
+    </a>
+    <ul class="latselos">
+      <li>Sem tarja, não é medicamento</li>
+      <li>Não cria dependência</li>
+      <li>Manipulado em farmácia, em lote</li>
+      <li>Envio em até 2 dias úteis</li>
+    </ul>
+    <p class="latnota">Frete grátis a partir de 2 frascos</p>
+  </div>
+
+  <div class="lat latav" id="latav" hidden>
+    <h4>O que dizem</h4>
+    <div id="latavcorpo"></div>
+  </div>
+</aside>
+</div>
 <script>
   // contador de 24h, reinicia a cada carregamento
   (function(){
@@ -551,6 +615,30 @@
     if (document.visibilityState === 'hidden') mandar();
   });
   window.addEventListener('pagehide', mandar);
+})();
+</script>
+
+<script>
+/* A caixa de avaliacao da lateral so existe se houver comentario
+   aprovado de verdade. Enquanto nao houver, ela fica escondida: nota
+   inventada em pagina de saude nao entra. */
+(function(){
+  var caixa = document.getElementById('latav');
+  var corpo = document.getElementById('latavcorpo');
+  if (!caixa || !corpo) return;
+  fetch('/api/comentario?pagina=psiquiatra')
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      var n = (d.comentarios || []).length;
+      if (!n) return;                       /* sem comentario, sem caixa */
+      corpo.innerHTML =
+        '<div class="linha"><b style="font-size:15px;color:var(--ink)">' + n +
+        (n === 1 ? ' comentário' : ' comentários') + '</b></div>' +
+        '<p style="font:13px/1.55 system-ui,sans-serif;color:var(--muted);margin:6px 0 0">' +
+        'De quem comprou e escreveu aqui na página. Role até o fim pra ler.</p>';
+      caixa.hidden = false;
+    })
+    .catch(function(){});
 })();
 </script>
 </body>
