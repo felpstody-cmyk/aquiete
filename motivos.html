@@ -188,6 +188,11 @@
   /* comentarios */
   .coment{border:1px solid var(--linha);border-radius:14px;padding:18px 20px;margin-bottom:12px;
      background:#fff}
+  .coment{display:flex;gap:13px;align-items:flex-start}
+  .coment .bola{flex:none;width:42px;height:42px;border-radius:50%;
+     display:grid;place-items:center;color:#fff;
+     font:700 16px/1 sans-serif;letter-spacing:.01em;user-select:none}
+  .coment .corpo3{flex:1;min-width:0}
   .coment .quem3{font:700 14.5px/1.3 sans-serif;margin-bottom:2px}
   .coment .quando3{font:12px/1.3 sans-serif;color:var(--tinta3);margin-bottom:9px}
   .coment .texto3{font:16px/1.65 sans-serif;color:var(--tinta2)}
@@ -583,6 +588,22 @@
     var d = document.createElement('div'); d.textContent = t; return d.innerHTML;
   }
 
+  /* Sem foto de propósito: pedir imagem exigiria login ou upload, e aí
+     alguém tem que guardar e revisar arquivo. Inicial em círculo resolve,
+     e a cor sai do próprio nome, então a mesma pessoa tem sempre a mesma. */
+  var CORES = ['#C4485B','#9E3346','#7C5B86','#3F6B8C','#2E7D5B','#B4571A','#6B6B8C'];
+  function inicial(nome){
+    var n = (nome || '?').trim();
+    var p = n.split(/\s+/);
+    var i = p[0].charAt(0) + (p.length > 1 ? p[p.length - 1].charAt(0) : '');
+    return i.toUpperCase();
+  }
+  function cor(nome){
+    var soma = 0, n = nome || '';
+    for (var i = 0; i < n.length; i++) soma = (soma + n.charCodeAt(i) * (i + 7)) % 9973;
+    return CORES[soma % CORES.length];
+  }
+
   function desenhar(cs){
     if (!cs.length) {
       lista.innerHTML = '<div class="semcoment">Ainda não tem comentário por aqui. ' +
@@ -591,11 +612,15 @@
     }
     lista.innerHTML = cs.map(function(c){
       return '<div class="coment">' +
-        '<div class="quem3">' + limpo(c.nome) + '</div>' +
-        '<div class="quando3">' + quando(c.em) + '</div>' +
-        '<div class="texto3">' + limpo(c.texto) + '</div>' +
-        (c.resposta ? '<div class="loja3"><b>Resposta da Aquiete</b><p>' +
-            limpo(c.resposta) + '</p></div>' : '') +
+        '<div class="bola" style="background:' + cor(c.nome) + '" aria-hidden="true">' +
+          limpo(inicial(c.nome)) + '</div>' +
+        '<div class="corpo3">' +
+          '<div class="quem3">' + limpo(c.nome) + '</div>' +
+          '<div class="quando3">' + quando(c.em) + '</div>' +
+          '<div class="texto3">' + limpo(c.texto) + '</div>' +
+          (c.resposta ? '<div class="loja3"><b>Resposta da Aquiete</b><p>' +
+              limpo(c.resposta) + '</p></div>' : '') +
+        '</div>' +
         '</div>';
     }).join('');
   }
