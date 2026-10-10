@@ -409,6 +409,17 @@ td.sel,th.sel{width:34px;padding-right:0}
   </div>
 
   <div class="card">
+    <h3>Comentários <span class="tag" id="comResumo"></span></h3>
+    <p class="sub" style="margin:0;padding:4px 18px 14px">Quem lê os artigos pode comentar.
+       Nada aparece no site antes de você aprovar aqui. Aprovar com resposta publica a sua
+       resposta logo abaixo do comentário, como numa conversa.</p>
+    <div class="acoes" style="padding:0 18px 14px">
+      <button class="btn sec mini" id="comAtualizar">Atualizar</button>
+    </div>
+    <div class="tw"><table id="tbComentarios"></table></div>
+  </div>
+
+  <div class="card">
     <h3>Todos os carrinhos <span class="tag" id="carrinhosResumo"></span></h3>
     <p class="sub" style="margin:0 0 10px">Quem pagou fica 4 meses, pra dar conta de reclamação depois. Quem não pagou sai em 15 dias.</p>
     <p class="sub" style="margin:0;padding:4px 18px 14px">Todo mundo que digitou um e-mail válido no checkout, com a situação de cada um. É isso que explica a diferença entre "carrinhos novos" e "abandonados": quem ainda tá digitando, quem gerou o Pix e tá no prazo, e quem já pagou não aparece como abandonado.</p>
@@ -893,6 +904,7 @@ function sincronizar(silencioso){
     .then(function(res){
       var d = res[0], estadoNuvem = res[1];
       remotos = { pedidos: d.pedidos||[], metricas: d.metricas||{}, ativos: d.ativos||[], abandonados: d.abandonados||[], carrinhos: d.carrinhos||[], conversoesGoogle: d.conversoesGoogle||[], ambiente: d.ambiente||'', comportamento: d.comportamento||{ porPagina:{}, sessoes:[] }, resumos: d.resumos||[], precos: d.precos||null, zap: d.zap||null };
+      buscarComentarios();
       sincEm = new Date().toISOString();
       gravar(K.rem, remotos); gravar(K.sinc, sincEm);
 
@@ -1973,6 +1985,88 @@ function renderCarrinhos(){
     : '<tbody><tr><td class="vazio">Nenhum carrinho guardado ainda.</td></tr></tbody>';
 }
 
+/* ================= comentarios ================= */
+/* Vem de /api/admin-comentarios, nao de admin-dados: e uma lista que muda
+   por conta propria (qualquer visitante escreve) e nao precisa pesar a
+   carga do painel inteiro. */
+var comentarios = [];
+
+function urlComentarios(){
+  return cfg.url.replace(/\/?admin-dados\/?$/, '/admin-comentarios');
+}
+
+function buscarComentarios(){
+  if (!cfg.url || !cfg.token) return Promise.resolve();
+  /* O parametro aleatorio e pra furar o cache da CDN, que ja me devolveu
+     lista vazia com comentario guardado. */
+  return fetch(urlComentarios() + '?cb=' + Date.now(), { headers: { 'x-admin-token': cfg.token } })
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(j){ if (j) { comentarios = j.comentarios || []; renderComentarios(); } })
+    .catch(function(){});
+}
+
+function renderComentarios(){
+  var esperando = comentarios.filter(function(c){ return !c.aprovado; }).length;
+  el('comResumo').textContent = comentarios.length
+    ? (esperando ? esperando + ' esperando aprovação' : 'tudo aprovado')
+      + ' · ' + comentarios.length + ' no total'
+    : 'nenhum comentário ainda';
+
+  el('tbComentarios').innerHTML = comentarios.length
+    ? '<thead><tr><th>Quando</th><th>Página</th><th>Quem</th><th>Comentário</th>' +
+      '<th>Situação</th><th></th></tr></thead><tbody>' +
+      comentarios.map(function(c){
+        var acoes = c.aprovado
+          ? '<button class="lnk" data-com-esconder="'+c.id+'">esconder</button>'
+          : '<button class="lnk" data-com-ok="'+c.id+'">aprovar</button>' +
+            '<button class="lnk" data-com-resp="'+c.id+'">aprovar com resposta</button>';
+        return '<tr><td style="white-space:nowrap">' + esc(dataHoraBR(c.em)) + '</td>' +
+          '<td>' + esc(c.pagina || '') + '</td>' +
+          '<td><b>' + esc(c.nome || '—') + '</b></td>' +
+          '<td style="font-size:13px">' + esc(c.texto || '') +
+            (c.resposta ? '<br><span style="color:var(--rose-deep)">↳ ' + esc(c.resposta) + '</span>' : '') +
+          '</td>' +
+          '<td>' + (c.aprovado
+             ? '<span class="pill p-pago">no site</span>'
+             : '<span class="pill p-pendente">esperando</span>') + '</td>' +
+          '<td style="white-space:nowrap">' + acoes +
+            '<button class="lnk" data-com-rm="'+c.id+'">apagar</button></td></tr>';
+      }).join('') + '</tbody>'
+    : '<tbody><tr><td class="vazio">Nenhum comentário ainda. Eles chegam pelas páginas de artigo.</td></tr></tbody>';
+
+  function ligar(attr, fn){
+    Array.prototype.forEach.call(el('tbComentarios').querySelectorAll('[' + attr + ']'), function(b){
+      b.onclick = function(){ fn(b.getAttribute(attr)); };
+    });
+  }
+  ligar('data-com-ok', function(id){ acaoComentario(id, 'aprovar'); });
+  ligar('data-com-esconder', function(id){ acaoComentario(id, 'esconder'); });
+  ligar('data-com-rm', function(id){
+    if (confirm('Apagar este comentário de vez?')) acaoComentario(id, 'apagar');
+  });
+  ligar('data-com-resp', function(id){
+    var r = prompt('Sua resposta (aparece embaixo do comentário):');
+    if (r && r.trim()) acaoComentario(id, 'aprovar', r.trim());
+  });
+}
+
+function acaoComentario(id, acao, resposta){
+  if (!cfg.url || !cfg.token) { alert('Configure a conexão com o site em Ajustes primeiro.'); return; }
+  var corpo = { id: id, acao: acao };
+  if (resposta) corpo.resposta = resposta;
+  fetch(urlComentarios(), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-admin-token': cfg.token },
+    body: JSON.stringify(corpo)
+  })
+    .then(function(r){ return r.json().then(function(j){ return { ok: r.ok, j: j }; }); })
+    .then(function(res){
+      if (!res.ok || !res.j.ok) { alert('Não consegui: ' + (res.j.erro || 'erro desconhecido')); return; }
+      return buscarComentarios();
+    })
+    .catch(function(e){ alert('Falha de conexão: ' + e.message); });
+}
+
 /* ================= pedidos ================= */
 function atualizarBulkBar(){
   var ids = Object.keys(selecionados);
@@ -2610,7 +2704,8 @@ function renderZap(){
     + 'Conectar um dispositivo. O codigo de pareamento foi junto na notificacao.';
 }
 
-function render(){ renderAmbiente(); renderZap(); renderPainel(); renderAoVivo(); renderPedidos(); renderAbandonados(); renderCarrinhos(); renderConversoes(); renderClientes(); renderEstoque(); renderDesp(); renderRel(); }
+function render(){ renderAmbiente(); renderZap(); renderComentarios(); renderPainel(); renderAoVivo(); renderPedidos(); renderAbandonados(); renderCarrinhos(); renderConversoes(); renderClientes(); renderEstoque(); renderDesp(); renderRel(); }
+el('comAtualizar').onclick = function(){ buscarComentarios(); };
 el('p_data').value = hoje(); el('d_data').value = hoje(); el('l_data').value = hoje();
 el('l_custo').value = cfg.custo;
 el('p_kit').onchange();
