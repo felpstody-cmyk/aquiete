@@ -152,11 +152,6 @@
      color:var(--green);font-weight:700}
   .latnota{font:12px/1.5 system-ui,sans-serif;color:var(--muted);
      text-align:center;margin:12px 0 0}
-  .latav h4{font:700 15px/1.3 system-ui,sans-serif;text-align:center;margin:0 0 12px}
-  .latav .linha{display:flex;align-items:center;gap:9px;margin-bottom:7px;
-     font:12.5px/1 system-ui,sans-serif;color:var(--muted)}
-  .latav .barra{flex:1;height:9px;border-radius:99px;background:#eceaef;overflow:hidden}
-  .latav .barra i{display:block;height:100%;background:var(--star);border-radius:99px}
 
   @media (max-width:1023px){
     .comlateral{display:block}
@@ -371,9 +366,8 @@
     <p class="latnota">Frete grátis a partir de 2 frascos</p>
   </div>
 
-  <div class="lat latav" id="latav" hidden>
-    <h4>O que dizem</h4>
-    <div id="latavcorpo"></div>
+  <div class="lat">
+    <div class="latfoto" style="aspect-ratio:4/5;margin-bottom:0">FOTO DO PRODUTO<br>o frasco na mão, ou dentro da bolsa</div>
   </div>
 </aside>
 </div>
@@ -618,28 +612,5 @@
 })();
 </script>
 
-<script>
-/* A caixa de avaliacao da lateral so existe se houver comentario
-   aprovado de verdade. Enquanto nao houver, ela fica escondida: nota
-   inventada em pagina de saude nao entra. */
-(function(){
-  var caixa = document.getElementById('latav');
-  var corpo = document.getElementById('latavcorpo');
-  if (!caixa || !corpo) return;
-  fetch('/api/comentario?pagina=psiquiatra')
-    .then(function(r){ return r.json(); })
-    .then(function(d){
-      var n = (d.comentarios || []).length;
-      if (!n) return;                       /* sem comentario, sem caixa */
-      corpo.innerHTML =
-        '<div class="linha"><b style="font-size:15px;color:var(--ink)">' + n +
-        (n === 1 ? ' comentário' : ' comentários') + '</b></div>' +
-        '<p style="font:13px/1.55 system-ui,sans-serif;color:var(--muted);margin:6px 0 0">' +
-        'De quem comprou e escreveu aqui na página. Role até o fim pra ler.</p>';
-      caixa.hidden = false;
-    })
-    .catch(function(){});
-})();
-</script>
 </body>
 </html>
