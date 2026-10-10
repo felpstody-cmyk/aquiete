@@ -41,6 +41,13 @@
   to = "/motivos.html"
   status = 200
 
+# Advertorial so de anuncio. Quem decide quem entra e a edge function
+# so-anuncio.mjs: sem a chave no link, devolve 404.
+[[redirects]]
+  from = "/psiquiatra"
+  to = "/psiquiatra.html"
+  status = 200
+
 # ------------------------------------------------------------
 #  VARIÁVEIS DE AMBIENTE
 #  Configure em: Site configuration > Environment variables.

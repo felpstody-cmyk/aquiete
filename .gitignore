@@ -31,3 +31,7 @@ __pycache__/
 # Material de teste que nao vai pro ar (entrou uma vez por "git add -A")
 relato-agua.html
 img/relato-agua/
+
+# Rascunho de outro produto e configuracao local de pre-visualizacao
+myherby-br/
+.claude/
