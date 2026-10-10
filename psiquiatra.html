@@ -63,7 +63,7 @@
   .comments{margin-top:48px;border-top:1px solid var(--line);padding-top:18px;font-family:system-ui,sans-serif}
   .comments h3{font-size:18px;margin:0 0 12px}
   .c{display:flex;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}
-  .c .av{flex:0 0 38px;height:38px;border-radius:50%;background:#cfd8dc}
+  .c .av{flex:0 0 38px;height:38px;border-radius:50%;background:#cfd8dc;display:grid;place-items:center;color:#fff;font:700 14px/1 system-ui,sans-serif;user-select:none}
   .c .bubble{background:#f0f2f5;border-radius:14px;padding:8px 12px;font-size:15px;line-height:1.45}
   .c .name{font-weight:700;color:#385898;font-size:14px}
   .c .acts{font-size:12px;color:var(--muted);margin:4px 0 0 12px;font-weight:600}
@@ -296,9 +296,10 @@
   <div class="c reply"><div class="av"></div><div><div class="bubble"><div class="name">Lourdes Carvalho</div>Me ajuda sim! Tô usando há 3 meses e é o que eu pego na hora que o coração dispara. É super fácil de usar, não dá sono e não tive nenhum daqueles efeitos chatos do remédio que eu tomava antes.</div><div class="acts">Curtir · Responder</div></div></div>
   <div class="c"><div class="av"></div><div><div class="bubble"><div class="name">Débora Paiva</div>Dei pra minha irmã porque ela vivia tendo crise no trabalho e agora ela não para de falar disso kkkk. Diz que não sai mais de casa sem o frasco na bolsa.</div><div class="acts">Curtir · Responder</div></div></div>
 
+  <div id="listac"></div>
+
   <div class="cnovo">
     <h4>Deixe o seu</h4>
-    <div id="listac"></div>
     <div class="fc">
       <label for="cnome">Como você quer ser chamada</label>
       <input id="cnome" maxlength="40" autocomplete="name" placeholder="Seu primeiro nome">
@@ -382,9 +383,15 @@
     return (t[0].charAt(0) + (t.length > 1 ? t[t.length-1].charAt(0) : '')).toUpperCase();
   }
   function cor(n){
-    var soma = 0; n = n || '';
-    for (var i = 0; i < n.length; i++) soma = (soma + n.charCodeAt(i) * (i + 7)) % 9973;
-    return CORES[soma % CORES.length];
+    /* Espalha melhor que somar codigos: nomes parecidos caiam em cores
+       diferentes. Sem isto, quatro dos nove comentarios saiam no mesmo
+       roxo, um embaixo do outro. */
+    var h = 2166136261; n = n || '';
+    for (var i = 0; i < n.length; i++) {
+      h ^= n.charCodeAt(i);
+      h = (h + (h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24)) >>> 0;
+    }
+    return CORES[h % CORES.length];
   }
   function quando(ts){
     var m = Math.max(0, Math.round((Date.now() - ts) / 60000));
@@ -394,21 +401,52 @@
   }
   function limpo(t){ var d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
 
+  /* Pinta a inicial em toda bolinha vazia da pagina, lendo o nome que ja
+     esta no HTML. Assim os comentarios antigos ficam iguais aos novos sem
+     precisar mexer no texto deles. */
+  function pintarBolinhas(){
+    /* A cor sai do nome, mas se cair igual a da bolinha logo acima, anda
+       uma casa na paleta. Sem isso, com 9 nomes e 7 cores, tres ou quatro
+       saem iguais empilhados e parece defeito. */
+    var anterior = null;
+    document.querySelectorAll('.c .av').forEach(function(av){
+      var bolha = av.parentElement.querySelector('.name');
+      var nome = bolha ? bolha.textContent.trim() : '';
+      if (!nome) return;
+      var c = cor(nome);
+      if (c === anterior) {
+        var i = CORES.indexOf(c);
+        c = CORES[(i + 1) % CORES.length];
+      }
+      anterior = c;
+      if (!av.textContent.trim()) av.textContent = inicial(nome);
+      av.style.background = c;
+    });
+  }
+  pintarBolinhas();
+
   fetch('/api/comentario?pagina=' + PAGINA)
     .then(function(r){ return r.json(); })
     .then(function(d){
       var cs = d.comentarios || [];
+      /* Mesma marcacao dos que ja estao na pagina, pra entrarem na mesma
+         lista em vez de virarem um bloco separado la embaixo. */
       lista.innerHTML = cs.map(function(c){
-        return '<div class="creal">' +
-          '<div class="bola" style="background:' + cor(c.nome) + '" aria-hidden="true">' +
+        var bloco =
+          '<div class="c"><div class="av" style="background:' + cor(c.nome) + '">' +
             limpo(inicial(c.nome)) + '</div>' +
-          '<div class="corpo"><div class="nm">' + limpo(c.nome) + '</div>' +
-          '<div class="qd">' + quando(c.em) + '</div>' +
-          '<div class="tx">' + limpo(c.texto) + '</div>' +
-          (c.resposta ? '<div class="rsp"><b>Resposta da Aquiete</b><p>' +
-              limpo(c.resposta) + '</p></div>' : '') +
-          '</div></div>';
+          '<div><div class="bubble"><div class="name">' + limpo(c.nome) + '</div>' +
+            limpo(c.texto) + '</div>' +
+          '<div class="acts">' + quando(c.em) + '</div></div></div>';
+        if (c.resposta) {
+          bloco += '<div class="c reply"><div class="av" style="background:#C4485B">A</div>' +
+            '<div><div class="bubble"><div class="name">Aquiete</div>' +
+              limpo(c.resposta) + '</div>' +
+            '<div class="acts">Resposta da loja</div></div></div>';
+        }
+        return bloco;
       }).join('');
+      pintarBolinhas();
     })
     .catch(function(){});
 
