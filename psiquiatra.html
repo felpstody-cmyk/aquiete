@@ -266,7 +266,7 @@
     </div>
   </div>
   <div class="stock">* Oferta por tempo limitado</div>
-  <div class="timer"><div><b class="h">24</b><span>HORAS</span></div><div><b class="m">00</b><span>MIN</span></div><div><b class="s">00</b><span>SEG</span></div></div>
+  <div class="timer"><div><b class="h">--</b><span>HORAS</span></div><div><b class="m">00</b><span>MIN</span></div><div><b class="s">00</b><span>SEG</span></div></div>
   <a class="cta" data-ir href="checkout.html?kit=2&amp;utm_source=advertorial&amp;utm_medium=psiquiatra&amp;utm_campaign=psiquiatra"><span data-rotulo>Quero o compre 1, leve 2</span><small>Pix, cart&atilde;o ou boleto &middot; compra segura</small></a>
 </div>
 
@@ -324,7 +324,7 @@
     </div>
   </div>
   <div class="stock">* Oferta por tempo limitado</div>
-  <div class="timer"><div><b class="h">24</b><span>HORAS</span></div><div><b class="m">00</b><span>MIN</span></div><div><b class="s">00</b><span>SEG</span></div></div>
+  <div class="timer"><div><b class="h">--</b><span>HORAS</span></div><div><b class="m">00</b><span>MIN</span></div><div><b class="s">00</b><span>SEG</span></div></div>
   <a class="cta" data-ir href="checkout.html?kit=2&amp;utm_source=advertorial&amp;utm_medium=psiquiatra&amp;utm_campaign=psiquiatra"><span data-rotulo>Quero o compre 1, leve 2</span><small>Pix, cart&atilde;o ou boleto &middot; compra segura</small></a>
 </div>
 
@@ -380,12 +380,19 @@
 </aside>
 </div>
 <script>
-  // contador de 24h, reinicia a cada carregamento
+  // conta até a meia-noite e começa de novo no dia seguinte.
+  // Antes reiniciava em 24h a cada carregamento: quem dava F5 via o
+  // relógio voltar pro começo.
   (function(){
-    var end = Date.now() + 24*3600*1000;
+    function meiaNoite(){
+      var d = new Date(); d.setHours(24,0,0,0); return d.getTime();
+    }
+    var end = meiaNoite();
     function pad(n){return (n<10?'0':'')+n}
     function tick(){
-      var t = Math.max(0, Math.floor((end-Date.now())/1000));
+      var t = Math.floor((end-Date.now())/1000);
+      // virou o dia com a aba aberta: pega a meia-noite seguinte
+      if (t <= 0) { end = meiaNoite(); t = Math.floor((end-Date.now())/1000); }
       var h=pad(Math.floor(t/3600)), m=pad(Math.floor(t%3600/60)), s=pad(t%60);
       document.querySelectorAll('.timer').forEach(function(el){
         el.querySelector('.h').textContent=h; el.querySelector('.m').textContent=m; el.querySelector('.s').textContent=s;
