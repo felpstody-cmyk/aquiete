@@ -34,8 +34,9 @@
   .meta{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;font:14px system-ui,sans-serif;color:var(--muted);border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:12px 0;margin-bottom:22px}
   .stars{color:var(--star);letter-spacing:2px}
   .author{display:flex;align-items:center;gap:10px}
-  .avatar{width:40px;height:40px;border-radius:50%;background:#ddd;display:grid;place-items:center;font-size:11px;color:#777}
-  .avatar img{width:100%;height:100%;border-radius:50%;object-fit:cover;object-position:50% 22%}
+  .avatar{width:40px;height:40px;border-radius:50%;background:#ddd;display:grid;place-items:center;font-size:11px;color:#777;overflow:hidden;position:relative}
+  .avatar img{position:absolute;width:195%;height:195%;max-width:none;
+     left:-45%;top:-15%;object-fit:cover}
   .ph{background:var(--soft);border:2px dashed #e3b3bd;border-radius:10px;color:var(--accent-dark);font:600 14px system-ui,sans-serif;display:grid;place-items:center;text-align:center;padding:16px;margin:22px 0}
   .ph.hero{aspect-ratio:4/3}
   figure{margin:22px 0}
