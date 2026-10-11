@@ -72,18 +72,29 @@ export async function enviarZap({ telefone, texto }) {
   const { provedor, base, key } = config()
   if (!base) return { enviado: false, erro: 'falta ZAP_URL' }
 
+  // Na WAME da pra perguntar o endereco certo antes de mandar. Nos
+  // outros provedores segue o numero simples.
+  let destino = to
+  if (provedor === 'wame') {
+    const real = await enderecoReal(telefone)
+    if (real && real.existe === false) {
+      return { enviado: false, erro: 'numero nao tem WhatsApp' }
+    }
+    if (real?.jid) destino = real.jid
+  }
+
   let url, corpo, headers = { 'Content-Type': 'application/json' }
   if (provedor === 'evolution') {
     url = `${base}/message/sendText/${key}`
-    corpo = { number: to, text: texto }
+    corpo = { number: destino, text: texto }
     headers.apikey = process.env.ZAP_TOKEN || ''
   } else if (provedor === 'zapi') {
     url = `${base}/instances/${key}/token/${process.env.ZAP_TOKEN}/send-text`
-    corpo = { phone: to, message: texto }
+    corpo = { phone: destino, message: texto }
     if (process.env.ZAP_CLIENT) headers['Client-Token'] = process.env.ZAP_CLIENT
   } else {
     url = `${base}/${key}/message/text`
-    corpo = { to, text: texto, provider: 'whatsapp' }
+    corpo = { to: destino, text: texto, provider: 'whatsapp' }
   }
 
   try {
@@ -132,6 +143,36 @@ async function chamarInstancia(caminho, metodo = 'GET', corpo = null) {
   } catch (e) {
     return { ok: false, erro: e.message }
   }
+}
+
+/**
+ * Pergunta ao WhatsApp qual e o endereco real de um numero.
+ *
+ * Existe porque "55 + o que a pessoa digitou" nem sempre e o endereco
+ * certo. No Brasil, muita conta esta registrada SEM o nono digito, e o
+ * WhatsApp responde com o endereco canonico:
+ *
+ *   mandei  5549999352933   ->   real  554999352933@s.whatsapp.net
+ *
+ * O app do celular resolve isso sozinho. A API nao: ela manda pro
+ * endereco que receber. Perguntar antes custa uma chamada rapida e
+ * elimina uma classe inteira de "a API disse que enviou e nao chegou".
+ *
+ * De quebra, descobre quem NAO tem WhatsApp — que antes virava um
+ * envio aceito pra lugar nenhum, sem erro nenhum pra ninguem ver.
+ *
+ * Se a checagem falhar, devolve null e o envio segue com o numero
+ * simples: melhor tentar do jeito antigo do que nao mandar nada.
+ */
+export async function enderecoReal(telefone) {
+  const numero = numeroZap(telefone)
+  if (!numero) return null
+  const r = await chamarInstancia(`/actions/registered?number=${numero}`)
+  if (!r.ok) return null
+  const item = r.dados?.['0'] || r.dados?.[0] || null
+  if (!item) return null
+  if (item.exists === false) return { existe: false }
+  return { existe: true, jid: String(item.jid || '') }
 }
 
 /** O chip da loja ainda esta conectado? Chamada barata, feita pra isso. */

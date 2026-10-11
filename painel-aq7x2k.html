@@ -549,6 +549,22 @@ td.sel,th.sel{width:34px;padding-right:0}
   </div>
 
   <div class="card">
+    <h3>Imagens do site <span class="tag" id="imgResumo"></span></h3>
+    <p class="sub" style="margin:0;padding:4px 18px 14px">Mande a foto daqui e ela fica no ar na hora,
+       sem publicar o site de novo. Antes de subir, o próprio navegador reduz pra no máximo 1600px e
+       converte pra webp, pra não pesar em quem abre pelo celular. Depois é só copiar o endereço.</p>
+    <div class="body">
+      <div class="acoes">
+        <input type="file" id="imgArquivo" accept="image/png,image/jpeg,image/webp" style="max-width:100%">
+        <button class="btn" id="imgEnviar" type="button" disabled>Enviar</button>
+        <button class="btn sec mini" id="imgAtualizar" type="button">Atualizar lista</button>
+      </div>
+      <p class="sub" style="margin:12px 0 0" id="imgMsg"></p>
+    </div>
+    <div class="tw"><table id="tbImagens"></table></div>
+  </div>
+
+  <div class="card">
     <h3>Custos e meta</h3>
     <div class="body">
       <div class="grid">
@@ -905,6 +921,7 @@ function sincronizar(silencioso){
       var d = res[0], estadoNuvem = res[1];
       remotos = { pedidos: d.pedidos||[], metricas: d.metricas||{}, ativos: d.ativos||[], abandonados: d.abandonados||[], carrinhos: d.carrinhos||[], conversoesGoogle: d.conversoesGoogle||[], ambiente: d.ambiente||'', comportamento: d.comportamento||{ porPagina:{}, sessoes:[] }, resumos: d.resumos||[], precos: d.precos||null, zap: d.zap||null };
       buscarComentarios();
+      buscarImagens();
       sincEm = new Date().toISOString();
       gravar(K.rem, remotos); gravar(K.sinc, sincEm);
 
@@ -2067,6 +2084,163 @@ function acaoComentario(id, acao, resposta){
     .catch(function(e){ alert('Falha de conexão: ' + e.message); });
 }
 
+/* ================= imagens ================= */
+/* Trocar foto do site sem deploy. Cada publicacao gasta credito no
+   Netlify, e trocar uma imagem nao deveria custar um build inteiro. O
+   arquivo vai pra um blob e sai pelo endereco /api/imagem/<id>. */
+var imagens = [];
+
+function urlImagens(){
+  return cfg.url.replace(/\/?admin-dados\/?$/, '/admin-imagem');
+}
+function origemSite(){
+  try { return new URL(cfg.url).origin; } catch(e){ return ''; }
+}
+function tamanhoBonito(n){
+  return n > 1048576 ? (n/1048576).toFixed(1) + ' MB' : Math.round(n/1024) + ' KB';
+}
+
+function buscarImagens(){
+  if (!cfg.url || !cfg.token) return Promise.resolve();
+  /* mesmo cache-buster dos comentarios: a CDN ja me devolveu lista
+     velha com coisa nova guardada */
+  return fetch(urlImagens() + '?cb=' + Date.now(), { headers: { 'x-admin-token': cfg.token } })
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(j){ if (j) { imagens = j.imagens || []; renderImagens(); } })
+    .catch(function(){});
+}
+
+function renderImagens(){
+  el('imgResumo').textContent = imagens.length
+    ? imagens.length + (imagens.length === 1 ? ' imagem' : ' imagens')
+    : 'nenhuma ainda';
+
+  var origem = origemSite();
+  el('tbImagens').innerHTML = imagens.length
+    ? '<thead><tr><th></th><th>Nome</th><th>Peso</th><th>Endereço no site</th><th></th></tr></thead><tbody>' +
+      imagens.map(function(im){
+        return '<tr>' +
+          '<td><img src="' + esc(origem + im.url) + '" alt="" loading="lazy" ' +
+            'style="width:54px;height:54px;object-fit:cover;border-radius:8px;display:block"></td>' +
+          '<td><b>' + esc(im.nome) + '</b><br><span class="sub">' + esc(dataHoraBR(im.em)) +
+            (im.largura ? ' · ' + im.largura + '×' + im.altura : '') + '</span></td>' +
+          '<td style="white-space:nowrap">' + tamanhoBonito(im.bytes) + '</td>' +
+          '<td style="font-size:12px;word-break:break-all">' + esc(im.url) + '</td>' +
+          '<td style="white-space:nowrap">' +
+            '<button class="lnk" data-img-copiar="' + im.id + '">copiar endereço</button>' +
+            '<button class="lnk" data-img-rm="' + im.id + '">apagar</button></td></tr>';
+      }).join('') + '</tbody>'
+    : '<tbody><tr><td class="vazio">Nenhuma imagem ainda. Mande a primeira aí em cima.</td></tr></tbody>';
+
+  function ligar(attr, fn){
+    Array.prototype.forEach.call(el('tbImagens').querySelectorAll('[' + attr + ']'), function(botao){
+      botao.onclick = function(){ fn(botao.getAttribute(attr)); };
+    });
+  }
+  ligar('data-img-copiar', function(id){
+    var im = imagens.filter(function(x){ return x.id === id; })[0];
+    if (!im) return;
+    var endereco = origemSite() + im.url;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(endereco)
+        .then(function(){ el('imgMsg').textContent = 'Endereço copiado: ' + endereco; })
+        .catch(function(){ prompt('Copie o endereço:', endereco); });
+    } else {
+      prompt('Copie o endereço:', endereco);
+    }
+  });
+  ligar('data-img-rm', function(id){
+    if (!confirm('Apagar esta imagem? Onde ela estiver usada no site vai virar um quadrado vazio.')) return;
+    fetch(urlImagens() + '?id=' + encodeURIComponent(id), {
+      method: 'DELETE', headers: { 'x-admin-token': cfg.token }
+    })
+      .then(function(r){ return r.json().then(function(j){ return { ok: r.ok, j: j }; }); })
+      .then(function(res){
+        if (!res.ok || !res.j.ok) { alert('Não consegui: ' + (res.j.erro || 'erro desconhecido')); return; }
+        return buscarImagens();
+      })
+      .catch(function(e){ alert('Falha de conexão: ' + e.message); });
+  });
+}
+
+/* Reduz e converte antes de mandar: aqui e de graca, e evita guardar um
+   arquivo de 6 MB que ninguem precisa baixar. */
+function prepararImagem(arq){
+  return new Promise(function(ok, falhou){
+    var leitor = new FileReader();
+    leitor.onerror = function(){ falhou(new Error('não consegui ler o arquivo')); };
+    leitor.onload = function(){
+      var img = new Image();
+      img.onerror = function(){ falhou(new Error('esse arquivo não abre como imagem')); };
+      img.onload = function(){
+        var MAX = 1600;
+        var escala = Math.min(1, MAX / Math.max(img.width, img.height));
+        var w = Math.max(1, Math.round(img.width * escala));
+        var h = Math.max(1, Math.round(img.height * escala));
+        var tela = document.createElement('canvas');
+        tela.width = w; tela.height = h;
+        tela.getContext('2d').drawImage(img, 0, 0, w, h);
+        tela.toBlob(function(saida){
+          if (!saida) { falhou(new Error('não consegui converter a imagem')); return; }
+          ok({ blob: saida, largura: w, altura: h });
+        }, 'image/webp', 0.86);
+      };
+      img.src = leitor.result;
+    };
+    leitor.readAsDataURL(arq);
+  });
+}
+
+function paraBase64(blob){
+  return new Promise(function(ok, falhou){
+    var l = new FileReader();
+    l.onerror = function(){ falhou(new Error('não consegui ler o que foi convertido')); };
+    l.onload = function(){ ok(String(l.result).split(',')[1]); };
+    l.readAsDataURL(blob);
+  });
+}
+
+function enviarImagem(){
+  var entrada = el('imgArquivo');
+  var arq = entrada.files && entrada.files[0];
+  if (!arq) return;
+  if (!cfg.url || !cfg.token) { alert('Configure a conexão com o site aqui em cima primeiro.'); return; }
+
+  var botao = el('imgEnviar');
+  botao.disabled = true;
+  el('imgMsg').textContent = 'Preparando…';
+
+  prepararImagem(arq)
+    .then(function(pronta){
+      el('imgMsg').textContent = 'Enviando ' + tamanhoBonito(pronta.blob.size) + '…';
+      return paraBase64(pronta.blob).then(function(b64){
+        return fetch(urlImagens(), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-admin-token': cfg.token },
+          body: JSON.stringify({
+            nome: arq.name.replace(/\.[^.]+$/, ''),
+            tipo: 'image/webp',
+            largura: pronta.largura,
+            altura: pronta.altura,
+            dados: b64
+          })
+        });
+      });
+    })
+    .then(function(r){ return r.json().then(function(j){ return { ok: r.ok, j: j }; }); })
+    .then(function(res){
+      botao.disabled = false;
+      if (!res.ok || !res.j.ok) {
+        el('imgMsg').textContent = 'Não deu: ' + (res.j.erro || 'erro desconhecido');
+        return;
+      }
+      el('imgMsg').textContent = 'Pronto. O endereço está na lista aqui embaixo.';
+      entrada.value = '';
+      return buscarImagens();
+    })
+    .catch(function(e){ botao.disabled = false; el('imgMsg').textContent = 'Falhou: ' + e.message; });
+}
+
 /* ================= pedidos ================= */
 function atualizarBulkBar(){
   var ids = Object.keys(selecionados);
@@ -2706,6 +2880,12 @@ function renderZap(){
 
 function render(){ renderAmbiente(); renderZap(); renderComentarios(); renderPainel(); renderAoVivo(); renderPedidos(); renderAbandonados(); renderCarrinhos(); renderConversoes(); renderClientes(); renderEstoque(); renderDesp(); renderRel(); }
 el('comAtualizar').onclick = function(){ buscarComentarios(); };
+el('imgAtualizar').onclick = function(){ buscarImagens(); };
+el('imgEnviar').onclick = enviarImagem;
+el('imgArquivo').onchange = function(){
+  el('imgEnviar').disabled = !(this.files && this.files.length);
+  el('imgMsg').textContent = '';
+};
 el('p_data').value = hoje(); el('d_data').value = hoje(); el('l_data').value = hoje();
 el('l_custo').value = cfg.custo;
 el('p_kit').onchange();
