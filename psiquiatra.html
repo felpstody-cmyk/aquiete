@@ -166,6 +166,18 @@
     .lateral{display:none}
   }
 
+  /* aviso de cookie: mesmo texto e mesma chave das outras paginas */
+  .cookies{position:fixed;left:0;right:0;bottom:0;z-index:40;background:#26222B;
+     color:#EADAD6;font:14px/1.45 system-ui,sans-serif;padding:13px 16px;
+     display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;justify-content:center}
+  .cookies[hidden]{display:none}
+  .cookies p{flex:1 1 230px;margin:0}
+  .cookies a{color:#F0A8B4}
+  .cookies button{border:0;border-radius:999px;padding:9px 18px;
+     font:700 14px system-ui,sans-serif;cursor:pointer}
+  .cookies .sim-bt{background:var(--accent);color:#fff}
+  .cookies .nao-bt{background:transparent;color:#EADAD6;border:1px solid #6B504B}
+
   @media (max-width:480px){
     .bar{letter-spacing:.18em;font-size:10.5px;padding:10px 14px}
     .marcalogo .palavra{font-size:27px}
@@ -624,6 +636,66 @@
     if (document.visibilityState === 'hidden') mandar();
   });
   window.addEventListener('pagehide', mandar);
+})();
+</script>
+
+<!-- Mesmo consentimento das outras paginas (chave aq_cookies): sem aceitar, o Pixel nao carrega -->
+<div class="cookies" id="cookies" hidden>
+  <p>Usamos cookies pra medir nossos anúncios. <a href="termos.html">Saiba mais</a>.</p>
+  <button class="nao-bt" type="button" id="ckNao">Só o necessário</button>
+  <button class="sim-bt" type="button" id="ckSim">Aceitar</button>
+</div>
+
+<script>
+/* Pixel do Meta. Antes esta pagina nao tinha nenhum: o anuncio apontava
+   pra ca e o Meta nao sabia que a visita existiu, entao nao dava pra
+   montar publico de quem leu o artigo. */
+(function(){
+  var META_PIXEL_ID = '1991105264740384';
+  var cookies = document.getElementById('cookies');
+  var carregado = false;
+
+  function lerConsent(){ try { return localStorage.getItem('aq_cookies'); } catch(e){ return null; } }
+
+  function carregarPixel(){
+    if (carregado || lerConsent() !== 'aceito') return;
+    carregado = true;
+    /* eslint-disable */
+    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+    n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}
+    (window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+    /* eslint-enable */
+    fbq('init', META_PIXEL_ID);
+    fbq('track', 'PageView');
+    fbq('track', 'ViewContent', { content_name: 'Aquiete 30ml', content_type: 'product' });
+  }
+
+  function decidir(valor){
+    try { localStorage.setItem('aq_cookies', valor); } catch(e){}
+    if (cookies) cookies.hidden = true;
+    carregarPixel();
+  }
+
+  if (!lerConsent() && cookies) cookies.hidden = false;
+  var sim = document.getElementById('ckSim'), nao = document.getElementById('ckNao');
+  if (sim) sim.addEventListener('click', function(){ decidir('aceito'); });
+  if (nao) nao.addEventListener('click', function(){ decidir('essencial'); });
+  carregarPixel();
+
+  /* Intencao de compra, nunca carga de pagina. Mesma trava aq_ic do
+     checkout: quem clica aqui ja disparou e nao conta de novo la. */
+  document.querySelectorAll('[data-ir]').forEach(function(a){
+    a.addEventListener('click', function(){
+      if (!carregado || !window.fbq) return;
+      try {
+        if (sessionStorage.getItem('aq_ic')) return;
+        sessionStorage.setItem('aq_ic','1');
+      } catch(e){}
+      fbq('track', 'InitiateCheckout');
+    });
+  });
 })();
 </script>
 
