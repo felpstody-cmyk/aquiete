@@ -1402,11 +1402,38 @@ try { if (!aqEmTeste()) {
  * lá, e não pode disparar de novo ao chegar aqui. Sem isso o Meta contava
  * duas pessoas onde tinha uma — o custo por evento aparecia pela metade e
  * a otimização aprendia com número inflado. */
+function aqIdEvento(prefixo){
+  return prefixo + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,9);
+}
+function aqCookie(nome){
+  var m = document.cookie.match(new RegExp('(^|; )' + nome + '=([^;]*)'));
+  return m ? decodeURIComponent(m[2]) : null;
+}
+/* Caminho do próprio domínio pro Meta. O pixel só liga pra quem aceita o
+   cookie, e isso era 12% do movimento. Quem clicou "Só o necessário" é
+   barrado no servidor. O id é o mesmo dos dois lados, pra deduplicar. */
+function aqSinal(nome, id){
+  try {
+    var consent = null;
+    try { consent = localStorage.getItem('aq_cookies'); } catch (e) {}
+    fetch('/api/sinal', {
+      method: 'POST', keepalive: true,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        evento: nome, id: id, pagina: location.href,
+        consent: consent, fbp: aqCookie('_fbp'), fbc: aqCookie('_fbc')
+      })
+    }).catch(function(){});
+  } catch (e) { /* medição nunca derruba a página */ }
+}
+
 function aqIniciouCheckout(){
   try {
     if (sessionStorage.getItem('aq_ic')) return;
     sessionStorage.setItem('aq_ic', '1');
-    if (window.fbq) fbq('track', 'InitiateCheckout');
+    var id = aqIdEvento('ic');
+    aqSinal('InitiateCheckout', id);
+    if (window.fbq) fbq('track', 'InitiateCheckout', {}, { eventID: id });
     if (window.gtag) gtag('event', 'begin_checkout');
   } catch (e) { /* medição nunca derruba a página */ }
 }

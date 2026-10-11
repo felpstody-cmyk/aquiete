@@ -2530,17 +2530,28 @@ body::after{
       dispatchEvent(new CustomEvent('aq:consentimento', { detail: valor }));
     }
 
-    d.getElementById('ckSim').addEventListener('click', function(){ responder('aceito'); });
-    d.getElementById('ckNao').addEventListener('click', function(){ responder('essencial'); });
-    d.getElementById('ckX').addEventListener('click', fechar);
-    d.getElementById('ckCta').addEventListener('click', function(){
+    /* Um getElementById que volta null derruba o script inteiro, e tudo
+       que vem depois para de rodar. Foi exatamente o que acontecia: o
+       ckCode saiu do html e levou junto o Pixel e a tag do Google, que
+       ficam mais abaixo neste mesmo bloco. */
+    function ligar(id, evento, fn){
+      var e = d.getElementById(id);
+      if (e) e.addEventListener(evento, fn);
+      return e;
+    }
+
+    ligar('ckSim', 'click', function(){ responder('aceito'); });
+    ligar('ckNao', 'click', function(){ responder('essencial'); });
+    ligar('ckX', 'click', fechar);
+    ligar('ckCta', 'click', function(){
       guardar('aq_cupom', CODIGO); fechar();
     });
 
-    d.getElementById('ckCode').addEventListener('click', function(){
+    ligar('ckCode', 'click', function(){
       guardar('aq_cupom', CODIGO);
       var aviso = d.getElementById('ckCopy');
       var pronto = function(){
+        if (!aviso) return;
         aviso.textContent = 'copiado!';
         setTimeout(function(){ aviso.textContent = 'copiar'; }, 2200);
       };
@@ -2548,7 +2559,7 @@ body::after{
       else pronto();
     });
 
-    d.getElementById('ckForm').addEventListener('submit', function(ev){
+    ligar('ckForm', 'submit', function(ev){
       ev.preventDefault();
       var campo = d.getElementById('ckMail');
       var msg   = d.getElementById('ckMsg');
@@ -2609,6 +2620,38 @@ body::after{
       try { return localStorage.getItem('aq_cookies') === 'aceito'; } catch(e){ return false; }
     }
 
+    /* O mesmo id vai pelos dois caminhos. E assim que o Meta sabe que o
+       evento do servidor e o do navegador sao o mesmo, e nao dois. */
+    function idEvento(prefixo){
+      return prefixo + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,9);
+    }
+    function cookieDe(nome){
+      var m = document.cookie.match(new RegExp('(^|; )' + nome + '=([^;]*)'));
+      return m ? decodeURIComponent(m[2]) : null;
+    }
+    /* Caminho do proprio dominio. O pixel so liga pra quem aceita o
+       cookie: medido de 13/09 a 10/10, isso era 12% do movimento. Aqui
+       vai o valor cru do consentimento, nao o booleano do aceitou(),
+       porque quem clicou "So o necessario" precisa ser barrado e quem
+       nao respondeu nada, nao. */
+    function sinal(nome, id){
+      try {
+        var consent = null;
+        try { consent = localStorage.getItem('aq_cookies'); } catch(e){}
+        fetch('/api/sinal', {
+          method: 'POST', keepalive: true,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            evento: nome, id: id, pagina: location.href,
+            consent: consent, fbp: cookieDe('_fbp'), fbc: cookieDe('_fbc')
+          })
+        }).catch(function(){});
+      } catch(e){}
+    }
+
+    var idConteudo = idEvento('vc');
+    sinal('ViewContent', idConteudo);
+
     function script(src){
       var s = d.createElement('script'); s.async = true; s.src = src;
       d.head.appendChild(s); return s;
@@ -2628,7 +2671,9 @@ body::after{
         /* eslint-enable */
         fbq('init', META_PIXEL_ID);
         fbq('track', 'PageView');
-        fbq('track', 'ViewContent', { content_name: 'Aquiete 30ml', content_type: 'product' });
+        fbq('track', 'ViewContent',
+            { content_name: 'Aquiete 30ml', content_type: 'product' },
+            { eventID: idConteudo });
       }
 
       /* Cookie liberado: avisa a tag do Google, que ja esta na pagina. */
@@ -2672,12 +2717,15 @@ body::after{
     /* Cliques nos CTAs: só contam se o rastreador estiver carregado. */
     d.querySelectorAll('[data-cta]').forEach(function(a){
       a.addEventListener('click', function(){
-        if (!carregado) return;
         /* Mesma trava do checkout (aq_ic): um evento por pessoa. Quem clica
-           aqui ja disparou, entao ao chegar no checkout nao dispara de novo. */
+           aqui ja disparou, entao ao chegar no checkout nao dispara de novo.
+           Ela vem antes dos dois envios, senao o servidor contaria cliques
+           repetidos que o navegador ja estava segurando. */
         try { if (sessionStorage.getItem('aq_ic')) return; sessionStorage.setItem('aq_ic','1'); } catch(e){}
-        if (window.fbq)  fbq('track', 'InitiateCheckout');
-        if (window.gtag) gtag('event', 'begin_checkout', { origem: a.dataset.cta });
+        var idCompra = idEvento('ic');
+        sinal('InitiateCheckout', idCompra);
+        if (carregado && window.fbq)  fbq('track', 'InitiateCheckout', {}, { eventID: idCompra });
+        if (carregado && window.gtag) gtag('event', 'begin_checkout', { origem: a.dataset.cta });
       });
     });
 
