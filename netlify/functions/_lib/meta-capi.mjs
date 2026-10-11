@@ -33,6 +33,61 @@ const hashTelefone = (tel) => {
 const semNulos = (obj) =>
   Object.fromEntries(Object.entries(obj).filter(([, v]) => v != null))
 
+/**
+ * Quem é a pessoa, do jeito que o Meta exige: tudo que identifica vai
+ * em SHA-256. IP, navegador e os cookies _fbp/_fbc vão crus, porque
+ * nesses campos o Meta pede assim — e são eles que deixam o Meta casar
+ * a pessoa com o anúncio que ela viu.
+ */
+function identidade(cliente, rede = {}) {
+  return semNulos({
+    em: [hash(cliente.email)].filter(Boolean),
+    ph: [hashTelefone(cliente.telefone)].filter(Boolean),
+    fn: [hash(String(cliente.nome).split(' ')[0])].filter(Boolean),
+    ln: [hash(String(cliente.nome).split(' ').slice(-1)[0])].filter(Boolean),
+    ct: [hash(cliente.cidade)].filter(Boolean),
+    zp: [hash(String(cliente.cep).replace(/\D/g, ''))].filter(Boolean),
+    country: [hash('br')],
+    client_ip_address: rede.ip || null,
+    client_user_agent: rede.ua || null,
+    fbp: rede.fbp || null,
+    fbc: rede.fbc || null,
+  })
+}
+
+/**
+ * Pix gerado, mandado pelo servidor.
+ *
+ * Esse é o evento que a campanha otimiza hoje. Pelo navegador ele só
+ * existia pra quem aceitou o cookie: 13 no mês inteiro. O `event_id` é
+ * a referência do pedido, igual à que o checkout usa no eventID, então
+ * o Meta junta os dois em vez de contar duas vezes.
+ */
+export async function enviarPagamento({ referencia, total, cliente, kitId, unidades, ip, ua, fbp, fbc }) {
+  const pixel = process.env.META_PIXEL_ID
+  const token = process.env.META_CAPI_TOKEN
+  if (!pixel || !token) return { enviado: false, motivo: 'sem credenciais' }
+
+  const evento = {
+    event_name: 'AddPaymentInfo',
+    event_time: Math.floor(Date.now() / 1000),
+    event_id: referencia,
+    action_source: 'website',
+    event_source_url: 'https://aquieteagora.com.br/checkout',
+    user_data: identidade(cliente, { ip, ua, fbp, fbc }),
+    custom_data: {
+      currency: 'BRL',
+      value: Number(total),
+      content_type: 'product',
+      content_ids: [`aquiete-kit-${kitId}`],
+      contents: [{ id: `aquiete-kit-${kitId}`, quantity: unidades, item_price: Number((total / unidades).toFixed(2)) }],
+      num_items: unidades,
+    },
+  }
+
+  return postar(evento, pixel, token)
+}
+
 export async function enviarCompra({ referencia, total, cliente, kitId, unidades }) {
   const pixel = process.env.META_PIXEL_ID
   const token = process.env.META_CAPI_TOKEN
@@ -49,15 +104,7 @@ export async function enviarCompra({ referencia, total, cliente, kitId, unidades
     event_id: referencia,
     action_source: 'website',
     event_source_url: 'https://aquieteagora.com.br/checkout',
-    user_data: semNulos({
-      em: [hash(cliente.email)].filter(Boolean),
-      ph: [hashTelefone(cliente.telefone)].filter(Boolean),
-      fn: [hash(String(cliente.nome).split(' ')[0])].filter(Boolean),
-      ln: [hash(String(cliente.nome).split(' ').slice(-1)[0])].filter(Boolean),
-      ct: [hash(cliente.cidade)].filter(Boolean),
-      zp: [hash(String(cliente.cep).replace(/\D/g, ''))].filter(Boolean),
-      country: [hash('br')],
-    }),
+    user_data: identidade(cliente),
     custom_data: {
       currency: 'BRL',
       value: Number(total),

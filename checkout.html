@@ -1103,6 +1103,11 @@ img,svg{display:block;max-width:100%}
           catch(e){ return null; }
         })(),
         metodo: d.querySelector('.pay input:checked').value,
+        // Vao junto pro servidor mandar o Pix gerado pro Meta com a
+        // mesma identificacao que o navegador usaria.
+        consent: (function(){ try { return localStorage.getItem('aq_cookies'); } catch(e){ return null; } })(),
+        fbp: aqCookie('_fbp'),
+        fbc: aqCookie('_fbc'),
         cliente: {
           nome: el('nome').value, cpf: el('cpf').value,
           email: el('email').value, telefone: el('tel').value,

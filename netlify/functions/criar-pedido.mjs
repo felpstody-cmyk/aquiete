@@ -15,6 +15,7 @@ import { marcarCarrinhoComPedido, guardarCliqueDoPedido } from './_lib/metricas.
 import { notificarPedidoGerado, podeNotificar } from './_lib/notificar.mjs'
 import { enviarZap, textoPixGerado, textoPixCodigo } from './_lib/zap.mjs'
 import { registrarZap } from './_lib/zaplog.mjs'
+import { enviarPagamento } from './_lib/meta-capi.mjs'
 import { geoDe } from './_lib/geo.mjs'
 
 const json = (dados, status = 200) =>
@@ -60,6 +61,26 @@ export default async (req) => {
     // Liga este pedido ao clique do anuncio. So sera usado la na frente,
     // quando (e se) o Asaas confirmar o pagamento.
     await guardarCliqueDoPedido(referencia, corpo.clique).catch(() => {})
+
+    // Pix gerado tambem vai pro Meta daqui, nao so do navegador: la o
+    // evento so existe pra quem aceitou o cookie, e isso era 13 no mes.
+    // Mesmo id (a referencia) que o checkout usa, entao o Meta junta os
+    // dois. Quem clicou "So o necessario" fica de fora. Nunca derruba o
+    // pedido: medicao e o ultimo da fila.
+    if (corpo.consent !== 'essencial') {
+      enviarPagamento({
+        referencia,
+        total: pedido.total,
+        cliente,
+        kitId: pedido.kitId,
+        unidades: Number(pedido.kitId) || 1,
+        ip: req.headers.get('x-nf-client-connection-ip') ||
+            (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || null,
+        ua: req.headers.get('user-agent'),
+        fbp: typeof corpo.fbp === 'string' ? corpo.fbp.slice(0, 120) : null,
+        fbc: typeof corpo.fbc === 'string' ? corpo.fbc.slice(0, 200) : null,
+      }).catch((e) => console.log('[capi] Pix gerado nao foi:', e.message))
+    }
 
     const geo = geoDe(req)
     await marcarCarrinhoComPedido(cliente.email, {
