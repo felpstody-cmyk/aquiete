@@ -657,6 +657,35 @@
 
   function lerConsent(){ try { return localStorage.getItem('aq_cookies'); } catch(e){ return null; } }
 
+  /* O mesmo id vai pelos dois caminhos. E assim que o Meta sabe que o
+     evento do servidor e o do navegador sao o mesmo, e nao dois. */
+  function idEvento(prefixo){
+    return prefixo + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,9);
+  }
+  function cookie(nome){
+    var m = document.cookie.match(new RegExp('(^|; )' + nome + '=([^;]*)'));
+    return m ? decodeURIComponent(m[2]) : null;
+  }
+  /* Caminho do proprio dominio. O pixel so liga pra quem aceita o
+     cookie, e isso era 12% do movimento: o Meta escolhia pra quem
+     mostrar o anuncio com um oitavo do dado. Quem clicou "So o
+     necessario" e barrado no servidor. */
+  function sinal(nome, id){
+    try {
+      fetch('/api/sinal', {
+        method: 'POST', keepalive: true,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          evento: nome, id: id, pagina: location.href,
+          consent: lerConsent(), fbp: cookie('_fbp'), fbc: cookie('_fbc')
+        })
+      }).catch(function(){});
+    } catch(e){}
+  }
+
+  var idConteudo = idEvento('vc');
+  sinal('ViewContent', idConteudo);
+
   function carregarPixel(){
     if (carregado || lerConsent() !== 'aceito') return;
     carregado = true;
@@ -669,7 +698,9 @@
     /* eslint-enable */
     fbq('init', META_PIXEL_ID);
     fbq('track', 'PageView');
-    fbq('track', 'ViewContent', { content_name: 'Aquiete 30ml', content_type: 'product' });
+    fbq('track', 'ViewContent',
+        { content_name: 'Aquiete 30ml', content_type: 'product' },
+        { eventID: idConteudo });
   }
 
   function decidir(valor){
@@ -688,12 +719,15 @@
      checkout: quem clica aqui ja disparou e nao conta de novo la. */
   document.querySelectorAll('[data-ir]').forEach(function(a){
     a.addEventListener('click', function(){
-      if (!carregado || !window.fbq) return;
+      /* A trava vem antes dos dois envios: senao o servidor contaria
+         cliques repetidos que o navegador ja estava segurando. */
       try {
         if (sessionStorage.getItem('aq_ic')) return;
         sessionStorage.setItem('aq_ic','1');
       } catch(e){}
-      fbq('track', 'InitiateCheckout');
+      var id = idEvento('ic');
+      sinal('InitiateCheckout', id);
+      if (carregado && window.fbq) fbq('track', 'InitiateCheckout', {}, { eventID: id });
     });
   });
 })();

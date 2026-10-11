@@ -68,6 +68,11 @@ export async function enviarCompra({ referencia, total, cliente, kitId, unidades
     },
   }
 
+  return postar(evento, pixel, token)
+}
+
+/** O envio em si. Dois chamadores: a Compra e os eventos de funil. */
+async function postar(evento, pixel, token) {
   const corpo = { data: [evento] }
   if (process.env.META_TEST_EVENT) corpo.test_event_code = process.env.META_TEST_EVENT
 
@@ -81,4 +86,52 @@ export async function enviarCompra({ referencia, total, cliente, kitId, unidades
     throw new Error(`Meta ${r.status}: ${resposta?.error?.message || 'erro desconhecido'}`)
   }
   return { enviado: true, recebidos: resposta.events_received }
+}
+
+/**
+ * Eventos de funil mandados pelo servidor.
+ *
+ * Por que existe: o pixel do navegador só liga pra quem aceita o cookie.
+ * Medido em 13/09 a 10/10, o Meta estava vendo 228 de 1.928 visitas — 12%.
+ * O algoritmo escolhia pra quem mostrar o anúncio com um oitavo do dado.
+ *
+ * O `eventId` é o mesmo que o navegador usa quando o pixel está ligado,
+ * então o Meta junta os dois em vez de contar duas vezes.
+ *
+ * Quem clicou "Só o necessário" não chega aqui: isso é barrado antes, em
+ * /api/sinal. O botão é uma promessa escrita na tela.
+ */
+const DE_FUNIL = new Set(['ViewContent', 'InitiateCheckout'])
+
+export async function enviarSinal({ nome, eventId, url, ip, ua, fbp, fbc, valor }) {
+  const pixel = process.env.META_PIXEL_ID
+  const token = process.env.META_CAPI_TOKEN
+  if (!pixel || !token) return { enviado: false, motivo: 'sem credenciais' }
+  if (!DE_FUNIL.has(nome)) return { enviado: false, motivo: 'evento fora da lista' }
+  if (!eventId) return { enviado: false, motivo: 'sem id pra deduplicar' }
+
+  const evento = {
+    event_name: nome,
+    event_time: Math.floor(Date.now() / 1000),
+    event_id: eventId,
+    action_source: 'website',
+    event_source_url: url || 'https://aquieteagora.com.br/',
+    // IP e navegador vao crus de proposito: o Meta exige assim nestes
+    // campos, e e o que permite ele casar a pessoa com o anuncio.
+    user_data: semNulos({
+      client_ip_address: ip || null,
+      client_user_agent: ua || null,
+      fbp: fbp || null,
+      fbc: fbc || null,
+      country: [hash('br')],
+    }),
+    custom_data: semNulos({
+      currency: valor != null ? 'BRL' : null,
+      value: valor != null ? Number(valor) : null,
+      content_type: 'product',
+      content_ids: ['aquiete-30ml'],
+    }),
+  }
+
+  return postar(evento, pixel, token)
 }
