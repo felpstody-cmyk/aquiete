@@ -167,7 +167,15 @@ export default async (req) => {
           })
           return r
         })
-        .catch(() => {})
+        .catch(async (e) => {
+          // Engolir o erro aqui deixava o pedido sem NENHUMA linha no log:
+          // nem "enviado", nem "nao tentou". Foi o que aconteceu com um
+          // pedido de 12/10, e ficou impossivel saber se a mensagem saiu.
+          await registrarZap({
+            referencia, nome: cliente.nome, telefone: cliente.telefone,
+            etapa: 'pix gerado', resultado: { enviado: false, erro: String(e?.message || e) },
+          }).catch(() => {})
+        })
 
       // O copia-e-cola NAO sai aqui. Vai depois do e-mail, la embaixo.
       // Duas mensagens no mesmo instante e padrao de robo, e e o tipo de
