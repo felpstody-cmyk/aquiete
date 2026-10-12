@@ -15,10 +15,13 @@ export default async (req) => {
   const tipo = url.searchParams.get('t') === 'checkout' ? 'checkout' : 'visita'
   await contar(`${tipo}:${dia}`)
 
-  // Visita e checkout que vieram da página de venda (/oferta) ganham um
-  // contador a mais. O total em visita:/checkout: continua somando tudo, então
-  // a home é o total menos o da oferta, inclusive nos dias antes disso existir.
-  if (url.searchParams.get('p') === 'oferta') await contar(`oferta-${tipo}:${dia}`)
+  // Cada página ganha o contador dela, além de entrar no total. Antes só a
+  // /oferta tinha, então tudo que não era oferta caía no mesmo balde e não
+  // dava pra saber quanta gente o anúncio levou pra /psiquiatra.
+  // O total em visita:/checkout: continua somando tudo, então a home é o
+  // total menos as outras páginas, inclusive nos dias antes disso existir.
+  const pagina = String(url.searchParams.get('p') || '').toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 24)
+  if (pagina) await contar(`${pagina}-${tipo}:${dia}`)
 
   // So registra cidade/origem na visita da pagina inicial — contar de novo
   // no checkout inflaria a mesma pessoa duas vezes na lista. O dia entra na

@@ -1674,16 +1674,31 @@ function renderAoVivo(){
   var linhas = [];
   linhas.push('<div><b>'+visitasPer+'</b> visita'+(visitasPer===1?'':'s')+' '+rotuloPer+'</div>');
   linhas.push('<div><b>'+checkoutsPer+'</b> checkout'+(checkoutsPer===1?'':'s')+' iniciado'+(checkoutsPer===1?'':'s')+' '+rotuloPer+'</div>');
-  // Home x página de venda. O total soma as duas, então a home é o total menos
-  // a oferta (isso também deixa certos os dias antes de a oferta existir).
-  var ofVis = somaMetrica('oferta-visita'), ofChk = somaMetrica('oferta-checkout');
-  var hmVis = Math.max(0, visitasPer - ofVis), hmChk = Math.max(0, checkoutsPer - ofChk);
+  // Uma linha por página. As páginas se descobrem sozinhas pelos contadores
+  // <pagina>-visita que o /api/visita grava, então uma página nova aparece
+  // aqui sem eu mexer no painel. A home é o total menos a soma das outras,
+  // o que também deixa certos os dias antes de cada página existir.
+  var APELIDO = { oferta: 'Página de venda', psiquiatra: 'Artigo do anúncio',
+                  motivos: 'Artigo dos 6 motivos' };
+  var paginas = {};
+  Object.keys(remotos.metricas || {}).forEach(function(k){
+    var m = /^([a-z0-9-]+)-(visita|checkout):/.exec(k);
+    if (m) paginas[m[1]] = true;
+  });
   var linhaPagina = function(nome, v, ck){
     return '<div style="padding-left:14px;color:var(--ink-3);font-size:12.5px">↳ ' + nome + ': <b style="color:var(--ink)">' + v + '</b> visita' + (v===1?'':'s') +
       ' · <b style="color:var(--ink)">' + ck + '</b> checkout' + (ck===1?'':'s') + (v ? ' (' + Math.round(ck / v * 100) + '% foi pro checkout)' : '') + '</div>';
   };
-  linhas.push(linhaPagina('Página inicial', hmVis, hmChk));
-  linhas.push(linhaPagina('Página de venda', ofVis, ofChk));
+  var somaVis = 0, somaChk = 0, outras = [];
+  Object.keys(paginas).sort().forEach(function(nome){
+    var v = somaMetrica(nome + '-visita'), ck = somaMetrica(nome + '-checkout');
+    if (!v && !ck) return;
+    somaVis += v; somaChk += ck;
+    outras.push(linhaPagina(APELIDO[nome] || (nome.charAt(0).toUpperCase() + nome.slice(1)), v, ck));
+  });
+  linhas.push(linhaPagina('Página inicial',
+      Math.max(0, visitasPer - somaVis), Math.max(0, checkoutsPer - somaChk)));
+  outras.forEach(function(l){ linhas.push(l); });
   linhas.push('<div><b>'+carrinhosPer+'</b> carrinho'+(carrinhosPer===1?'':'s')+' novo'+(carrinhosPer===1?'':'s')+' '+rotuloPer+'</div>');
   // Pedido gerado e dinheiro na mesa saem nos cards lá em cima, com a
   // quebra de produto e frete. Repetir aqui embaixo só enchia a tela.

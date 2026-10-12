@@ -27,7 +27,11 @@ export default async (req) => {
   try { corpo = await req.json() } catch { return new Response(null, { status: 204, headers: CORS }) }
 
   const email = String(corpo.email ?? '').trim().toLowerCase()
-  if (email && /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(email)) {
+  // O fim precisa ser só letras. A regra antiga aceitava "fulano@gmail.com25",
+  // que é o que sobra quando a pessoa começa a digitar o CEP antes de o foco
+  // sair do campo de e-mail. Cada variação dessas virava um carrinho separado
+  // no painel, marcado como abandonado, para a mesma pessoa.
+  if (email && /^[^@\s]+@[^@\s]+\.[a-z]{2,24}$/.test(email)) {
     try {
       const geo = geoDe(req)
       const campos = Array.isArray(corpo.campos)
