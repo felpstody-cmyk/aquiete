@@ -757,6 +757,13 @@ img,svg{display:block;max-width:100%}
     var ETAPAS_ABERTAS = true;
 
     if (ETAPAS_ABERTAS) {
+      /* O contador de etapa vivia so no clique do "Continuar", que este
+         modo esconde. Sem isso o painel mostrava todo mundo parado em
+         "seus dados" mesmo com a cobranca ja criada no gateway. Aqui ele
+         sobe pelo mesmo sinal que move a gota: a etapa completa. */
+      window.aqEtapa = 1;
+      window.aqTravou = window.aqTravou || [];
+
       // Nada a travar: as tres etapas ja estao visiveis no HTML. Some com
       // os "Continuar" e libera o botao de compra. A validacao do envio
       // confere os 9 campos, entao abrir tudo nao deixa passar pedido
@@ -796,6 +803,9 @@ img,svg{display:block;max-width:100%}
           var completa = campos.every(function(c){ return c.value.trim(); });
           var antes = etapa.hasAttribute('data-feita');
           etapa.toggleAttribute('data-feita', completa);
+          // etapa 0 completa = passou dos seus dados (2)
+          // etapa 1 completa = passou do endereco, chegou no pagamento (3)
+          if (completa) window.aqEtapa = Math.max(window.aqEtapa || 1, i + 2);
           // A gota so escorre na virada, nao a cada tecla.
           if (completa && !antes) pingar(proxima.querySelector('.step__gota'));
         }
@@ -1400,10 +1410,14 @@ try { if (!aqEmTeste()) {
          desistiu ali", que e o que responde "o que faltou ela colocar". */
       travadoAgora: (function(){
         try {
+          /* O campo em que a pessoa esta digitando agora nao conta: CPF
+             pela metade fica invalido por um segundo, e isso aparecia no
+             relatorio como "desistiu no CPF" de quem so estava digitando. */
+          var focado = document.activeElement && document.activeElement.id;
           return Array.prototype.map.call(
             document.querySelectorAll('[aria-invalid="true"]'),
             function(c){ return c.id; }
-          ).filter(Boolean).slice(0, 12);
+          ).filter(function(id){ return id && id !== focado; }).slice(0, 12);
         } catch (e) { return []; }
       })(),
       campos: aqPreenchidos(),

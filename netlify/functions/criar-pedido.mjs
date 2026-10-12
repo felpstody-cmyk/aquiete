@@ -127,7 +127,12 @@ export default async (req) => {
       }).catch(() => {})
     }
 
-    if (podeZap) {
+    // O aviso no meu celular nao pode depender da trava do zap do
+    // cliente. A mesma pessoa gerando tres Pix em meia hora e justamente
+    // quando eu mais preciso saber, e pagamento no cartao nao avisava
+    // nada. A trava aqui e pela referencia, que e unica por pedido: cobre
+    // POST repetido e deixa passar todo pedido de verdade.
+    if (await podeNotificar('aviso:' + referencia, 1)) {
       notificarPedidoGerado({
         nome: cliente.nome,
         telefone: cliente.telefone,
@@ -136,7 +141,9 @@ export default async (req) => {
         descricao: pedido.descricao,
         cidade: cliente.cidade || geo?.cidade || '',
       }).catch(() => {})
+    }
 
+    if (podeZap) {
       // E o zap pro cliente, sozinho, no mesmo segundo. A mesma trava
       // cobre os dois: um POST repetido nao manda dois zaps pra pessoa.
       const codigoPix = cobranca.pix?.payload || null
