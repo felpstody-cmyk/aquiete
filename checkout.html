@@ -1190,7 +1190,23 @@ img,svg{display:block;max-width:100%}
     ta.style.cssText = 'width:100%;margin-top:.75rem;padding:.6rem;font-size:.75rem;'
       + 'border:1px solid #B9DCCB;border-radius:8px;resize:none;font-family:monospace';
     ta.value = String(pix.payload || '');
+    // tocar na caixa ja seleciona tudo, pra quem preferir copiar na mao
+    ta.onclick = function(){ ta.focus(); ta.select(); };
     caixa.appendChild(ta);
+
+    var copiar = d.createElement('button');
+    copiar.type = 'button';
+    copiar.textContent = 'Copiar código Pix';
+    copiar.style.cssText = 'width:100%;margin-top:.6rem;padding:.9rem 1rem;border:0;'
+      + 'border-radius:10px;background:var(--ok);color:#fff;font:700 1rem/1 inherit;'
+      + 'cursor:pointer;font-family:inherit';
+    copiar.onclick = function(){ copiarPix(ta, copiar); };
+    caixa.appendChild(copiar);
+
+    var dica = d.createElement('p');
+    dica.style.cssText = 'margin-top:.5rem;font-size:.8125rem;color:var(--ink-3);line-height:1.4';
+    dica.textContent = 'Copie o código, abra o app do banco e escolha Pix Copia e Cola.';
+    caixa.appendChild(dica);
 
     var p = d.createElement('p');
     p.style.marginTop = '.6rem';
@@ -1213,6 +1229,43 @@ img,svg{display:block;max-width:100%}
     travar(true, 'Aguardando pagamento');
 
     vigiarPagamento(dados.referencia, Number(dados.total) || totalAtual, caixa, aviso);
+  }
+
+  /* Copiar o codigo inteiro, de uma vez.
+     Sem isso a pessoa precisava selecionar a mao dentro de uma caixinha
+     de 3 linhas. No celular quase sempre saia pela metade, e Pix pela
+     metade o banco recusa como "chave invalida": o codigo termina num
+     digito verificador que nao fecha se faltar pedaco. */
+  function copiarPix(ta, botao){
+    var texto = String(ta.value || '');
+    if (!texto) return;
+
+    function deuCerto(){
+      botao.textContent = 'Código copiado';
+      botao.style.background = 'var(--ink-2)';
+      setTimeout(function(){
+        botao.textContent = 'Copiar código Pix';
+        botao.style.background = 'var(--ok)';
+      }, 2500);
+    }
+    /* O caminho moderno falha em http, em navegador velho e quando a aba
+       nao esta em foco. O antigo (selecionar + execCommand) ainda funciona
+       nesses casos, entao ele fica como rede de seguranca. */
+    function pelaSelecao(){
+      try {
+        ta.focus();
+        ta.select();
+        ta.setSelectionRange(0, texto.length);
+        if (d.execCommand('copy')) { deuCerto(); return; }
+      } catch (e) { /* cai no aviso abaixo */ }
+      botao.textContent = 'Toque e segure no código acima';
+    }
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(texto).then(deuCerto, pelaSelecao);
+    } else {
+      pelaSelecao();
+    }
   }
 
   /* Pergunta ao servidor, de tempos em tempos, se o pagamento daquele
