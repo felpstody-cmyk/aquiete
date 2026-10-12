@@ -103,6 +103,7 @@ export default async (req) => {
     // Preenchido so se o zap do "pedido reservado" for disparado; e lido
     // depois do e-mail, pra mandar o copia-e-cola numa segunda mensagem.
     let codigoDepois = null
+    let primeiraMsg = null
 
     // "Toc toc" na hora, com o botao de chamar no zap ja pronto. Cartao
     // fica de fora: ali a pessoa ja esta na tela de pagamento e nao ha o
@@ -151,7 +152,7 @@ export default async (req) => {
       // Sai sem await: roda em paralelo com o e-mail aqui embaixo, pra nao
       // somar tempo na tela de quem esta comprando. A promessa fica guardada
       // porque a segunda mensagem SO pode sair depois desta terminar.
-      const primeiraMsg = enviarZap({
+      primeiraMsg = enviarZap({
         telefone: cliente.telefone,
         texto: textoPixGerado({
           nome: cliente.nome,
@@ -181,7 +182,7 @@ export default async (req) => {
       // Duas mensagens no mesmo instante e padrao de robo, e e o tipo de
       // coisa que faz o WhatsApp derrubar a sessao do dispositivo.
       if (codigoPix && cliente.telefone) {
-        codigoDepois = { telefone: cliente.telefone, codigo: codigoPix, antes: primeiraMsg }
+        codigoDepois = { telefone: cliente.telefone, codigo: codigoPix }
       }
     }
 
@@ -224,8 +225,15 @@ export default async (req) => {
     // O segundo await e porque isto e a ultima coisa antes da resposta:
     // sem ele a funcao pode ser congelada no meio do envio. Nenhum dos
     // dois derruba o pedido se falhar.
+    // A primeira mensagem tem que ser esperada SEMPRE, mesmo quando nao
+    // existe segunda. Antes esse await vivia dentro do if de baixo: numa
+    // cobranca que volta sem codigo de Pix, ninguem esperava, a funcao
+    // devolvia a resposta e o Netlify congelava ela no meio do envio. A
+    // mensagem nao saia e nao sobrava nem linha no log. Foi o que
+    // aconteceu no pedido AQ-261012-AF3XL.
+    if (primeiraMsg) await primeiraMsg
+
     if (codigoDepois) {
-      await codigoDepois.antes
       const r = await enviarZap({
         telefone: codigoDepois.telefone,
         texto: textoPixCodigo(codigoDepois.codigo),
