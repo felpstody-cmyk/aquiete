@@ -2649,6 +2649,32 @@ body::after{
       } catch(e){}
     }
 
+    /* Primeira origem: de qual anuncio a pessoa veio na primeira visita.
+       Guardado aqui porque o link desta pagina pro checkout leva utm
+       proprio e sobrescreve o do anuncio. Sem isto, todo carrinho aparece
+       vindo da propria pagina em vez do criativo que pagou o clique. */
+    (function(){
+      try {
+        var p = new URLSearchParams(location.search);
+        var camp = p.get('utm_campaign') || '';
+        var src = p.get('utm_source') || '';
+        if (!camp && !src && !p.get('fbclid') && !p.get('gclid')) return;
+        var antes = null;
+        try { antes = JSON.parse(localStorage.getItem('aq_origem') || 'null'); } catch(e){}
+        // A primeira vence. So reescreve depois de 30 dias, que e a janela
+        // de atribuicao do Meta: passou disso, quem trouxe de novo leva.
+        if (antes && antes.em && Date.now() - antes.em < 2592000000) return;
+        localStorage.setItem('aq_origem', JSON.stringify({
+          camp: camp.slice(0, 60),
+          src: src.slice(0, 40),
+          med: (p.get('utm_medium') || '').slice(0, 40),
+          anuncio: (p.get('utm_content') || '').slice(0, 60),
+          pagina: location.pathname.replace(/[^a-z0-9/._-]/gi, '').slice(0, 40),
+          em: Date.now()
+        }));
+      } catch(e){}
+    })();
+
     var idPagina = idEvento('pv');
     sinal('PageView', idPagina);
     var idConteudo = idEvento('vc');

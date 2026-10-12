@@ -1551,13 +1551,22 @@ function aqGerouPagamento(dados){
     var dCidade = document.getElementById('cidade');
     var mandar = function(){
       var email = (dEmail.value || '').trim();
-      if (!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(email)) return;
+      // Mesmo criterio do servidor: o fim do e-mail tem que ser so letras.
+      // Sem isso, cada estado intermediario do que a pessoa digita virava
+      // um carrinho diferente no painel.
+      if (!/^[^@\s]+@[^@\s]+\.[a-z]{2,24}$/.test(email)) return;
       var preenchidos = campos.filter(function(c){ return (c.value || '').trim(); }).map(function(c){ return c.id; });
       fetch('/api/carrinho', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nome: dNome.value, email: email, telefone: dTel.value, kit: kitDoCarrinho,
-          cidade: dCidade ? dCidade.value : '', campos: preenchidos }),
+          cidade: dCidade ? dCidade.value : '', campos: preenchidos,
+          // De qual anuncio veio. Guardado la na pagina de chegada, porque
+          // o link de la pra ca carrega utm proprio e apagaria o original.
+          origem: (function(){
+            try { return JSON.parse(localStorage.getItem('aq_origem') || 'null'); }
+            catch(e){ return null; }
+          })() }),
         keepalive: true
       }).catch(function(){});
     };

@@ -38,7 +38,21 @@ export default async (req) => {
         ? [...new Set(corpo.campos.map(String).filter((c) => CAMPOS_CONHECIDOS.has(c)))]
         : undefined
       const cidadeForm = String(corpo.cidade ?? '').trim().slice(0, 60)
+      // De qual anuncio essa pessoa veio. Vem do navegador porque so ele
+      // sabe a PRIMEIRA visita: aqui no servidor chega so o ultimo clique.
+      const o = corpo.origem && typeof corpo.origem === 'object' ? corpo.origem : null
+      const origem = o
+        ? {
+            camp: String(o.camp ?? '').slice(0, 60),
+            src: String(o.src ?? '').slice(0, 40),
+            med: String(o.med ?? '').slice(0, 40),
+            anuncio: String(o.anuncio ?? '').slice(0, 60),
+            pagina: String(o.pagina ?? '').slice(0, 40),
+          }
+        : null
+
       await salvarCarrinho(email, {
+        ...(origem ? { origem } : {}),
         nome: String(corpo.nome ?? '').trim(),
         telefone: String(corpo.telefone ?? '').trim(),
         kit: String(corpo.kit ?? '').trim(),

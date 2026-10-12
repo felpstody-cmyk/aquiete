@@ -1760,7 +1760,13 @@ function renderAoVivo(){
     : 'no mês';
   var visitasPer = somaMetrica('visita');
   var checkoutsPer = somaMetrica('checkout');
-  var carrinhosPer = somaMetrica('carrinho');
+  /* Antes isto vinha do contador de salvamento. Como o carrinho e
+     guardado por e-mail, cada variacao do que a pessoa digitava virava
+     um carrinho novo e o numero inflava: 13 "carrinhos" para 4 pessoas.
+     A lista de verdade e a fonte certa. */
+  var carrinhosPer = (remotos.carrinhos || []).filter(function(c){
+    return noPeriodo(diaDeTs(c.criado || c.em));
+  }).length;
   var linhas = [];
   linhas.push('<div><b>'+visitasPer+'</b> visita'+(visitasPer===1?'':'s')+' '+rotuloPer+'</div>');
   linhas.push('<div><b>'+checkoutsPer+'</b> checkout'+(checkoutsPer===1?'':'s')+' iniciado'+(checkoutsPer===1?'':'s')+' '+rotuloPer+'</div>');
@@ -2084,6 +2090,21 @@ el('baixarConv').onclick = function(){
   setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
 };
 
+/* De qual anuncio a pessoa veio. O nome da campanha costuma ser o id
+   numerico do Meta quando o parametro da URL manda {{campaign.id}} em
+   vez de {{campaign.name}} — nesse caso mostro so o fim, que ja basta
+   pra distinguir uma campanha da outra. */
+function carrinhoOrigem(c){
+  var o = c.origem;
+  if (!o || (!o.camp && !o.src)) return '<span style="color:var(--ink-3)">—</span>';
+  var camp = String(o.camp || '').trim();
+  var curto = /^\d{10,}$/.test(camp) ? '#' + camp.slice(-6) : camp;
+  var linha1 = curto || String(o.src || '');
+  var linha2 = [o.anuncio, o.src && curto !== o.src ? o.src : ''].filter(Boolean).join(' · ');
+  return '<b style="font-size:12.5px">' + esc(linha1) + '</b>' +
+    (linha2 ? '<br><span style="font-size:11.5px;color:var(--ink-3)">' + esc(linha2) + '</span>' : '');
+}
+
 function renderCarrinhos(){
   var lista = (remotos.carrinhos||[]).slice().sort(function(a,b){ return (b.criado||b.em||0)-(a.criado||a.em||0); });
   var soma = {}; lista.forEach(function(c){ soma[c.situacao] = (soma[c.situacao]||0) + valorCarrinho(c); });
@@ -2095,10 +2116,11 @@ function renderCarrinhos(){
     : 'nenhum carrinho guardado';
 
   el('tbCarrinhos').innerHTML = lista.length
-    ? '<thead><tr><th>Começou</th><th>Cliente</th><th>Cidade</th><th>Kit</th><th class="num">Valor</th><th>Situação</th><th>Preencheu</th><th></th></tr></thead><tbody>' +
+    ? '<thead><tr><th>Começou</th><th>Cliente</th><th>Veio de</th><th>Cidade</th><th>Kit</th><th class="num">Valor</th><th>Situação</th><th>Preencheu</th><th></th></tr></thead><tbody>' +
       lista.map(function(c){
         return '<tr><td style="white-space:nowrap">'+carrinhoQuando(c)+'</td>' +
           '<td><b>'+esc(c.nome||'—')+'</b><br><span style="font-size:12px;color:var(--ink-3)">'+esc(c.email)+'</span></td>' +
+          '<td>'+carrinhoOrigem(c)+'</td>' +
           '<td>'+carrinhoCidade(c)+'</td><td>'+esc(c.kit?c.kit+' un.':'—')+'</td>' +
           '<td class="num"><b>'+brl(valorCarrinho(c))+'</b></td>' +
           '<td>'+carrinhoSituacao(c)+'</td><td>'+carrinhoCampos(c)+'</td>' +
