@@ -60,6 +60,14 @@ h2{font-size:19px;font-weight:650;letter-spacing:-.01em}
 .card h3{font-size:14px;font-weight:650;padding:14px 18px;border-bottom:1px solid var(--line);
   display:flex;align-items:center;gap:10px}
 .card h3 .tag{font-size:11px;font-weight:600;color:var(--ink-3);letter-spacing:.04em}
+/* sanfona: o titulo abre e fecha o card */
+.card.sanfona > h3{cursor:pointer;user-select:none}
+.card.sanfona > h3:after{content:"";margin-left:auto;width:7px;height:7px;flex:none;
+  border-right:2px solid var(--ink-3);border-bottom:2px solid var(--ink-3);
+  transform:rotate(45deg) translateY(-2px);transition:transform .16s}
+.card.fechado > h3{border-bottom:0}
+.card.fechado > h3:after{transform:rotate(-45deg) translateX(-2px)}
+.card.fechado > *:not(h3){display:none !important}
 .card .body{padding:18px}
 .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:20px}
 
@@ -218,6 +226,10 @@ td.sel,th.sel{width:34px;padding-right:0}
 
   <div id="alertas"></div>
   <div class="kpis" id="kpis"></div>
+  <div style="margin:-6px 0 20px">
+    <button class="btn sec mini" id="kpisBtn" type="button">Ver os outros números</button>
+  </div>
+  <div class="kpis" id="kpisMais" hidden></div>
 
   <div class="card">
     <h3>Entrou × Saiu <span class="tag" id="caixaTag"></span></h3>
@@ -864,13 +876,75 @@ function todos(){
 function doPeriodo(){ return todos().filter(function(p){ return noPeriodo(p.data); }); }
 
 /* ================= navegação ================= */
+/* Cards que nascem fechados. Sao os de consulta, nao os de olhar todo
+   dia. Quem abre um, encontra ele aberto na proxima vez: a escolha fica
+   guardada por card, entao esta lista so decide o primeiro acesso. */
+var NASCEM_FECHADOS = [
+  'Dentro do checkout', 'Comportamento no site', 'Meta do mês',
+  'Onde o dinheiro foi', 'Vendas por pagamento', 'Últimos pedidos',
+  'Conversões pro Google', 'Todos os carrinhos', 'Mês a mês',
+  'Por forma de pagamento', 'Backup', 'Imagens do site'
+];
+
+function montarSanfona(){
+  Array.prototype.forEach.call(document.querySelectorAll('.card > h3'), function(h){
+    var card = h.parentElement;
+    if (card.classList.contains('sanfona')) return;
+    card.classList.add('sanfona');
+
+    var titulo = String(h.textContent || '').replace(/\s+/g, ' ').trim();
+    var chave = 'aq.card.' + titulo.slice(0, 40);
+    var salvo = null;
+    try { salvo = localStorage.getItem(chave); } catch(e){}
+
+    var comecaFechado = salvo === null
+      ? NASCEM_FECHADOS.some(function(t){ return titulo.indexOf(t) === 0; })
+      : salvo === 'fechado';
+    if (comecaFechado) card.classList.add('fechado');
+
+    h.setAttribute('role', 'button');
+    h.setAttribute('tabindex', '0');
+    h.setAttribute('aria-expanded', comecaFechado ? 'false' : 'true');
+
+    h.onclick = function(){
+      var fechou = card.classList.toggle('fechado');
+      h.setAttribute('aria-expanded', fechou ? 'false' : 'true');
+      try { localStorage.setItem(chave, fechou ? 'fechado' : 'aberto'); } catch(e){}
+    };
+    h.onkeydown = function(ev){
+      if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); h.onclick(); }
+    };
+  });
+}
+
 Array.prototype.forEach.call(document.querySelectorAll('nav button'), function(b){
   b.onclick = function(){
     Array.prototype.forEach.call(document.querySelectorAll('nav button'), function(x){ x.classList.remove('on'); });
     Array.prototype.forEach.call(document.querySelectorAll('.view'), function(x){ x.classList.remove('on'); });
     b.classList.add('on'); el('v-'+b.dataset.v).classList.add('on');
+    montarSanfona();
   };
 });
+
+/* O estado dos outros numeros tambem fica guardado, igual aos cards. */
+(function(){
+  var caixa = el('kpisMais'), botao = el('kpisBtn');
+  if (!caixa || !botao) return;
+  var aberto = false;
+  try { aberto = localStorage.getItem('aq.kpisMais') === 'aberto'; } catch(e){}
+  var pintar = function(){
+    caixa.hidden = !aberto;
+    botao.textContent = aberto ? 'Esconder os outros números' : 'Ver os outros números';
+  };
+  pintar();
+  botao.onclick = function(){
+    aberto = !aberto;
+    try { localStorage.setItem('aq.kpisMais', aberto ? 'aberto' : 'fechado'); } catch(e){}
+    pintar();
+  };
+})();
+
+montarSanfona();
 el('mes').value = mesAtual();
 el('mes').onchange = function(){ aplicarPeriodo('mes'); };
 el('btnPerHoje').onclick = function(){ aplicarPeriodo('hoje'); };
@@ -1575,9 +1649,17 @@ function renderPainel(){
       quebraTxt(cc.prodMesa, cc.freteMesa), (cc.rsNaoPagou + cc.rsAbandonado) ? 'bad' : ''],
     ['Estoque', est.saldo + ' frascos', est.entrou + ' entraram · ' + est.saiu + ' saíram', est.saldo<=cfg.min?'bad':'good']
   ];
-  el('kpis').innerHTML = cards.map(function(c){
+  /* Onze quadros abertos de uma vez e mais do que da pra olhar. Estes
+     cinco decidem o dia; o resto e consulta e fica atras de um toque. */
+  var PRINCIPAIS = ['Faturamento', 'Despesas', 'Pedidos gerados', 'Dinheiro na mesa', 'Estoque'];
+  var principal = function(rotulo){
+    return PRINCIPAIS.some(function(x){ return String(rotulo).indexOf(x) === 0; });
+  };
+  var quadro = function(c){
     return '<div class="kpi '+c[3]+'"><div class="k">'+c[0]+'</div><div class="v">'+c[1]+'</div><div class="n">'+c[2]+'</div></div>';
-  }).join('');
+  };
+  el('kpis').innerHTML = cards.filter(function(c){ return principal(c[0]); }).map(quadro).join('');
+  el('kpisMais').innerHTML = cards.filter(function(c){ return !principal(c[0]); }).map(quadro).join('');
 
   var porDia = {};
   m.vendidos.forEach(function(p){ porDia[p.data] = (porDia[p.data]||0) + totalDe(p); });
