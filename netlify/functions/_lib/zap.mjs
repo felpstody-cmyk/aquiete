@@ -107,7 +107,11 @@ export async function enviarZap({ telefone, texto }) {
       console.error('[zap]', r.status, detalhe.slice(0, 200))
       return { enviado: false, erro: `HTTP ${r.status}` }
     }
-    return { enviado: true }
+    // O id da mensagem e o que liga este envio ao aviso de entrega que a
+    // WAME manda depois. Sem ele, "enviado" significa so "a API aceitou",
+    // e nao da pra saber se chegou no celular de alguem.
+    const resposta = await r.json().catch(() => null)
+    return { enviado: true, id: String(resposta?.id || '') }
   } catch (e) {
     console.error('[zap] falhou:', e.message)
     return { enviado: false, erro: e.message }

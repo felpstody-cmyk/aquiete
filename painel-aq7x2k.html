@@ -432,6 +432,14 @@ td.sel,th.sel{width:34px;padding-right:0}
   </div>
 
   <div class="card">
+    <h3>Mensagens do WhatsApp <span class="tag" id="zapLogResumo"></span></h3>
+    <p class="sub" style="margin:0;padding:4px 18px 14px">O que a loja tentou mandar, e o que
+       aconteceu com cada mensagem. "Aceita" quer dizer que a API recebeu o pedido de envio;
+       "entregue" quer dizer que chegou no aparelho da pessoa. São coisas diferentes.</p>
+    <div class="tw"><table id="tbZapLog"></table></div>
+  </div>
+
+  <div class="card">
     <h3>Todos os carrinhos <span class="tag" id="carrinhosResumo"></span></h3>
     <p class="sub" style="margin:0 0 10px">Quem pagou fica 4 meses, pra dar conta de reclamação depois. Quem não pagou sai em 15 dias.</p>
     <p class="sub" style="margin:0;padding:4px 18px 14px">Todo mundo que digitou um e-mail válido no checkout, com a situação de cada um. É isso que explica a diferença entre "carrinhos novos" e "abandonados": quem ainda tá digitando, quem gerou o Pix e tá no prazo, e quem já pagou não aparece como abandonado.</p>
@@ -756,7 +764,7 @@ var manuais = ler(K.ped, []);
 // "Entregue" quem marca e voce). Chave e o id do pedido, valor e o status novo.
 var statusManual = ler(K.sta, {});
 var selecionados = {};
-var remotos = ler(K.rem, { pedidos:[], metricas:{}, ativos:[], abandonados:[], carrinhos:[], conversoesGoogle:[], ambiente:'', comportamento:{ porPagina:{}, sessoes:[] }, resumos:[], precos:null, zap:null });
+var remotos = ler(K.rem, { pedidos:[], metricas:{}, ativos:[], abandonados:[], carrinhos:[], conversoesGoogle:[], ambiente:'', comportamento:{ porPagina:{}, sessoes:[] }, resumos:[], precos:null, zap:null, zapLog:[] });
 var despesas = ler(K.desp, null);
 var lotes   = ler(K.est, []);
 var cfg     = ler(K.cfg, {});
@@ -993,7 +1001,7 @@ function sincronizar(silencioso){
   ])
     .then(function(res){
       var d = res[0], estadoNuvem = res[1];
-      remotos = { pedidos: d.pedidos||[], metricas: d.metricas||{}, ativos: d.ativos||[], abandonados: d.abandonados||[], carrinhos: d.carrinhos||[], conversoesGoogle: d.conversoesGoogle||[], ambiente: d.ambiente||'', comportamento: d.comportamento||{ porPagina:{}, sessoes:[] }, resumos: d.resumos||[], precos: d.precos||null, zap: d.zap||null };
+      remotos = { pedidos: d.pedidos||[], metricas: d.metricas||{}, ativos: d.ativos||[], abandonados: d.abandonados||[], carrinhos: d.carrinhos||[], conversoesGoogle: d.conversoesGoogle||[], ambiente: d.ambiente||'', comportamento: d.comportamento||{ porPagina:{}, sessoes:[] }, resumos: d.resumos||[], precos: d.precos||null, zap: d.zap||null, zapLog: d.zapLog||[] };
       buscarComentarios();
       buscarImagens();
       sincEm = new Date().toISOString();
@@ -2939,6 +2947,47 @@ function renderAmbiente(){
  * Quando esta tudo certo isto e so uma pastilha discreta no cabecalho.
  * Quando cai vira faixa vermelha, porque loja muda sem ninguem saber foi
  * exatamente o problema que isto existe pra resolver. */
+var ZAP_SITUACAO = {
+  aceita:   ['a API aceitou',      'p-pendente'],
+  enviada:  ['saiu do servidor',   'p-pendente'],
+  entregue: ['chegou no aparelho', 'p-pago'],
+  lida:     ['a pessoa leu',       'p-pago'],
+  falhou:   ['falhou',             'p-pendente'],
+  apagada:  ['apagada',            'p-pendente']
+};
+
+function renderZapLog(){
+  var linhas = remotos.zapLog || [];
+  var tab = el('tbZapLog');
+  if (!tab) return;
+
+  var entregues = linhas.filter(function(l){
+    return l.situacao === 'entregue' || l.situacao === 'lida';
+  }).length;
+  var falhas = linhas.filter(function(l){ return !l.enviado || l.situacao === 'falhou'; }).length;
+  el('zapLogResumo').textContent = linhas.length
+    ? entregues + ' de ' + linhas.length + ' confirmadas no aparelho' +
+      (falhas ? ' · ' + falhas + ' com problema' : '')
+    : 'nenhuma mensagem ainda';
+
+  tab.innerHTML = linhas.length
+    ? '<thead><tr><th>Quando</th><th>Quem</th><th>O quê</th><th>Situação</th><th>Detalhe</th></tr></thead><tbody>' +
+      linhas.map(function(l){
+        var s = ZAP_SITUACAO[l.situacao] || null;
+        var pill = !l.enviado
+          ? '<span class="pill p-pendente">não saiu</span>'
+          : (s ? '<span class="pill ' + s[1] + '">' + s[0] + '</span>'
+               : '<span class="pill p-pendente">sem retorno</span>');
+        return '<tr><td style="white-space:nowrap">' + esc(dataHoraBR(l.em)) + '</td>' +
+          '<td><b>' + esc(l.nome || '—') + '</b>' +
+            (l.telefone ? '<br><span class="sub">final ' + esc(l.telefone) + '</span>' : '') + '</td>' +
+          '<td>' + esc(l.etapa || '') + '<br><span class="sub">' + esc(l.referencia || '') + '</span></td>' +
+          '<td style="white-space:nowrap">' + pill + '</td>' +
+          '<td style="font-size:12.5px;color:var(--ink-3)">' + esc(l.erro || '') + '</td></tr>';
+      }).join('') + '</tbody>'
+    : '<tbody><tr><td class="vazio">Nenhuma mensagem registrada ainda.</td></tr></tbody>';
+}
+
 function renderZap(){
   var z = remotos.zap, pastilha = el('zapStatus'), faixa = el('avisoZap');
   if (!pastilha || !faixa) return;
@@ -2975,7 +3024,7 @@ function renderZap(){
     + 'Conectar um dispositivo. O codigo de pareamento foi junto na notificacao.';
 }
 
-function render(){ renderAmbiente(); renderZap(); renderComentarios(); renderPainel(); renderAoVivo(); renderPedidos(); renderAbandonados(); renderCarrinhos(); renderConversoes(); renderClientes(); renderEstoque(); renderDesp(); renderRel(); }
+function render(){ renderAmbiente(); renderZap(); renderZapLog(); renderComentarios(); renderPainel(); renderAoVivo(); renderPedidos(); renderAbandonados(); renderCarrinhos(); renderConversoes(); renderClientes(); renderEstoque(); renderDesp(); renderRel(); }
 el('comAtualizar').onclick = function(){ buscarComentarios(); };
 el('imgAtualizar').onclick = function(){ buscarImagens(); };
 el('imgEnviar').onclick = enviarImagem;
