@@ -1485,6 +1485,9 @@ function aqSinal(nome, id){
   } catch (e) { /* medição nunca derruba a página */ }
 }
 
+var aqIdPagina = aqIdEvento('pv');
+aqSinal('PageView', aqIdPagina);
+
 function aqIniciouCheckout(){
   try {
     if (sessionStorage.getItem('aq_ic')) return;
@@ -1605,7 +1608,7 @@ function aqGerouPagamento(dados){
       (window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
       /* eslint-enable */
       fbq('init', META_PIXEL_ID);
-      fbq('track', 'PageView');
+      fbq('track', 'PageView', {}, { eventID: aqIdPagina });
       /* InitiateCheckout NÃO dispara aqui.
          Disparar no carregamento ensina o Meta a procurar gente que ABRE
          a página do checkout — e ele faz isso muito bem: traz quem abre,

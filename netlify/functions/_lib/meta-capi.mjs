@@ -148,7 +148,7 @@ async function postar(evento, pixel, token) {
  * Quem clicou "Só o necessário" não chega aqui: isso é barrado antes, em
  * /api/sinal. O botão é uma promessa escrita na tela.
  */
-const DE_FUNIL = new Set(['ViewContent', 'InitiateCheckout'])
+const DE_FUNIL = new Set(['PageView', 'ViewContent', 'InitiateCheckout'])
 
 export async function enviarSinal({ nome, eventId, url, ip, ua, fbp, fbc, valor }) {
   const pixel = process.env.META_PIXEL_ID

@@ -2649,6 +2649,8 @@ body::after{
       } catch(e){}
     }
 
+    var idPagina = idEvento('pv');
+    sinal('PageView', idPagina);
     var idConteudo = idEvento('vc');
     sinal('ViewContent', idConteudo);
 
@@ -2670,7 +2672,7 @@ body::after{
         (window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
         /* eslint-enable */
         fbq('init', META_PIXEL_ID);
-        fbq('track', 'PageView');
+        fbq('track', 'PageView', {}, { eventID: idPagina });
         fbq('track', 'ViewContent',
             { content_name: 'Aquiete 30ml', content_type: 'product' },
             { eventID: idConteudo });
