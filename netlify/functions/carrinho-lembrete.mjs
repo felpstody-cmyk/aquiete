@@ -27,6 +27,12 @@ export default async () => {
       // Zap só no primeiro toque. O e-mail insiste três vezes porque
       // e-mail se ignora sem custo; WhatsApp insistente irrita a pessoa
       // e ainda aumenta a chance de alguém denunciar o número.
+      // A etapa avança ANTES de qualquer envio, e de propósito. Antes ela
+      // só avançava depois do e-mail dar certo, dentro do try: e-mail que
+      // falha deixava o carrinho preso na etapa 0 — justo a que manda
+      // WhatsApp — e o zap saía de novo a cada hora, pra sempre.
+      await marcarEmailCarrinho(c.email, c.etapa)
+
       if (c.etapa === 0 && c.telefone) {
         // Registra igual ao criar-pedido. Sem isto o envio era invisivel:
         // o carrinho avancava de etapa e nao havia como saber se a
@@ -47,7 +53,6 @@ export default async () => {
           assunto: ASSUNTOS[Math.min(c.etapa, ASSUNTOS.length - 1)],
           html: htmlRecuperarCarrinho({ nome: c.nome, kit: c.kit, etapa: c.etapa }),
         })
-        await marcarEmailCarrinho(c.email, c.etapa)
         enviados++
       } catch (e) {
         console.error('[carrinho-lembrete] falhou para', c.email, e.message)

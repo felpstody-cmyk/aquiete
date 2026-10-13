@@ -315,6 +315,11 @@ export async function carrinhosPendentesDeEmail() {
     await Promise.all(blobs.map(async (b) => {
       const d = await store.get(b.key, { type: 'json' }).catch(() => null)
       if (!d) return
+      // E-mail que não é e-mail nunca sai da fila: o envio falha sempre,
+      // a etapa nunca avança, e o carrinho fica cobrando pra sempre. Foi
+      // o que aconteceu com "fulano@hotmail.com25", que mandou 17 zaps
+      // pra mesma pessoa em 17 horas.
+      if (!/^[^@\s]+@[^@\s]+\.[a-z]{2,24}$/.test(String(b.key))) return
       // Pagou, ou ainda tá no prazo de pagar o Pix/boleto: não cobra por e-mail.
       if (d.pago || aguardandoPagamento(d, agora)) return
       const etapa = d.etapa || 0
