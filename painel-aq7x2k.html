@@ -1930,6 +1930,27 @@ function renderOrigens(){
 /* Quebra as visitas por utm_campaign do link do anúncio. Enquanto a origem
    diz só "veio do Meta", isto diz QUAL criativo trouxe, pra comparar um
    contra o outro sem depender do gerenciador de anúncios. */
+/* Apelido de campanha.
+   Fica guardado neste navegador: e preferencia de leitura, nao dado da
+   loja. Em outro aparelho o numero volta a aparecer ate ser apelidado
+   la tambem. */
+function lerApelidos(){
+  try { return JSON.parse(localStorage.getItem('aq.apelidosCampanha') || '{}') || {}; }
+  catch(e){ return {}; }
+}
+function salvarApelido(id, nome){
+  var m = lerApelidos();
+  if (nome) m[id] = nome; else delete m[id];
+  try { localStorage.setItem('aq.apelidosCampanha', JSON.stringify(m)); } catch(e){}
+}
+function ehIdNumerico(bruto){ return /^\d{10,}$/.test(String(bruto || '')); }
+function nomeCampanha(bruto){
+  var s = String(bruto || '');
+  var ap = lerApelidos()[s];
+  if (ap) return ap;
+  return ehIdNumerico(s) ? '#' + s.slice(-6) : s;
+}
+
 function renderCampanhas(){
   var alvo = el('campanhaLista');
   if (!alvo) return;
@@ -1941,10 +1962,28 @@ function renderCampanhas(){
   var total = itens.reduce(function(s,o){ return s+o.n; }, 0);
   alvo.innerHTML = itens.map(function(o){
     var pct = total ? Math.round((o.n/total)*100) : 0;
+    var temApelido = !!lerApelidos()[o.resto];
+    // So oferece apelidar o que e ilegivel: id numerico, ou algo ja
+    // apelidado que voce queira corrigir.
+    var botao = (ehIdNumerico(o.resto) || temApelido)
+      ? ' <button class="lnk" data-apelidar="' + esc(o.resto) + '">' +
+        (temApelido ? 'renomear' : 'dar nome') + '</button>'
+      : '';
     return '<div style="display:flex;justify-content:space-between;gap:8px">' +
-      '<span>' + esc(o.resto) + '</span>' +
+      '<span>' + esc(nomeCampanha(o.resto)) + botao + '</span>' +
       '<b>' + o.n + '<span style="color:var(--ink-3);font-weight:400"> (' + pct + '%)</span></b></div>';
   }).join('');
+
+  Array.prototype.forEach.call(alvo.querySelectorAll('[data-apelidar]'), function(bt){
+    bt.onclick = function(){
+      var id = bt.getAttribute('data-apelidar');
+      var atual = lerApelidos()[id] || '';
+      var novo = prompt('Nome desta campanha (deixe vazio pra voltar ao número):\n' + id, atual);
+      if (novo === null) return;
+      salvarApelido(id, novo.trim().slice(0, 40));
+      render();
+    };
+  });
 }
 
 /* ================= carrinhos abandonados ================= */
@@ -2098,7 +2137,7 @@ function carrinhoOrigem(c){
   var o = c.origem;
   if (!o || (!o.camp && !o.src)) return '<span style="color:var(--ink-3)">—</span>';
   var camp = String(o.camp || '').trim();
-  var curto = /^\d{10,}$/.test(camp) ? '#' + camp.slice(-6) : camp;
+  var curto = nomeCampanha(camp);
   var linha1 = curto || String(o.src || '');
   var linha2 = [o.anuncio, o.src && curto !== o.src ? o.src : ''].filter(Boolean).join(' · ');
   return '<b style="font-size:12.5px">' + esc(linha1) + '</b>' +
