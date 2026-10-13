@@ -9,6 +9,7 @@
 import { carrinhosPendentesDeEmail, marcarEmailCarrinho } from './_lib/metricas.mjs'
 import { enviar, htmlRecuperarCarrinho } from './_lib/email.mjs'
 import { enviarZap, textoCarrinhoParado } from './_lib/zap.mjs'
+import { registrarZap } from './_lib/zaplog.mjs'
 
 const ASSUNTOS = [
   'Ainda dá tempo — seu pedido te espera',
@@ -27,10 +28,17 @@ export default async () => {
       // e-mail se ignora sem custo; WhatsApp insistente irrita a pessoa
       // e ainda aumenta a chance de alguém denunciar o número.
       if (c.etapa === 0 && c.telefone) {
-        await enviarZap({
+        // Registra igual ao criar-pedido. Sem isto o envio era invisivel:
+        // o carrinho avancava de etapa e nao havia como saber se a
+        // mensagem saiu, falhou, ou sequer foi tentada.
+        const r = await enviarZap({
           telefone: c.telefone,
           texto: textoCarrinhoParado({ nome: c.nome }),
-        }).catch(() => {})
+        }).catch((e) => ({ enviado: false, erro: String(e?.message || e) }))
+        await registrarZap({
+          referencia: '', nome: c.nome, telefone: c.telefone,
+          etapa: 'carrinho parado', resultado: r,
+        })
       }
 
       try {
