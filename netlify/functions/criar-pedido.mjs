@@ -116,7 +116,11 @@ export default async (req) => {
     // 30 minutos, e nao havia como saber qual.
     const podeZap = pedido.metodo !== 'card' && await podeNotificar('pedido:' + cliente.email, 30)
     if (!podeZap) {
-      registrarZap({
+      // Com await de proposito: sem ele a funcao devolve a resposta e o
+      // Netlify congela antes de a linha ser gravada. Foi o que escondeu
+      // o pedido no cartao do AQ-261012-AF3XL, que ficou sem registro
+      // nenhum enquanto outros do mesmo dia registraram.
+      await registrarZap({
         referencia,
         nome: cliente.nome,
         telefone: cliente.telefone,

@@ -14,13 +14,24 @@
  * 84,99 / 99,90 / 179,90, que sao os numeros que o cliente ve. Escolhidos
  * pra cair redondos depois do desconto.
  */
+/**
+ * Caixa e peso de cada kit, pesados na balança em 12/10/2026.
+ *
+ * É a mesma caixa para os três kits, 19 x 12 x 7 cm. O que muda é o peso.
+ *
+ * A transportadora cobra pelo maior entre o peso real e o cúbico
+ * (volume / 6000). Nesta caixa o cúbico dá 266 g, então os kits de 1 e 2
+ * são cobrados por 266 g e o de 4 pelos 380 g reais. Os três continuam
+ * dentro de faixas baratas, e caixa menor não mudaria nada: abaixo de
+ * 16 x 11 x 2 o cálculo sobe pro mínimo dos Correios de qualquer jeito.
+ */
 export const KITS = {
   '1': { rotulo: '1 unidade',  unidades: 1, preco:  69.99, frete: 14.99,
-         caixa: { altura: 11, largura:  9, comprimento:  6, peso: 0.15 } },
+         caixa: { altura: 19, largura: 12, comprimento:  7, peso: 0.10 } },
   '2': { rotulo: '2 unidades', unidades: 2, preco: 129.90, frete: 0,
-         caixa: { altura: 16, largura: 11, comprimento:  7, peso: 0.28 } },
+         caixa: { altura: 19, largura: 12, comprimento:  7, peso: 0.17 } },
   '4': { rotulo: '4 unidades', unidades: 4, preco: 199.90, frete: 0,
-         caixa: { altura: 20, largura: 15, comprimento:  9, peso: 0.52 } },
+         caixa: { altura: 19, largura: 12, comprimento:  7, peso: 0.38 } },
 }
 
 export const METODOS = new Set(['pix', 'card', 'boleto'])
