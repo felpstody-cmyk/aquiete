@@ -283,6 +283,22 @@ img,svg{display:block;max-width:100%}
 .total__note{font-size:.75rem;color:var(--ink-3);text-align:right;margin-top:.2rem}
 .frete-nota{font-size:.75rem;line-height:1.45;color:var(--brand-700);background:var(--brand-100);border-radius:var(--r-sm);padding:.5rem .6rem;margin-top:.4rem}
 .frete-nota[hidden]{display:none}
+/* .lines div e flex por padrao, entao estes precisam voltar a empilhar:
+   sem isto o titulo e a lista ficam lado a lado e as opcoes vazam. */
+.lines .fretes{display:block;margin-top:.7rem}
+.lines .fretes > div{display:block}
+.lines .fretes[hidden]{display:none}
+.fretes__tit{font-size:.75rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;
+  color:var(--ink-3);margin-bottom:.4rem}
+.frete-op{display:flex;align-items:center;gap:.55rem;padding:.55rem .6rem;border:1px solid var(--line);
+  border-radius:var(--r-sm);margin-bottom:.35rem;cursor:pointer;background:#fff}
+.frete-op:has(input:checked){border-color:var(--brand);background:var(--brand-100)}
+.frete-op input{flex:none;margin:0}
+.frete-op__txt{flex:1;min-width:0;line-height:1.25}
+.frete-op__txt b{display:block;font-size:.8125rem;font-weight:600}
+.frete-op__txt small{font-size:.6875rem;color:var(--ink-3)}
+.frete-op__preco{font-size:.8125rem;font-weight:700;white-space:nowrap}
+.fretes__aviso{font-size:.75rem;color:var(--ink-3)}
 /* Dica cinza abaixo do campo. Vira mensagem de erro quando precisa. */
 .field small.dica{color:var(--ink-3);font-size:.8125rem}
 .field input[aria-invalid="true"] ~ small.dica{color:var(--brand-700)}
@@ -581,6 +597,10 @@ img,svg{display:block;max-width:100%}
             <div id="linhaDesc" hidden><span>Desconto</span> <span id="desc">— R$ 0,00</span></div>
             <div><span>Frete</span> <span id="frete">Grátis</span></div>
             <p class="frete-nota" id="freteNota" hidden>Frete grátis não vale para a sua região: o envio para o Norte é feito por transportadora e sai por R$ 19,99.</p>
+            <div class="fretes" id="fretes" hidden>
+              <div class="fretes__tit">Como quer receber</div>
+              <div id="fretesLista"></div>
+            </div>
           </div>
 
           <div class="total">
@@ -666,6 +686,10 @@ img,svg{display:block;max-width:100%}
   var FRETE_NORTE = 19.99;
   var CEPS_NORTE = [[66000, 69999], [76800, 76999], [77000, 77999]];
   var cepDigitado = '';
+  /* Opcao de entrega escolhida. Quando existe, ela manda no frete; quando
+     nao, vale a tabela fixa de sempre. */
+  var envioEscolhido = null;
+  var fretePedido = 0;
   function ehNorte(n){
     var p = Number(String(n || '').replace(/\D/g, '').slice(0, 5));
     if (!p) return false;
@@ -677,7 +701,7 @@ img,svg{display:block;max-width:100%}
   function pintarResumo(){
     var desconto = cupomAtivo ? +(kit.preco * cupomAtivo.percentual).toFixed(2) : 0;
     var norte = ehNorte(cepDigitado);
-    var frete = norte ? FRETE_NORTE : kit.frete;
+    var frete = envioEscolhido ? envioEscolhido.preco : (norte ? FRETE_NORTE : kit.frete);
     var total = kit.preco - desconto + frete;
 
     el('itemT').textContent  = kit.rotulo;
@@ -695,7 +719,9 @@ img,svg{display:block;max-width:100%}
         ? 'Frete grátis não vale para a sua região: o envio para o Norte é feito por transportadora e sai por ' + brl(FRETE_NORTE) + '.'
         : 'O envio para o Norte é feito por transportadora, por isso o frete é ' + brl(FRETE_NORTE) + '.';
     }
-    el('freteNota').hidden   = !norte;
+    // Com opcao escolhida o aviso do Norte mentiria: o preco ali ja e o
+    // da transportadora que a pessoa marcou, nao os R$ 19,99 da tabela.
+    el('freteNota').hidden   = !norte || !!envioEscolhido;
     el('linhaDesc').hidden   = !desconto;
     el('desc').textContent   = '— ' + brl(desconto);
     el('total').textContent  = brl(total);
@@ -947,6 +973,85 @@ img,svg{display:block;max-width:100%}
     return v.slice(0,8).replace(/(\d{5})(\d{0,3})/, '$1-$2').replace(/-$/, '');
   });
 
+  /* ---------- Opcoes de entrega ----------
+     So para quem paga: kit de 1 frasco, ou qualquer kit indo pro Norte.
+     Nos kits com frete gratis nao ha escolha a fazer. */
+  function pagaFrete(){ return kit.frete > 0 || ehNorte(cepDigitado); }
+
+  function limparFretes(){
+    envioEscolhido = null;
+    el('fretes').hidden = true;
+    el('fretesLista').replaceChildren();
+  }
+
+  /* Montado pela API do DOM: o nome da transportadora vem do Melhor Envio
+     e nao pode virar HTML nesta pagina. */
+  function desenharFretes(opcoes){
+    var lista = el('fretesLista');
+    lista.replaceChildren();
+
+    opcoes.forEach(function(o, i){
+      var linha = d.createElement('label');
+      linha.className = 'frete-op';
+
+      var radio = d.createElement('input');
+      radio.type = 'radio';
+      radio.name = 'envio';
+      radio.value = String(o.id);
+      radio.checked = i === 0;
+      radio.addEventListener('change', function(){
+        envioEscolhido = o;
+        totalAtual = pintarResumo();
+      });
+      linha.appendChild(radio);
+
+      var txt = d.createElement('span');
+      txt.className = 'frete-op__txt';
+      var nome = d.createElement('b');
+      nome.textContent = [o.empresa, o.nome].filter(Boolean).join(' ');
+      txt.appendChild(nome);
+      if (o.prazo) {
+        var prazo = d.createElement('small');
+        prazo.textContent = o.prazo + (o.prazo === 1 ? ' dia útil' : ' dias úteis');
+        txt.appendChild(prazo);
+      }
+      linha.appendChild(txt);
+
+      var preco = d.createElement('span');
+      preco.className = 'frete-op__preco';
+      preco.textContent = brl(o.preco);
+      linha.appendChild(preco);
+
+      lista.appendChild(linha);
+    });
+
+    envioEscolhido = opcoes[0];
+    el('fretes').hidden = false;
+    totalAtual = pintarResumo();
+  }
+
+  function buscarFretes(){
+    var n = String(cepDigitado || '').replace(/\D/g, '');
+    if (n.length !== 8 || !pagaFrete()) { limparFretes(); totalAtual = pintarResumo(); return; }
+
+    // Cada busca ganha um numero. Resposta de busca antiga que chega
+    // atrasada e descartada, senao o CEP anterior sobrescreve o atual.
+    var meu = ++fretePedido;
+    fetch('/api/frete?kit=' + encodeURIComponent(kitId) + '&cep=' + n)
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        if (meu !== fretePedido) return;
+        var opcoes = (j && j.opcoes) || [];
+        if (!opcoes.length) { limparFretes(); totalAtual = pintarResumo(); return; }
+        desenharFretes(opcoes.slice(0, 6));
+      })
+      .catch(function(){
+        if (meu !== fretePedido) return;
+        limparFretes();
+        totalAtual = pintarResumo();
+      });
+  }
+
   /* ---------- Busca de CEP (ViaCEP — gratuito, sem chave) ---------- */
   var cep = el('cep'), cepMsg = el('cepMsg');
 
@@ -954,7 +1059,9 @@ img,svg{display:block;max-width:100%}
     var n = cep.value.replace(/\D/g, '');
     if (n.length !== 8) return;
     cepDigitado = n;
+    envioEscolhido = null;
     totalAtual = pintarResumo();
+    buscarFretes();
     cepMsg.textContent = 'Buscando…';
     cepMsg.removeAttribute('data-err');
 
@@ -1113,6 +1220,9 @@ img,svg{display:block;max-width:100%}
           catch(e){ return null; }
         })(),
         metodo: d.querySelector('.pay input:checked').value,
+        // O servidor cota de novo e confere este id antes de cobrar: sem
+        // isso daria pra escolher o barato na tela e postar pelo caro.
+        envio: envioEscolhido ? envioEscolhido.id : null,
         // Vao junto pro servidor mandar o Pix gerado pro Meta com a
         // mesma identificacao que o navegador usaria.
         consent: (function(){ try { return localStorage.getItem('aq_cookies'); } catch(e){ return null; } })(),
