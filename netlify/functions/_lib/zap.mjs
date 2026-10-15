@@ -227,9 +227,13 @@ const oi = (nome) => (primeiroNome(nome) ? `Oi, ${primeiroNome(nome)}!` : 'Oi!')
 
 /** Na hora que o Pix é gerado. */
 export function textoPixGerado({ nome, descricao, total, payload }) {
+  // O banco mostra a razao social do MEI, nao "Aquiete". Quem nao e
+  // avisado antes ve um nome estranho na hora de confirmar e desiste.
+  // O texto abaixo e exatamente o campo 59 do codigo Pix.
+  const recebedor = 'No banco o recebedor aparece como 68601075 FELIPE STRAUSS, de Chapecó — é o CNPJ da Aquiete.'
   const fim = payload
-    ? 'Te mando o código do Pix na mensagem de baixo: é só copiar e colar no app do banco. Vence em 24h.'
-    : 'Se travou alguma coisa na hora de pagar, é só responder aqui que a gente resolve. O código vence em 24h.'
+    ? 'Te mando o código do Pix na mensagem de baixo: é só copiar e colar no app do banco. Vence em 24h.\n\n' + recebedor
+    : 'Se travou alguma coisa na hora de pagar, é só responder aqui que a gente resolve. O código vence em 24h.\n\n' + recebedor
   return [
     `${oi(nome)} Aqui é da Aquiete 🌿`,
     '',

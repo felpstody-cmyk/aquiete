@@ -130,8 +130,10 @@ export function htmlAguardando({ nome, referencia, descricao, total, metodo, pay
       <p style="margin:0"><b>3.</b> Confira o valor de <b>${brl(total)}</b> e confirme.</p>
     </div>
     <p style="margin:0 0 18px;font-size:13px;color:#82655F">
-      No app, o recebedor aparece como <b style="color:#5C4340">Felipe Strauss Toderati</b>.
-      É o nome da Aquiete no CNPJ, pode confirmar tranquilo.
+      Na hora de confirmar, o seu banco vai mostrar o recebedor como
+      <b style="color:#5C4340">68601075 FELIPE STRAUSS</b>, em Chapecó.
+      É o CNPJ da Aquiete — o banco mostra a razão social, não o nome da loja.
+      Pode confirmar.
     </p>` : ''
 
   const prazo = ehPix
@@ -181,7 +183,13 @@ export function htmlLembretePix({ nome, referencia, descricao, total, payload, l
     <p style="margin:20px 0 8px;font-size:13px;color:#82655F">Pix copia e cola:</p>
     <div style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;line-height:1.5;
                 color:#2A1613;background:#FBEDE9;border:1px dashed #F0A79F;border-radius:12px;
-                padding:12px;word-break:break-all">${esc(payload)}</div>` : ''
+                padding:12px;word-break:break-all">${esc(payload)}</div>
+    <p style="margin:10px 0 0;font-size:13px;color:#82655F;line-height:1.5">
+      Na hora de confirmar, o seu banco vai mostrar o recebedor como
+      <b style="color:#5C4340">68601075 FELIPE STRAUSS</b>, em Chapecó.
+      É o CNPJ da Aquiete — o banco mostra a razão social, não o nome da loja.
+      Pode confirmar.
+    </p>` : ''
 
   const botao = link ? `
     <table role="presentation" style="margin:22px auto 0"><tr><td style="border-radius:999px;background:#C8453E">
