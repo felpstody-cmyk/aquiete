@@ -42,7 +42,11 @@ const BASE_PADRAO = {
 /** Só os dígitos com 55 na frente, do jeito que os serviços querem. */
 export function numeroZap(telefone) {
   let d = String(telefone ?? '').replace(/\D/g, '')
-  if (d.startsWith('55')) d = d.slice(2)
+  // O 55 da frente só é código do país quando sobra um celular inteiro:
+  // 55 + 2 do DDD + 8 ou 9 do número dá 12 ou 13 dígitos. Em 11 dígitos
+  // o 55 É o DDD do Rio Grande do Sul (Santa Maria, Uruguaiana, Bagé), e
+  // arrancar ele fazia a loja recusar o telefone de todo mundo de lá.
+  if (d.length > 11 && d.startsWith('55')) d = d.slice(2)
   if (d.length < 10 || d.length > 11) return ''   // não é celular BR
   return '55' + d
 }

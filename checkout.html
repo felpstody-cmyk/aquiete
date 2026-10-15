@@ -896,7 +896,7 @@ img,svg{display:block;max-width:100%}
         ok = erro(el('nome'),  el('nome').value.trim().split(/\s+/).length < 2 ? 'Falta o sobrenome' : '') && ok;
         ok = erro(el('cpf'),   msgCpf(el('cpf').value)) && ok;
         ok = erro(el('email'), /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(el('email').value) ? '' : 'Confira o e-mail — falta o @ ou o ponto') && ok;
-        ok = erro(el('tel'),   el('tel').value.replace(/\D/g,'').length < 10 ? 'Falta número — com o DDD são 11' : '') && ok;
+        ok = erro(el('tel'),   msgTel(el('tel').value)) && ok;
         return ok;
       },
       function(){
@@ -1118,6 +1118,17 @@ img,svg{display:block;max-width:100%}
      coisas pedem reação diferente: uma é "continua digitando", a outra é
      "relê o que você digitou". Uma mensagem só pras duas faz a pessoa
      achar que o site não aceita o CPF dela. */
+  /* Celular brasileiro tem 11 digitos e o numero comeca com 9 depois do
+     DDD. Contar digito so nao bastava: passou um 55799980223, que tem 11,
+     e o envio recusou depois — a pessoa gerou o Pix e nao recebeu nada. */
+  function msgTel(v){
+    var d = String(v || '').replace(/\D/g, '');
+    if (d.length < 11) return 'Falta número — com o DDD são 11';
+    if (d.length > 11) return 'Número comprido demais — com o DDD são 11';
+    if (d.charAt(2) !== '9') return 'Confira o número — depois do DDD o celular começa com 9';
+    return '';
+  }
+
   function msgCpf(v){
     var n = String(v || '').replace(/\D/g, '');
     if (!n) return 'Falta o CPF';
