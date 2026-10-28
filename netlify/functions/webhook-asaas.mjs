@@ -21,6 +21,7 @@ import { enviar, htmlConfirmacao, htmlVenda } from './_lib/email.mjs'
 import { enviarCompra } from './_lib/meta-capi.mjs'
 import { notificarVenda, podeNotificar } from './_lib/notificar.mjs'
 import { marcarCarrinhoPago, registrarVendaPaga } from './_lib/metricas.mjs'
+import { marcarPagoUtmify } from './_lib/utmify.mjs'
 import { enviarZap, textoPago } from './_lib/zap.mjs'
 
 const json = (dados, status = 200) =>
@@ -123,6 +124,10 @@ export default async (req) => {
   // Venda paga de verdade: entra na fila de conversao do Google. Se o
   // pedido nao veio de anuncio, isso nao faz nada.
   await registrarVendaPaga({ referencia, valor: total, quando: Date.now() }).catch(() => {})
+
+  // A mesma venda, agora como paga, pra Utmify fechar a conta da
+  // campanha. Reaproveita o payload guardado quando o Pix foi gerado.
+  await marcarPagoUtmify(referencia, Date.now()).catch(() => {})
 
   // Zap de "pagamento confirmado". Vai junto do e-mail, nao no lugar
   // dele: quem paga quer ver a confirmacao onde estiver olhando.

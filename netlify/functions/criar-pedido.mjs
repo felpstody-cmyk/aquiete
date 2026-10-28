@@ -17,6 +17,7 @@ import { enviarZap, textoPixGerado, textoPixCodigo } from './_lib/zap.mjs'
 import { registrarZap } from './_lib/zaplog.mjs'
 import { enviarPagamento } from './_lib/meta-capi.mjs'
 import { geoDe } from './_lib/geo.mjs'
+import { registrarPedidoUtmify } from './_lib/utmify.mjs'
 
 const json = (dados, status = 200) =>
   new Response(JSON.stringify(dados), {
@@ -51,8 +52,17 @@ export default async (req) => {
     const cliente = validarCliente(corpo.cliente)
     const referencia = gerarReferencia()
 
+    // O IP sai daqui porque tres coisas precisam dele: o antifraude do
+    // gateway, o CAPI do Meta e o rastreio da Utmify.
+    const ipCliente =
+      req.headers.get('x-nf-client-connection-ip') ||
+      (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() ||
+      null
+
     const gateway = obterGateway()
-    const cobranca = await gateway.criarCobranca({ pedido, cliente, referencia })
+    const cobranca = await gateway.criarCobranca({
+      pedido, cliente, referencia, origem: corpo.origem, ip: ipCliente,
+    })
 
     // Pedido gerado ainda não é venda: quem gera o Pix e não paga tem que
     // voltar pra lista de abandonados sozinho depois do prazo. Por isso o
@@ -61,6 +71,18 @@ export default async (req) => {
     // Liga este pedido ao clique do anuncio. So sera usado la na frente,
     // quando (e se) o Asaas confirmar o pagamento.
     await guardarCliqueDoPedido(referencia, corpo.clique).catch(() => {})
+
+    // Atribuicao de campanha, gravada fora da nossa casa. Vai como
+    // "aguardando pagamento"; o webhook vira pra "pago" quando o dinheiro
+    // cair. Com await de proposito: a funcao congela ao responder, entao
+    // promessa solta aqui morreria sem terminar.
+    await registrarPedidoUtmify({
+      referencia,
+      pedido,
+      cliente,
+      origem: corpo.origem,
+      ip: ipCliente,
+    })
 
     // Pix gerado tambem vai pro Meta daqui, nao so do navegador: la o
     // evento so existe pra quem aceitou o cookie, e isso era 13 no mes.

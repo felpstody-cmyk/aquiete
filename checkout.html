@@ -1234,6 +1234,13 @@ img,svg{display:block;max-width:100%}
         // O servidor cota de novo e confere este id antes de cobrar: sem
         // isso daria pra escolher o barato na tela e postar pelo caro.
         envio: envioEscolhido ? envioEscolhido.id : null,
+        // De qual anuncio a pessoa veio, gravado na pagina de chegada.
+        // Antes isto so ia pro carrinho, entao o PEDIDO nao sabia a
+        // origem e a venda chegava na Utmify sem campanha nenhuma.
+        origem: (function(){
+          try { return JSON.parse(localStorage.getItem('aq_origem') || 'null'); }
+          catch(e){ return null; }
+        })(),
         // Vao junto pro servidor mandar o Pix gerado pro Meta com a
         // mesma identificacao que o navegador usaria.
         consent: (function(){ try { return localStorage.getItem('aq_cookies'); } catch(e){ return null; } })(),

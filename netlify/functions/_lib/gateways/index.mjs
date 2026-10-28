@@ -30,11 +30,12 @@
  * ------------------------------------------------------------------
  */
 
+import * as appmax from './appmax.mjs'
 import * as asaas from './asaas.mjs'
 import * as pagarme from './pagarme.mjs'
 import * as mercadopago from './mercadopago.mjs'
 
-const ADAPTADORES = { asaas, pagarme, mercadopago }
+const ADAPTADORES = { appmax, asaas, pagarme, mercadopago }
 
 export function obterGateway() {
   const escolhido = (process.env.GATEWAY || 'asaas').toLowerCase()
