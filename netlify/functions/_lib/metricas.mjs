@@ -327,7 +327,13 @@ export async function carrinhosPendentesDeEmail() {
       const horasDesde = (agora - d.em) / 3_600_000
       if (horasDesde < ETAPAS_CARRINHO[etapa].horasDesde) return
       if (horasDesde > 7 * 24) return
-      saida.push({ email: b.key, nome: d.nome, kit: d.kit, telefone: d.telefone || '', etapa })
+      // `desde` e quando esta compra comecou. Quem cobra usa isso pra
+      // saber se um pagamento do mesmo cliente liquida ESTE carrinho ou
+      // se era de uma compra anterior (ver _lib/pagantes.mjs).
+      saida.push({
+        email: b.key, nome: d.nome, kit: d.kit, telefone: d.telefone || '', etapa,
+        desde: d.pedido?.em || d.criado || d.em || 0,
+      })
     }))
   } catch { /* sem carrinho pra lembrar é melhor que erro 500 */ }
   return saida

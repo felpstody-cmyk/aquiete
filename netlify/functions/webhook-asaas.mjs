@@ -21,6 +21,7 @@ import { enviar, htmlConfirmacao, htmlVenda } from './_lib/email.mjs'
 import { enviarCompra } from './_lib/meta-capi.mjs'
 import { notificarVenda, podeNotificar } from './_lib/notificar.mjs'
 import { marcarCarrinhoPago, registrarVendaPaga } from './_lib/metricas.mjs'
+import { marcarPagante } from './_lib/pagantes.mjs'
 import { marcarPagoUtmify } from './_lib/utmify.mjs'
 import { enviarZap, textoPago } from './_lib/zap.mjs'
 
@@ -45,6 +46,20 @@ function ehAVezDesteEvento(evento, tipoCobranca) {
   const cartao = String(tipoCobranca ?? '').toUpperCase().includes('CREDIT_CARD')
   return cartao ? evento === 'PAYMENT_CONFIRMED' : evento === 'PAYMENT_RECEIVED'
 }
+
+/**
+ * Todo evento que significa "o dinheiro entrou", sem escolher de quem e a
+ * vez. A regra de cima existe pra nao mandar DOIS e-mails do mesmo
+ * pedido; parar de cobrar e outra coisa, e tem que acontecer no primeiro
+ * sinal. No Pix o CONFIRMED chega antes do RECEIVED, e esperar o segundo
+ * deixava uma janela em que o lembrete de Pix ainda saia pra quem acabou
+ * de pagar.
+ */
+const EVENTOS_PAGOS = new Set([
+  'PAYMENT_CONFIRMED',
+  'PAYMENT_RECEIVED',
+  'PAYMENT_RECEIVED_IN_CASH',
+])
 
 /** Comparação em tempo constante: `===` vaza o tamanho do prefixo certo. */
 function mesmoToken(recebido, esperado) {
@@ -86,40 +101,57 @@ export default async (req) => {
   const pgto = corpo?.payment
   if (!evento || !pgto) return json({ ok: true, ignorado: 'sem evento' })
 
+  const referencia = pgto.externalReference || pgto.id
+
+  // Cada etapa é isolada: falha em uma não impede as outras nem o 200.
+  let cliente = null
+
+  // Este bloco roda ANTES de decidir de quem é a vez, e é o conserto da
+  // primeira venda: a cliente gerou mais de um Pix, pagou um, e recebeu
+  // depois "seu Pix ainda não caiu" com o código de uma das cobranças que
+  // ficaram penduradas. Quem pagou para de ser cobrado no primeiro sinal
+  // de pagamento, qualquer que seja a cobrança que sobrou no Asaas.
+  if (EVENTOS_PAGOS.has(evento)) {
+    try {
+      const c = await buscarCliente(pgto.customer)
+      cliente = {
+        nome: c.name,
+        email: c.email,
+        telefone: c.mobilePhone || c.phone || '',
+        cidade: c.city || c.cityName || '',
+        cep: c.postalCode || '',
+        endereco: [c.address, c.addressNumber, c.complement, c.province, c.postalCode]
+          .filter(Boolean).join(', '),
+      }
+    } catch (e) {
+      console.error('[webhook] não consegui buscar o cliente:', e.message)
+    }
+
+    // A trava das cobranças, pela PESSOA: e-mail e telefone. Ver
+    // _lib/pagantes.mjs.
+    await marcarPagante({
+      email: cliente?.email,
+      telefone: cliente?.telefone,
+      referencia,
+    }).catch(() => {})
+
+    // Tira da lista de abandonados e da sequência de e-mail. Pela
+    // referência também, pra funcionar mesmo se a busca do cliente falhou.
+    await marcarCarrinhoPago({ email: cliente?.email, referencia }).catch(() => {})
+  }
+
   if (!ehAVezDesteEvento(evento, pgto.billingType)) {
     console.log('[webhook] ignorado:', evento, pgto.billingType, pgto.id)
     return json({ ok: true, ignorado: evento })
   }
 
-  const referencia = pgto.externalReference || pgto.id
   const total = Number(pgto.value)
   const descricao = pgto.description || 'Aquiete'
   const unidades = unidadesDe(descricao)
 
   console.log('[webhook] pagamento confirmado', referencia, total)
 
-  // Cada etapa é isolada: falha em uma não impede as outras nem o 200.
-  let cliente = null
-  try {
-    const c = await buscarCliente(pgto.customer)
-    cliente = {
-      nome: c.name,
-      email: c.email,
-      telefone: c.mobilePhone || c.phone || '',
-      cidade: c.city || c.cityName || '',
-      cep: c.postalCode || '',
-      endereco: [c.address, c.addressNumber, c.complement, c.province, c.postalCode]
-        .filter(Boolean).join(', '),
-    }
-  } catch (e) {
-    console.error('[webhook] não consegui buscar o cliente:', e.message)
-  }
-
   const resultados = {}
-
-  // Tira da lista de abandonados e da sequência de e-mail. Pela referência
-  // também, pra funcionar mesmo se a busca do cliente no Asaas falhou.
-  await marcarCarrinhoPago({ email: cliente?.email, referencia }).catch(() => {})
 
   // Venda paga de verdade: entra na fila de conversao do Google. Se o
   // pedido nao veio de anuncio, isso nao faz nada.
