@@ -58,3 +58,38 @@
 #    ASAAS_API_KEY    chave do Asaas (começa com $aact_)
 #    ASAAS_AMBIENTE   producao (padrão se não existir) | sandbox
 # ------------------------------------------------------------
+#  DESPACHO NO MELHOR ENVIO
+#
+#  Sem o bloco REMETENTE_* abaixo o despacho fica desligado e cada
+#  venda volta a ser cadastrada na mão. Não é opcional por capricho:
+#  a API exige o endereço completo de quem posta, e CEP_ORIGEM
+#  sozinho só serve pra cotar.
+#
+#    MELHORENVIO_TOKEN      Integrações > Tokens, no painel deles.
+#                           Precisa das permissões de carrinho; e
+#                           também de compra, geração e impressão se
+#                           MELHORENVIO_DESPACHO for "completo".
+#    MELHORENVIO_AMBIENTE   producao (padrão) | sandbox
+#    MELHORENVIO_DESPACHO   carrinho (padrão) deixa o envio pronto no
+#                           carrinho pra ele conferir e comprar.
+#                           completo paga a etiqueta com o saldo da
+#                           carteira e devolve o link pra imprimir.
+#                           off desliga.
+#    MELHORENVIO_SEGURAR    1 declara o valor do produto como valor
+#                           segurado. Só se a DC-e vier recusada por
+#                           divergência — o frete sobe um pouco.
+#
+#    CEP_ORIGEM             de onde sai a encomenda
+#    REMETENTE_NOME         razão social do MEI
+#    REMETENTE_CNPJ         só os dígitos
+#    REMETENTE_RUA
+#    REMETENTE_NUMERO
+#    REMETENTE_COMPLEMENTO  (opcional)
+#    REMETENTE_BAIRRO
+#    REMETENTE_CIDADE
+#    REMETENTE_UF
+#    REMETENTE_TELEFONE     (opcional)
+#    REMETENTE_EMAIL        (opcional, cai em contato@aquieteagora.com.br)
+#    REMETENTE_IE           (opcional, cai em ISENTO — MEI é isento)
+#    REMETENTE_CNAE         (opcional, só a LATAM Cargo exige)
+# ------------------------------------------------------------

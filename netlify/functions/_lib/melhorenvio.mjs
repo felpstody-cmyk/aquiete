@@ -1,16 +1,18 @@
 /**
- * Cotação de frete no Melhor Envio.
+ * Conversa com o Melhor Envio: cotação de frete, e o transporte que o
+ * despacho usa pra criar o envio (ver _lib/envio.mjs).
  *
- * Roda NO SERVIDOR, pelo mesmo motivo do preço: o valor do frete que o
- * navegador manda é ignorado. Quem cota é aqui, e `criar-pedido` cota de
- * novo antes de cobrar — senão qualquer um escolhe SEDEX e paga PAC.
+ * A cotação roda NO SERVIDOR, pelo mesmo motivo do preço: o valor do
+ * frete que o navegador manda é ignorado. Quem cota é aqui, e
+ * `criar-pedido` cota de novo antes de cobrar — senão qualquer um
+ * escolhe SEDEX e paga PAC.
  *
  * Precisa de três variáveis no Netlify:
  *   MELHORENVIO_TOKEN     token de Integrações > Tokens, na conta dele
  *   MELHORENVIO_AMBIENTE  "sandbox" para testar, "producao" para valer
  *   CEP_ORIGEM            de onde sai a encomenda (Chapecó)
  *
- * Sem o token a função devolve lista vazia em vez de estourar: a loja
+ * Sem o token a cotação devolve lista vazia em vez de estourar: a loja
  * continua vendendo com o frete fixo de antes, que é melhor que um
  * checkout quebrado.
  */
@@ -24,10 +26,49 @@ const BASES = {
 /** O Melhor Envio recusa chamada sem User-Agent com contato. */
 const AGENTE = 'Aquiete (contato@aquieteagora.com.br)'
 
-const soDigitos = (v) => String(v ?? '').replace(/\D/g, '')
+export const soDigitos = (v) => String(v ?? '').replace(/\D/g, '')
 
 export function configurado() {
   return Boolean(process.env.MELHORENVIO_TOKEN && process.env.CEP_ORIGEM)
+}
+
+export function base() {
+  const amb = (process.env.MELHORENVIO_AMBIENTE || 'producao').toLowerCase()
+  return BASES[amb] || BASES.producao
+}
+
+/**
+ * Uma chamada à API deles. Lança com o corpo do erro no texto, porque o
+ * 422 do Melhor Envio diz campo a campo o que faltou — e sem isso a
+ * investigação morre num "422" seco.
+ */
+export async function chamar(caminho, { metodo = 'POST', corpo } = {}) {
+  if (!process.env.MELHORENVIO_TOKEN) throw new Error('MELHORENVIO_TOKEN não configurado')
+
+  const r = await fetch(base() + caminho, {
+    method: metodo,
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${process.env.MELHORENVIO_TOKEN}`,
+      'User-Agent': AGENTE,
+    },
+    ...(corpo === undefined ? {} : { body: JSON.stringify(corpo) }),
+  })
+
+  const texto = await r.text()
+  let dados = null
+  try { dados = texto ? JSON.parse(texto) : null } catch { /* vem HTML quando cai */ }
+
+  if (!r.ok) {
+    const detalhe =
+      dados?.message ||
+      (dados?.errors && JSON.stringify(dados.errors)) ||
+      texto.slice(0, 300) ||
+      r.statusText
+    throw new Error(`Melhor Envio ${r.status}: ${detalhe}`)
+  }
+  return dados
 }
 
 /**
@@ -43,8 +84,6 @@ export async function cotar(kitId, cepDestino) {
   const destino = soDigitos(cepDestino)
   if (destino.length !== 8) return []
 
-  const base = BASES[(process.env.MELHORENVIO_AMBIENTE || 'producao').toLowerCase()] || BASES.producao
-
   const corpo = {
     from: { postal_code: soDigitos(process.env.CEP_ORIGEM) },
     to: { postal_code: destino },
@@ -59,19 +98,7 @@ export async function cotar(kitId, cepDestino) {
     options: { receipt: false, own_hand: false, insurance_value: 0 },
   }
 
-  const r = await fetch(`${base}/me/shipment/calculate`, {
-    method: 'POST',
-    headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${process.env.MELHORENVIO_TOKEN}`,
-      'User-Agent': AGENTE,
-    },
-    body: JSON.stringify(corpo),
-  })
-
-  if (!r.ok) throw new Error(`Melhor Envio ${r.status}`)
-  const lista = await r.json()
+  const lista = await chamar('/me/shipment/calculate', { corpo })
   if (!Array.isArray(lista)) return []
 
   return lista

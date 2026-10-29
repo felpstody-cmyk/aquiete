@@ -2414,6 +2414,80 @@ function atualizarBulkBar(){
   el('bulkCount').textContent = ids.length + ' selecionado' + (ids.length===1?'':'s');
 }
 
+/*
+ * Como esta a encomenda no Melhor Envio.
+ *
+ * `p.envio` vem do admin-dados e e null nos pedidos de antes do despacho
+ * automatico existir — ali a encomenda foi cadastrada na mao e o painel
+ * nao tem como saber, entao mostra um traco em vez de inventar estado.
+ */
+/*
+ * Cria o envio no Melhor Envio para um pedido que ja esta pago.
+ *
+ * O normal e automatico, no instante do pagamento. Isto serve pras vendas
+ * de antes do automatico existir e pras que falharam.
+ */
+function despacharPedido(id){
+  var p = todos().filter(function(x){ return x.id===id; })[0];
+  if (!p) return;
+  if (!pago(p)) { alert('Esse pedido ainda nao foi pago.'); return; }
+  if (!p.referencia) { alert('Esse pedido nao tem referencia, nao da pra despachar.'); return; }
+
+  if (!confirm('Criar o envio de ' + p.nome + ' no Melhor Envio?\n\nPedido ' + p.referencia)) return;
+
+  var url = cfg.url.replace(/\/?admin-dados\/?$/, '/admin-despachar');
+  fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-admin-token': cfg.token },
+    body: JSON.stringify({
+      referencia: p.referencia,
+      kitId: String(p.un || 1),
+      cliente: {
+        nome: p.nome, cpf: p.cpf, email: p.contato, telefone: p.telefone,
+        cep: p.cep, rua: p.rua, numero: p.numero, complemento: p.complemento,
+        bairro: p.bairro,
+        // O checkout grava "Cidade / UF" junto, e e esse formato que o
+        // servidor sabe desmontar.
+        cidade: [p.cidade, p.uf].filter(Boolean).join(' / ')
+      }
+    })
+  })
+  .then(function(r){ return r.json().then(function(j){ return { ok: r.ok, j: j }; }); })
+  .then(function(res){
+    if (!res.ok) { alert('Nao deu: ' + (res.j.erro || 'erro desconhecido')); return; }
+    if (res.j.repetido) { alert('Esse envio ja existia no Melhor Envio.'); return; }
+    alert('Envio criado' + (res.j.servico ? ' — ' + res.j.servico : '') +
+          '.\n\n' + (res.j.comprado ? 'Etiqueta paga e pronta pra imprimir.'
+                                      : 'Entra no Melhor Envio, confere e compra a etiqueta.'));
+    sincronizar();
+  })
+  .catch(function(e){ alert('Falhou: ' + e.message); });
+}
+
+function envioTxt(p){
+  var e = p.envio;
+  if (!e) return '<span style="color:var(--ink-3)">—</span>';
+
+  if (e.erro) {
+    return '<span class="pill p-vencido" title="' + esc(e.erro) + '">falhou</span>';
+  }
+
+  var rotulo = { pending: 'no carrinho', pago: 'etiqueta paga', gerado: 'etiqueta pronta' }[e.estado] || e.estado;
+  var classe = e.estado === 'pending' ? 'p-pendente' : 'p-pago';
+  var fora = '<span class="pill ' + classe + '">' + esc(rotulo) + '</span>';
+
+  if (e.servico) fora += '<br><span style="font-size:11.5px;color:var(--ink-3)">' + esc(e.servico) + '</span>';
+
+  // Os dois documentos que vao no pacote. Sem a DACE a encomenda pode
+  // ser retida: ela e obrigatoria desde 06/04/2026 em envio sem nota.
+  var links = [];
+  if (e.etiqueta) links.push('<a class="lnk" href="' + esc(e.etiqueta) + '" target="_blank">etiqueta</a>');
+  if (e.dace) links.push('<a class="lnk" href="' + esc(e.dace) + '" target="_blank">DACE</a>');
+  if (links.length) fora += '<br>' + links.join(' ');
+
+  return fora;
+}
+
 function renderPedidos(){
   var sts = {}; todos().forEach(function(p){ if(p.status) sts[p.status]=1; });
   var atual = el('fStatus').value;
@@ -2433,20 +2507,24 @@ function renderPedidos(){
 
   el('tbPedidos').innerHTML = lista.length
     ? '<thead><tr><th class="sel"><input type="checkbox" id="selAllPedidos"></th><th>Data</th><th>Cliente</th><th>Destino</th><th class="num">Un</th><th>Pgto</th>' +
-      '<th>Situação</th><th>Origem</th><th class="num">Total</th><th></th></tr></thead><tbody>' +
+      '<th>Situação</th><th>Envio</th><th>Origem</th><th class="num">Total</th><th></th></tr></thead><tbody>' +
       lista.map(function(p){
         return '<tr><td class="sel"><input type="checkbox" class="selPedido" data-id="'+p.id+'"'+(selecionados[p.id]?' checked':'')+'></td><td>'+dataBR(p.data)+'</td>' +
           '<td><b>'+esc(p.nome)+'</b>'+(p.contato?'<br><span style="color:var(--ink-3);font-size:12px">'+esc(p.contato)+'</span>':'')+'</td>' +
           '<td>'+esc([p.cidade,p.uf].filter(Boolean).join(' / ')||'—')+'</td>' +
           '<td class="num">'+(p.un||1)+'</td><td>'+esc(p.pag||'—')+'</td>' +
           '<td><span class="pill p-'+chave(p.status)+'">'+esc(p.status)+'</span></td>' +
+          '<td>'+envioTxt(p)+'</td>' +
           '<td>'+(p.origem==='site'?'<span class="pill p-enviado">site</span>':'<span class="pill p-manual">manual</span>')+'</td>' +
           '<td class="num">'+brl(totalDe(p))+'</td>' +
           '<td style="white-space:nowrap">' +
             '<button class="lnk" data-det="'+p.id+'">detalhes</button>' + (p.origem==='manual'
             ? '<button class="lnk" data-ed="'+p.id+'">editar</button><button class="lnk" data-rm="'+p.id+'">excluir</button>'
             : ((p.link?'<a class="lnk" href="'+esc(p.link)+'" target="_blank">cobrança</a> ':'') +
-               '<button class="lnk" data-tr="'+p.id+'">rastreio</button>')) + '</td></tr>';
+               '<button class="lnk" data-tr="'+p.id+'">rastreio</button>' +
+               // Só em pedido pago que ainda não tem envio: é o único caso
+               // em que apertar isso faz alguma coisa.
+               (pago(p) && !(p.envio && !p.envio.erro) ? '<button class="lnk" data-dp="'+p.id+'">despachar</button>' : ''))) + '</td></tr>';
       }).join('') + '</tbody>'
     : '<tbody><tr><td class="vazio">Nenhum pedido encontrado.</td></tr></tbody>';
 
@@ -2459,6 +2537,8 @@ function renderPedidos(){
     b.onclick = function(){ enviarRastreio(b.dataset.tr); }; });
   Array.prototype.forEach.call(el('tbPedidos').querySelectorAll('[data-det]'), function(b){
     b.onclick = function(){ abrirDetalhes(b.dataset.det); }; });
+  Array.prototype.forEach.call(el('tbPedidos').querySelectorAll('[data-dp]'), function(b){
+    b.onclick = function(){ despacharPedido(b.dataset.dp); }; });
 
   var selAll = el('selAllPedidos');
   if (selAll) {

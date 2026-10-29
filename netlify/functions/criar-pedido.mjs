@@ -18,6 +18,7 @@ import { registrarZap } from './_lib/zaplog.mjs'
 import { enviarPagamento } from './_lib/meta-capi.mjs'
 import { geoDe } from './_lib/geo.mjs'
 import { registrarPedidoUtmify } from './_lib/utmify.mjs'
+import { guardarDespacho } from './_lib/envio.mjs'
 
 const json = (dados, status = 200) =>
   new Response(JSON.stringify(dados), {
@@ -71,6 +72,12 @@ export default async (req) => {
     // Liga este pedido ao clique do anuncio. So sera usado la na frente,
     // quando (e se) o Asaas confirmar o pagamento.
     await guardarCliqueDoPedido(referencia, corpo.clique).catch(() => {})
+
+    // O que o Melhor Envio vai precisar quando o pagamento cair. Guardado
+    // AQUI porque o servico de entrega que o cliente escolheu so existe
+    // neste ponto: o gateway nao guarda isso, e sem ele o despacho tinha
+    // que chutar qual frete a pessoa pagou.
+    await guardarDespacho(referencia, { cliente, pedido }).catch(() => {})
 
     // Atribuicao de campanha, gravada fora da nossa casa. Vai como
     // "aguardando pagamento"; o webhook vira pra "pago" quando o dinheiro

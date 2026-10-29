@@ -19,9 +19,10 @@ import { timingSafeEqual } from 'node:crypto'
 import { buscarCliente } from './_lib/gateways/asaas.mjs'
 import { enviar, htmlConfirmacao, htmlVenda } from './_lib/email.mjs'
 import { enviarCompra } from './_lib/meta-capi.mjs'
-import { notificarVenda, podeNotificar } from './_lib/notificar.mjs'
+import { notificarVenda, podeNotificar, push } from './_lib/notificar.mjs'
 import { marcarCarrinhoPago, registrarVendaPaga } from './_lib/metricas.mjs'
 import { marcarPagante } from './_lib/pagantes.mjs'
+import { despachar } from './_lib/envio.mjs'
 import { marcarPagoUtmify } from './_lib/utmify.mjs'
 import { enviarZap, textoPago } from './_lib/zap.mjs'
 
@@ -206,6 +207,32 @@ export default async (req) => {
       console.error('[webhook] CAPI do Meta falhou:', e.message)
       resultados.meta = { enviado: false, erro: e.message }
     }
+  }
+
+  // Cria o envio no Melhor Envio. Antes disto, toda venda era digitada
+  // na mao no painel deles e o servico que o cliente pagou se perdia.
+  // Idempotente: o Asaas reenvia o webhook quando nao recebe 200 na hora,
+  // e etiqueta duplicada e dinheiro duplicado (ver _lib/envio.mjs).
+  const envio = await despachar(referencia).catch((e) => ({ ok: false, motivo: e.message }))
+  resultados.envio = envio
+
+  if (envio.ok && !envio.repetido) {
+    const linhas = envio.comprado
+      ? [`📦 Etiqueta paga e gerada — ${envio.servico}`, '', `Pedido ${referencia}`,
+         envio.etiqueta ? `\nEtiqueta: ${envio.etiqueta}` : '',
+         envio.dace ? `DACE (declaracao de conteudo): ${envio.dace}` : '']
+      : [`📦 Envio no carrinho do Melhor Envio — ${envio.servico}`, '',
+         `Pedido ${referencia}`, '',
+         'Entra la, confere e compra a etiqueta. A declaracao de conteudo',
+         'sai junto, e vai colada no pacote com a etiqueta.']
+    push(linhas.filter(Boolean).join('\n'), 'Aquiete — envio pronto').catch(() => {})
+  } else if (!envio.ok && envio.motivo !== 'desligado' && !envio.repetido) {
+    // Falhar calado aqui significa a encomenda nao sair e ninguem saber.
+    push(
+      `⚠️ O envio do pedido ${referencia} nao foi criado no Melhor Envio.\n\n${envio.motivo}\n\nTem que cadastrar na mao.`,
+      'Aquiete — envio travou',
+      { tags: 'warning' },
+    ).catch(() => {})
   }
 
   // O "toc toc" no celular. Sem cliente ainda manda, só troca o nome por generico.

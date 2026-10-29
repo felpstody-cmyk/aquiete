@@ -14,6 +14,7 @@ import { lerComportamento, lerResumos } from './_lib/jornada.mjs'
 import { KITS, FRETE_NORTE } from './_lib/catalogo.mjs'
 import { lerEstadoZap } from './_lib/zapvigia.mjs'
 import { lerZapLog } from './_lib/zaplog.mjs'
+import { lerDespachos, despachoConfigurado, faltaNoRemetente } from './_lib/envio.mjs'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -91,7 +92,7 @@ export default async (req) => {
   if (req.headers.get('x-admin-token') !== esperado) return json({ erro: 'Token inválido' }, 401)
 
   try {
-    const [cobrancas, clientes, metricas, ativos, carrinhos, comportamento, conversoesGoogle, resumos, zap, zapLog] = await Promise.all([
+    const [cobrancas, clientes, metricas, ativos, carrinhos, comportamento, conversoesGoogle, resumos, zap, zapLog, despachos] = await Promise.all([
       tudo('/payments'),
       tudo('/customers'),
       lerContadores(),
@@ -107,12 +108,17 @@ export default async (req) => {
       // chamada externa — foi assim que ele comecou a dar 504 antes.
       lerEstadoZap(),
       lerZapLog(),
+      // Leitura de blob, nao chamada no Melhor Envio: quem fala com eles e
+      // o webhook, uma vez por venda. Abrir o painel nao pode custar
+      // chamada externa.
+      lerDespachos(),
     ])
 
     // Uma leitura só do Blobs: a lista de abandonados sai da lista completa.
     const abandonados = await lerCarrinhosAbandonados(carrinhos)
 
     const porId = new Map(clientes.map((c) => [c.id, c]))
+    const porRef = new Map(despachos.map((d) => [d.referencia, d]))
 
     const pedidos = cobrancas.map((p) => {
       const c = porId.get(p.customer) || {}
@@ -133,6 +139,13 @@ export default async (req) => {
         bairro: c.province || '',
         cep: c.postalCode || '',
         endereco: [c.address, c.addressNumber].filter(Boolean).join(', '),
+        // Separados tambem: e o que o despacho manual precisa mandar de
+        // volta, porque `validarCliente` cobra rua e numero em campos
+        // proprios e o `endereco` colado acima nao da pra desmontar com
+        // seguranca (tem rua com virgula no nome).
+        rua: c.address || '',
+        numero: String(c.addressNumber || ''),
+        complemento: c.complement || '',
         un,
         valor: Number(p.value) || 0,
         liquido: Number(p.netValue) || 0,
@@ -140,6 +153,20 @@ export default async (req) => {
         status: SITUACAO[p.status] || p.status || '',
         descricao: p.description || '',
         link: p.invoiceUrl || '',
+        // Como esta a encomenda no Melhor Envio. `envio` fica null nos
+        // pedidos antigos, de antes do despacho automatico existir.
+        envio: (() => {
+          const d = porRef.get(p.externalReference || '')
+          if (!d) return null
+          return {
+            servico: d.me?.servico || d.servicoNome || '',
+            estado: d.me?.estado || (d.erro ? 'falhou' : 'nao enviado'),
+            protocolo: d.me?.protocolo || '',
+            etiqueta: d.me?.etiqueta || '',
+            dace: d.me?.dace || '',
+            erro: d.erro || '',
+          }
+        })(),
       }
     })
 
@@ -162,6 +189,13 @@ export default async (req) => {
       // tinha a própria cópia em Ajustes e ela ficou pra trás: carrinho
       // de 2 unidades aparecia como R$ 169,00 quando a loja cobrava
       // R$ 149,90. Uma fonte só, e não desencontra mais.
+      // Pro painel poder dizer "falta preencher X" em vez de so mostrar
+      // pedido sem envio e deixar ele adivinhando o motivo.
+      despacho: {
+        ligado: despachoConfigurado(),
+        falta: faltaNoRemetente(),
+        modo: (process.env.MELHORENVIO_DESPACHO || 'carrinho').toLowerCase(),
+      },
       precos: {
         kits: Object.fromEntries(
           Object.entries(KITS).map(([id, k]) => [id, { preco: k.preco, frete: k.frete, unidades: k.unidades }])
