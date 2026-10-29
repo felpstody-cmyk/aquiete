@@ -115,7 +115,7 @@ p{text-wrap:pretty}
    150 aplicações por frasco, duas ao dia, uns 75 dias. */
 .kit__dia{display:block;margin-top:.12rem;font-size:.74rem;font-weight:700;color:var(--brand-700);line-height:1.3}
 /* Âncora de preço. Sem ela, R$ 129,90 é comparado com zero. */
-.ancora{border:2px dashed var(--brand-200);border-radius:16px;padding:1rem 1.05rem;margin:0 0 1.15rem;background:#FFFAF8}
+.ancora{border:2px dashed var(--brand-200);border-radius:16px;padding:1rem 1.05rem;margin:1.25rem 0;background:#FFFAF8}
 .ancora__t{margin:0 0 .6rem;font-weight:800;font-size:1rem;color:var(--ink);line-height:1.3}
 .ancora__l{list-style:none;margin:0;padding:0}
 .ancora__l li{display:flex;align-items:baseline;gap:.5rem;padding:.4rem 0;border-top:1px solid var(--line);font-size:.86rem;line-height:1.35}
@@ -413,17 +413,6 @@ p.centro{margin:0}
       </ul>
     </div>
 
-    <div class="ancora">
-      <p class="ancora__t">Antes de olhar o preço, faz a conta do que você já gastou</p>
-      <ul class="ancora__l">
-        <li><span>Melatonina, toda vez que a caixa acaba</span><b>R$ 45</b></li>
-        <li><span>Chá, cápsula natural, aquele pote que ficou pela metade</span><b>R$ 60</b></li>
-        <li><span>Aplicativo de meditação, um ano</span><b>R$ 180</b></li>
-        <li><span>Uma consulta particular. Só a primeira</span><b>R$ 250</b></li>
-      </ul>
-      <p class="ancora__f">Deu mais de R$ 500, e a crise continua chegando sem avisar.<br><b>Dois frascos custam R$ 129,90 e duram cinco meses.</b></p>
-    </div>
-
     <div role="radiogroup" aria-label="Escolha a quantidade">
       <label class="kit">
         <input type="radio" name="kit" value="1">
@@ -485,6 +474,17 @@ p.centro{margin:0}
     <span class="olho">Faz a conta</span>
     <h2 class="sec-h">Você já sabe quanto custa ficar sem.</h2>
     <p>Custa a reunião que você saiu no meio com a desculpa de buscar água. A noite em que o coração disparou às três da manhã e você ficou contando as horas de sono que ainda sobravam. O lugar cheio que você evitou. O “tá tudo bem” dito com a mão gelada.</p>
+    <div class="ancora">
+      <p class="ancora__t">E já custou dinheiro também.</p>
+      <ul class="ancora__l">
+        <li><span>Melatonina, toda vez que a caixa acaba</span><b>R$ 45</b></li>
+        <li><span>Chá, cápsula natural, aquele pote que ficou pela metade</span><b>R$ 60</b></li>
+        <li><span>Aplicativo de meditação, um ano</span><b>R$ 180</b></li>
+        <li><span>Uma consulta particular. Só a primeira</span><b>R$ 250</b></li>
+      </ul>
+      <p class="ancora__f">Deu mais de R$ 500, e a crise continua chegando sem avisar.<br><b>Dois frascos custam R$ 129,90 e duram cinco meses.</b></p>
+    </div>
+
     <p class="solto">Você pode fechar essa página e torcer pra próxima crise ser leve. Ou pode estar com ele no bolso quando ela vier.</p>
     <a class="btn meio-cta" href="checkout.html?kit=2" data-compra data-cta="venda-meio">Garantir o meu agora<small>Pix, cartão ou boleto · compra segura</small></a>
     <p class="risco"><b>30 dias pra devolver</b>, frasco lacrado. Sem formulário e sem justificativa: se não servir pra você, o prejuízo é nosso.</p>
