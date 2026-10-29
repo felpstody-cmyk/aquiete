@@ -178,6 +178,27 @@ export async function registrarPedidoUtmify({
 }
 
 /**
+ * Pro painel: de qual anuncio veio cada pedido, pela referencia.
+ *
+ * O payload guardado ja tem isso desde que o Pix foi gerado. Sem esta
+ * leitura a resposta de "qual campanha vendeu" so existia no site deles,
+ * e no nosso painel a venda aparecia sem origem nenhuma.
+ */
+export async function lerRastreios() {
+  const fora = {}
+  try {
+    const store = await loja()
+    const { blobs } = await store.list()
+    await Promise.all((blobs || []).map(async (b) => {
+      const d = await store.get(b.key, { type: 'json' }).catch(() => null)
+      const t = d?.payload?.trackingParameters
+      if (t) fora[b.key] = t
+    }))
+  } catch { /* sem dado é melhor que erro 500 */ }
+  return fora
+}
+
+/**
  * Chamado pelo webhook do gateway quando o dinheiro cai de verdade.
  * Reaproveita o payload guardado e só troca o estado, porque o
  * `createdAt` precisa ser idêntico ao do primeiro envio.

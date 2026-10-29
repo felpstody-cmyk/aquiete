@@ -9,12 +9,13 @@
  * quem de fato recebeu o dinheiro. O sistema local só espelha.
  */
 
-import { lerContadores, lerAtivos, lerTodosCarrinhos, lerCarrinhosAbandonados, lerConversoesGoogle } from './_lib/metricas.mjs'
+import { lerContadores, lerAtivos, lerTodosCarrinhos, lerCarrinhosAbandonados, lerConversoesGoogle, lerCompraMeta } from './_lib/metricas.mjs'
 import { lerComportamento, lerResumos } from './_lib/jornada.mjs'
 import { KITS, FRETE_NORTE } from './_lib/catalogo.mjs'
 import { lerEstadoZap } from './_lib/zapvigia.mjs'
 import { lerZapLog } from './_lib/zaplog.mjs'
 import { lerDespachos, despachoConfigurado, faltaNoRemetente } from './_lib/envio.mjs'
+import { lerRastreios } from './_lib/utmify.mjs'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -92,7 +93,7 @@ export default async (req) => {
   if (req.headers.get('x-admin-token') !== esperado) return json({ erro: 'Token inválido' }, 401)
 
   try {
-    const [cobrancas, clientes, metricas, ativos, carrinhos, comportamento, conversoesGoogle, resumos, zap, zapLog, despachos] = await Promise.all([
+    const [cobrancas, clientes, metricas, ativos, carrinhos, comportamento, conversoesGoogle, resumos, zap, zapLog, despachos, metaPedido, rastreios] = await Promise.all([
       tudo('/payments'),
       tudo('/customers'),
       lerContadores(),
@@ -112,6 +113,11 @@ export default async (req) => {
       // o webhook, uma vez por venda. Abrir o painel nao pode custar
       // chamada externa.
       lerDespachos(),
+      // Recibo do envio da compra pro Meta, e de qual anuncio veio cada
+      // pedido. Leitura de blob nos dois casos: o painel nao fala com o
+      // Meta nem com a Utmify.
+      lerCompraMeta(),
+      lerRastreios(),
     ])
 
     // Uma leitura só do Blobs: a lista de abandonados sai da lista completa.
@@ -167,6 +173,20 @@ export default async (req) => {
             erro: d.erro || '',
           }
         })(),
+        // De qual anuncio veio a venda. Antes isto so existia no site da
+        // Utmify, e aqui a venda aparecia sem origem.
+        campanha: (() => {
+          const t = rastreios[p.externalReference || ''] || null
+          if (!t) return null
+          return {
+            origem: t.utm_source || '',
+            campanha: t.utm_campaign || '',
+            anuncio: t.utm_content || '',
+            midia: t.utm_medium || '',
+          }
+        })(),
+        // Se a compra chegou no Meta, e se foi com o _fbc.
+        meta: metaPedido[p.externalReference || ''] || null,
       }
     })
 

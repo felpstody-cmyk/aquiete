@@ -2559,6 +2559,20 @@ function renderPedidos(){
 }
 
 /** Mostra todos os dados do pedido — endereço, CPF, o que tiver. */
+/*
+ * Recibo do envio da compra pro Meta, por pedido.
+ *
+ * "sem _fbc" e o caso que importa: o evento chegou no Gerenciador de
+ * Eventos, mas sem o cookie do clique o Meta nao consegue dizer de qual
+ * anuncio a venda veio, e a campanha aparece com zero compra.
+ */
+function metaTxt(p){
+  var m = p.meta && p.meta.compra;
+  if (!m) return '';
+  if (!m.enviado) return 'não foi' + (m.motivo ? ' (' + m.motivo + ')' : '');
+  return 'enviada' + (m.comFbc ? ', com _fbc' : ', SEM _fbc — não atribui');
+}
+
 function abrirDetalhes(id){
   var p = todos().find(function(x){ return x.id===id; });
   if (!p) return;
@@ -2580,7 +2594,9 @@ function abrirDetalhes(id){
     ['Data', dataBR(p.data)],
     ['Referência', p.referencia],
     ['Rastreio', p.rastreio],
-    ['Origem', p.origem==='site' ? 'site' : 'lançado manualmente']
+    ['Origem', p.origem==='site' ? 'site' : 'lançado manualmente'],
+    ['Campanha', p.campanha ? [p.campanha.campanha, p.campanha.anuncio].filter(Boolean).join(' / ') : ''],
+    ['Compra no Meta', metaTxt(p)]
   ].filter(function(c){ return c[1]; });
 
   var linkCobranca = p.link ? '<div style="margin-top:14px"><a class="lnk" href="'+esc(p.link)+'" target="_blank">Ver cobrança no Asaas &rarr;</a></div>' : '';

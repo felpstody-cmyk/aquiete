@@ -20,7 +20,9 @@ import { buscarCliente } from './_lib/gateways/asaas.mjs'
 import { enviar, htmlConfirmacao, htmlVenda } from './_lib/email.mjs'
 import { enviarCompra } from './_lib/meta-capi.mjs'
 import { notificarVenda, podeNotificar, push } from './_lib/notificar.mjs'
-import { marcarCarrinhoPago, registrarVendaPaga } from './_lib/metricas.mjs'
+import {
+  marcarCarrinhoPago, registrarVendaPaga, lerIdentidadeDoPedido, anotarCompraMeta,
+} from './_lib/metricas.mjs'
 import { marcarPagante } from './_lib/pagantes.mjs'
 import { despachar } from './_lib/envio.mjs'
 import { marcarPagoUtmify } from './_lib/utmify.mjs'
@@ -198,15 +200,27 @@ export default async (req) => {
   }
 
   if (cliente) {
+    // Os cookies do clique no anuncio, guardados quando o Pix foi gerado.
+    // Sem eles o Meta recebe a compra e nao sabe de onde ela veio: o
+    // evento aparece no Gerenciador de Eventos e a coluna de compras da
+    // campanha fica vazia. O _fbc e o que carrega o fbclid.
+    const ident = (await lerIdentidadeDoPedido(referencia).catch(() => null)) || {}
+
     try {
       resultados.meta = await enviarCompra({
         referencia, total, cliente,
         kitId: unidades, unidades,
+        ip: ident.ip, ua: ident.ua, fbp: ident.fbp, fbc: ident.fbc,
       })
     } catch (e) {
       console.error('[webhook] CAPI do Meta falhou:', e.message)
       resultados.meta = { enviado: false, erro: e.message }
     }
+
+    // Recibo no painel. A resposta do webhook vai pro Asaas e some, e
+    // "a compra chegou no Meta?" nao pode depender do log de uma funcao
+    // que ja rodou.
+    await anotarCompraMeta(referencia, resultados.meta).catch(() => {})
   }
 
   // Cria o envio no Melhor Envio. Antes disto, toda venda era digitada

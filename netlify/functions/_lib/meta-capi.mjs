@@ -88,7 +88,16 @@ export async function enviarPagamento({ referencia, total, cliente, kitId, unida
   return postar(evento, pixel, token)
 }
 
-export async function enviarCompra({ referencia, total, cliente, kitId, unidades }) {
+/**
+ * Compra confirmada, mandada pelo servidor.
+ *
+ * Os quatro ultimos campos nao vem do navegador aqui: quando o dinheiro
+ * cai, a pessoa ja fechou a aba (no Pix ela saiu pro app do banco). Eles
+ * sao guardados na geracao do Pix e relidos pelo webhook. Sem eles — em
+ * especial o _fbc, que carrega o fbclid — o Meta recebe a compra mas nao
+ * sabe de qual anuncio ela veio, e a campanha fica sem compra nenhuma.
+ */
+export async function enviarCompra({ referencia, total, cliente, kitId, unidades, ip, ua, fbp, fbc }) {
   const pixel = process.env.META_PIXEL_ID
   const token = process.env.META_CAPI_TOKEN
   if (!pixel || !token) {
@@ -104,7 +113,7 @@ export async function enviarCompra({ referencia, total, cliente, kitId, unidades
     event_id: referencia,
     action_source: 'website',
     event_source_url: 'https://aquieteagora.com.br/checkout',
-    user_data: identidade(cliente),
+    user_data: identidade(cliente, { ip, ua, fbp, fbc }),
     custom_data: {
       currency: 'BRL',
       value: Number(total),

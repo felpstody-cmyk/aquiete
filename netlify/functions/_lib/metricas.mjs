@@ -172,6 +172,97 @@ export async function guardarCliqueDoPedido(referencia, clique) {
   } catch { /* silêncio proposital */ }
 }
 
+/* ---------------- Identidade do clique, pro Meta ---------------- */
+
+/**
+ * Guarda o que o Meta usa pra casar a venda com o anuncio: os cookies
+ * _fbp e _fbc, o IP e o navegador.
+ *
+ * Existe porque a compra NAO e enviada aqui. Ela sai do webhook, quando o
+ * gateway confirma o pagamento — minutos ou horas depois, sem navegador
+ * nenhum na frente. Sem isto o Purchase ia so com e-mail e telefone em
+ * SHA-256: o Meta recebia o evento, mas nao conseguia dizer de qual
+ * anuncio ele veio, e a coluna de compras da campanha ficava vazia.
+ *
+ * O _fbc e o que carrega o fbclid, ou seja, o clique exato. E o campo
+ * que mais pesa na atribuicao. O AddPaymentInfo sempre levou os quatro,
+ * e e por isso que ele aparecia atribuido e a compra nao.
+ */
+export async function guardarIdentidadeDoPedido(referencia, dados = {}) {
+  try {
+    if (!referencia) return
+    const corta = (v, n) => {
+      const s = String(v ?? '').trim()
+      return s ? s.slice(0, n) : null
+    }
+    const registro = {
+      fbp: corta(dados.fbp, 120),
+      fbc: corta(dados.fbc, 200),
+      ip: corta(dados.ip, 60),
+      ua: corta(dados.ua, 400),
+      em: Date.now(),
+    }
+    // Sem nada que sirva pra atribuicao nao vale guardar.
+    if (!registro.fbp && !registro.fbc && !registro.ip) return
+    const store = await loja('meta-pedido')
+    await store.setJSON(String(referencia), registro)
+  } catch { /* silêncio proposital */ }
+}
+
+/** Lido pelo webhook, na hora de mandar a compra. */
+export async function lerIdentidadeDoPedido(referencia) {
+  try {
+    if (!referencia) return null
+    const store = await loja('meta-pedido')
+    return await store.get(String(referencia), { type: 'json' })
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Recibo do envio da compra, guardado por pedido.
+ *
+ * O webhook devolve o resultado pro Asaas e some. Quando a duvida for
+ * "a compra chegou no Meta?", a resposta tem que estar no painel, e nao
+ * no log de uma funcao que ja rodou.
+ */
+export async function anotarCompraMeta(referencia, resultado = {}) {
+  try {
+    if (!referencia) return
+    const store = await loja('meta-pedido')
+    const atual = (await store.get(String(referencia), { type: 'json' }).catch(() => null)) || {}
+    await store.setJSON(String(referencia), {
+      ...atual,
+      compra: {
+        enviado: !!resultado.enviado,
+        recebidos: Number(resultado.recebidos) || 0,
+        motivo: resultado.motivo || resultado.erro || null,
+        // Evento enviado sem _fbc chega no Gerenciador e nao atribui.
+        // Guardado junto pra dar pra ver a diferenca pedido por pedido.
+        comFbc: !!atual.fbc,
+        em: Date.now(),
+      },
+    })
+  } catch { /* silêncio proposital */ }
+}
+
+/** Pro painel: o recibo de cada pedido, pela referencia. */
+export async function lerCompraMeta() {
+  const fora = {}
+  try {
+    const store = await loja('meta-pedido')
+    const { blobs } = await store.list()
+    await Promise.all((blobs || []).map(async (b) => {
+      const d = await store.get(b.key, { type: 'json' }).catch(() => null)
+      if (d) fora[b.key] = d
+    }))
+  } catch { /* sem dados é melhor que erro 500 */ }
+  return fora
+}
+
+/* ---------------- Conversao paga do Google (continua) ---------------- */
+
 /** Chamado quando o pagamento e confirmado. Sem clique guardado, nao faz nada. */
 export async function registrarVendaPaga({ referencia, valor, quando }) {
   try {

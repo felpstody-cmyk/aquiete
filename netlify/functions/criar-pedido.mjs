@@ -11,7 +11,7 @@ import { montarPedido, validarCliente, ErroDeEntrada } from './_lib/catalogo.mjs
 import { conferir } from './_lib/melhorenvio.mjs'
 import { obterGateway, ErroDeGateway } from './_lib/gateways/index.mjs'
 import { enviar, htmlAguardando } from './_lib/email.mjs'
-import { marcarCarrinhoComPedido, guardarCliqueDoPedido } from './_lib/metricas.mjs'
+import { marcarCarrinhoComPedido, guardarCliqueDoPedido, guardarIdentidadeDoPedido } from './_lib/metricas.mjs'
 import { notificarPedidoGerado, podeNotificar } from './_lib/notificar.mjs'
 import { enviarZap, textoPixGerado, textoPixCodigo } from './_lib/zap.mjs'
 import { registrarZap } from './_lib/zaplog.mjs'
@@ -96,18 +96,29 @@ export default async (req) => {
     // Mesmo id (a referencia) que o checkout usa, entao o Meta junta os
     // dois. Quem clicou "So o necessario" fica de fora. Nunca derruba o
     // pedido: medicao e o ultimo da fila.
+    // O que o Meta usa pra casar o evento com o clique no anuncio. Vale
+    // pros DOIS eventos: o Pix gerado, que sai daqui, e a compra, que sai
+    // do webhook quando o dinheiro cai. La nao tem navegador nenhum na
+    // frente, por isso isto fica guardado pela referencia do pedido.
+    const identidadeMeta = {
+      ip: ipCliente,
+      ua: req.headers.get('user-agent'),
+      fbp: typeof corpo.fbp === 'string' ? corpo.fbp.slice(0, 120) : null,
+      fbc: typeof corpo.fbc === 'string' ? corpo.fbc.slice(0, 200) : null,
+    }
+
     if (corpo.consent !== 'essencial') {
+      // Com await: a funcao congela ao responder, e promessa solta aqui
+      // morreria sem terminar. Quem recusou cookie nao passa por aqui.
+      await guardarIdentidadeDoPedido(referencia, identidadeMeta).catch(() => {})
+
       enviarPagamento({
         referencia,
         total: pedido.total,
         cliente,
         kitId: pedido.kitId,
         unidades: Number(pedido.kitId) || 1,
-        ip: req.headers.get('x-nf-client-connection-ip') ||
-            (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || null,
-        ua: req.headers.get('user-agent'),
-        fbp: typeof corpo.fbp === 'string' ? corpo.fbp.slice(0, 120) : null,
-        fbc: typeof corpo.fbc === 'string' ? corpo.fbc.slice(0, 200) : null,
+        ...identidadeMeta,
       }).catch((e) => console.log('[capi] Pix gerado nao foi:', e.message))
     }
 
