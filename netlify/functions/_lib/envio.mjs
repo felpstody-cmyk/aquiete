@@ -84,19 +84,35 @@ function remetente() {
   }
 }
 
-/** Tudo que a API exige do remetente, sem exceção, senão nem tenta. */
-const CAMPOS_REMETENTE = ['name', 'company_document', 'address', 'number', 'district', 'city', 'state_abbr', 'postal_code']
+/*
+ * Tudo que a API exige do remetente, sem exceção, senão nem tenta.
+ *
+ * Mapeado campo da API -> nome da variável no Netlify de propósito: quem
+ * lê o aviso precisa saber o que preencher, e "district" não diz a
+ * ninguém que o que falta é o bairro.
+ */
+const CAMPOS_REMETENTE = {
+  name: 'REMETENTE_NOME',
+  company_document: 'REMETENTE_CNPJ',
+  address: 'REMETENTE_RUA',
+  number: 'REMETENTE_NUMERO',
+  district: 'REMETENTE_BAIRRO',
+  city: 'REMETENTE_CIDADE',
+  state_abbr: 'REMETENTE_UF',
+  postal_code: 'CEP_ORIGEM',
+}
 
 export function despachoConfigurado() {
   if (MODO() === 'off' || !configurado()) return false
-  const de = remetente()
-  return CAMPOS_REMETENTE.every((c) => String(de[c] || '').trim())
+  return faltaNoRemetente().length === 0
 }
 
 /** O que falta preencher, pro painel e pro log dizerem em vez de só falhar. */
 export function faltaNoRemetente() {
   const de = remetente()
-  return CAMPOS_REMETENTE.filter((c) => !String(de[c] || '').trim())
+  return Object.entries(CAMPOS_REMETENTE)
+    .filter(([campo]) => !String(de[campo] || '').trim())
+    .map(([, variavel]) => variavel)
 }
 
 /*
