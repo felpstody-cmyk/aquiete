@@ -18,6 +18,10 @@
  *   options.invoice         NÃO enviar
  *   from.state_register     vazio ou "ISENTO"
  *
+ * O documento do remetente é o CNPJ do MEI (REMETENTE_CNPJ) ou o CPF
+ * dele (REMETENTE_CPF), nunca os dois. Tem que ser o mesmo titular da
+ * conta do Melhor Envio: `/api/admin-envio` compara os dois e avisa.
+ *
  * E desde 06/04/2026 a DC-e (declaração de conteúdo eletrônica) é
  * obrigatória nas encomendas sem nota, por determinação do Confaz. Quem
  * gera é o próprio Melhor Envio a partir do que vai em `products`, e por
@@ -57,18 +61,27 @@ const MODO = () => (process.env.MELHORENVIO_DESPACHO || 'carrinho').toLowerCase(
  */
 function remetente() {
   const e = process.env
+  /*
+   * Quem posta: o MEI (CNPJ) ou ele como pessoa física (CPF). Tem que
+   * ser o MESMO titular da conta do Melhor Envio — a API aceita qualquer
+   * documento aqui, ela não confere, só imprime. Quem descobre a
+   * divergência é a transportadora, no balcão, com o pacote na mão.
+   * `/api/admin-envio` diz em que nome a conta está.
+   *
+   * Mandar os dois preenchidos faz o Melhor Envio não saber quem está
+   * postando, então é um ou o outro, e o CNPJ ganha quando existe.
+   */
+  const cnpj = soDigitos(e.REMETENTE_CNPJ)
+  const cpf = soDigitos(e.REMETENTE_CPF)
   return {
     name: e.REMETENTE_NOME || '',
     email: e.REMETENTE_EMAIL || 'contato@aquieteagora.com.br',
     phone: soDigitos(e.REMETENTE_TELEFONE),
-    // MEI é pessoa jurídica: o documento vai em company_document e o
-    // `document` fica vazio. Mandar os dois preenchidos faz a Appmax e o
-    // Melhor Envio discordarem sobre quem está postando.
-    document: '',
-    company_document: soDigitos(e.REMETENTE_CNPJ),
-    // Vazio ou "ISENTO" em envio não comercial. MEI não tem inscrição
-    // estadual, então é literalmente isento.
-    state_register: e.REMETENTE_IE || 'ISENTO',
+    document: cnpj ? '' : cpf,
+    company_document: cnpj,
+    // Inscrição estadual só existe em pessoa jurídica, e MEI é isento.
+    // Como pessoa física o campo não se aplica e vai vazio.
+    state_register: cnpj ? (e.REMETENTE_IE || 'ISENTO') : '',
     address: e.REMETENTE_RUA || '',
     complement: e.REMETENTE_COMPLEMENTO || '',
     number: String(e.REMETENTE_NUMERO || ''),
@@ -93,7 +106,6 @@ function remetente() {
  */
 const CAMPOS_REMETENTE = {
   name: 'REMETENTE_NOME',
-  company_document: 'REMETENTE_CNPJ',
   address: 'REMETENTE_RUA',
   number: 'REMETENTE_NUMERO',
   district: 'REMETENTE_BAIRRO',
@@ -110,9 +122,13 @@ export function despachoConfigurado() {
 /** O que falta preencher, pro painel e pro log dizerem em vez de só falhar. */
 export function faltaNoRemetente() {
   const de = remetente()
-  return Object.entries(CAMPOS_REMETENTE)
+  const falta = Object.entries(CAMPOS_REMETENTE)
     .filter(([campo]) => !String(de[campo] || '').trim())
     .map(([, variavel]) => variavel)
+  // Documento é um ou o outro, não os dois, e qual depende de em que
+  // nome está a conta do Melhor Envio.
+  if (!de.company_document && !de.document) falta.push('REMETENTE_CNPJ ou REMETENTE_CPF')
+  return falta
 }
 
 /*
