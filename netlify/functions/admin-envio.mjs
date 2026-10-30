@@ -20,6 +20,7 @@
 
 import { chamar, base, configurado, soDigitos } from './_lib/melhorenvio.mjs'
 import { faltaNoRemetente } from './_lib/envio.mjs'
+import { listaDeVetos } from './_lib/dce.mjs'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -164,8 +165,14 @@ export default async (req) => {
     })
   }
 
+  // Quem já recusou Declaração de Conteúdo, e em que estado. Vem junto
+  // porque "por que o frete subiu nesse estado?" é a pergunta que essa
+  // lista responde, e ela some do log em poucos dias.
+  const vetos = await listaDeVetos().catch(() => ({}))
+
   const saida = {
     ambiente: (e.MELHORENVIO_AMBIENTE || 'producao').toLowerCase(),
+    semDeclaracaoDeConteudo: Object.entries(vetos).map(([k, v]) => `${v.nome || k} em ${k.split(':')[1]}`),
     endereco: base(),
     modo: (e.MELHORENVIO_DESPACHO || 'carrinho').toLowerCase(),
     tokenConfigurado: configurado(),

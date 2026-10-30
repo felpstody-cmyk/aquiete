@@ -37,6 +37,7 @@
 
 import { KITS } from './catalogo.mjs'
 import { chamar, cotar, configurado, soDigitos } from './melhorenvio.mjs'
+import { ufDoCep, ehRecusaDeDce, vetar } from './dce.mjs'
 
 let getStore = null
 async function loja() {
@@ -132,28 +133,11 @@ export function faltaNoRemetente() {
 }
 
 /*
- * Faixa de CEP -> UF, pra quando a cidade vier sem o "/ UF".
- *
- * O campo "Cidade / UF" do checkout é preenchido pelo ViaCEP, mas segue
+ * O "Cidade / UF" do checkout é preenchido pelo ViaCEP mas segue
  * editável: quem apaga o sufixo deixava o envio sem estado, e a API
- * recusa. Pares [último CEP da faixa, UF], em ordem crescente.
+ * recusa. O `ufDoCep` cobre esse buraco, e mora em dce.mjs porque a
+ * cotação também precisa dele.
  */
-const FAIXAS_UF = [
-  [19999, 'SP'], [28999, 'RJ'], [29999, 'ES'], [39999, 'MG'], [48999, 'BA'],
-  [49999, 'SE'], [56999, 'PE'], [57999, 'AL'], [58999, 'PB'], [59999, 'RN'],
-  [63999, 'CE'], [64999, 'PI'], [65999, 'MA'], [68899, 'PA'], [68999, 'AP'],
-  [69299, 'AM'], [69399, 'RR'], [69899, 'AM'], [69999, 'AC'], [72799, 'DF'],
-  [72999, 'GO'], [73699, 'DF'], [76799, 'GO'], [76999, 'RO'], [77999, 'TO'],
-  [78899, 'MT'], [78999, 'RO'], [79999, 'MS'], [87999, 'PR'], [89999, 'SC'],
-  [99999, 'RS'],
-]
-
-function ufDoCep(cep) {
-  const n = Number(soDigitos(cep).slice(0, 5))
-  if (!n) return ''
-  const faixa = FAIXAS_UF.find(([ate]) => n <= ate)
-  return faixa ? faixa[1] : ''
-}
 
 /* "Mossoró / RN" -> { cidade: 'Mossoró', uf: 'RN' }, que é como o
    checkout grava (vem assim do ViaCEP). Sem o sufixo, a UF sai do CEP. */
@@ -402,6 +386,12 @@ export async function despachar(referencia) {
         // outro erro é problema nosso ou deles, e aí parar é o certo.
         if (!/ 422:/.test(e.message)) throw e
         recusas.push(`${opcao.nome}: ${e.message.replace(/^Melhor Envio 422: /, '')}`)
+        // Recusa por Declaração de Conteúdo é permanente pra esse estado,
+        // não um acaso: grava, pra cotação parar de oferecer e o cliente
+        // parar de pagar um frete que não dá pra usar. Ver dce.mjs.
+        if (ehRecusaDeDce(e.message)) {
+          await vetar(opcao.id, ufDoCep(d.cliente?.cep), opcao.nome, e.message).catch(() => {})
+        }
       }
     }
     if (!carrinho) {

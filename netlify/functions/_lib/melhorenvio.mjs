@@ -17,6 +17,7 @@
  * checkout quebrado.
  */
 import { KITS } from './catalogo.mjs'
+import { ufDoCep, vetados } from './dce.mjs'
 
 const BASES = {
   sandbox: 'https://sandbox.melhorenvio.com.br/api/v2',
@@ -101,9 +102,21 @@ export async function cotar(kitId, cepDestino) {
   const lista = await chamar('/me/shipment/calculate', { corpo })
   if (!Array.isArray(lista)) return []
 
+  /*
+   * Fora quem já recusou Declaração de Conteúdo neste estado.
+   *
+   * MEI não emite nota: se a transportadora não aceita DC-e no destino,
+   * aquele preço não serve pra nada — ela vai recusar na hora de postar.
+   * Mostrar mesmo assim é cobrar um frete que não dá pra usar e pagar a
+   * diferença do calado. Ver dce.mjs.
+   */
+  const uf = ufDoCep(destino)
+  const fora = uf ? await vetados().catch(() => new Set()) : new Set()
+
   return lista
     // Serviço indisponível para o CEP vem com `error` preenchido.
     .filter((s) => !s.error && Number(s.price) > 0)
+    .filter((s) => !fora.has(`${s.id}:${uf}`))
     .map((s) => ({
       id: String(s.id),
       nome: s.name,
