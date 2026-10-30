@@ -2637,19 +2637,22 @@ function abrirDetalhes(id){
 el('modalFechar').onclick = function(){ el('modalBg').hidden = true; };
 el('modalBg').onclick = function(e){ if (e.target===el('modalBg')) el('modalBg').hidden = true; };
 document.addEventListener('keydown', function(e){ if (e.key==='Escape') el('modalBg').hidden = true; });
-/** Cola o código dos Correios e dispara o e-mail de rastreio pro cliente. */
+/** Cola o codigo da transportadora e dispara o aviso de rastreio pro cliente. */
 function enviarRastreio(id){
   var p = todos().find(function(x){ return x.id===id; });
   if (!p) return;
   if (!cfg.url || !cfg.token) { alert('Configure a conexão com o site em Ajustes primeiro.'); return; }
   if (!p.contato || p.contato.indexOf('@') < 0) { alert('Esse pedido não tem e-mail salvo — avise o cliente por outro canal.'); return; }
-  var codigo = (prompt('Código de rastreio dos Correios para ' + p.nome + ':', '') || '').trim();
+  // A transportadora vem do despacho: o aviso diz "ja esta com a Jadlog"
+  // em vez de "com os Correios", que era mentira em 2 dos 3 primeiros envios.
+  var transp = (p.envio && p.envio.servico) || '';
+  var codigo = (prompt('Codigo de rastreio' + (transp ? ' (' + transp + ')' : '') + ' para ' + p.nome + ':', '') || '').trim();
   if (!codigo) return;
   var url = cfg.url.replace(/\/?admin-dados\/?$/, '/enviar-rastreio');
   fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-admin-token': cfg.token },
-    body: JSON.stringify({ nome: p.nome, email: p.contato, telefone: p.telefone || '', referencia: p.referencia, rastreio: codigo })
+    body: JSON.stringify({ nome: p.nome, email: p.contato, telefone: p.telefone || '', referencia: p.referencia, rastreio: codigo, transportadora: transp })
   })
     .then(function(r){ return r.json().then(function(j){ return { ok: r.ok, j: j }; }); })
     .then(function(res){

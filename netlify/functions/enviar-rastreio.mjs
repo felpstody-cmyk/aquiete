@@ -37,6 +37,9 @@ export default async (req) => {
   const telefone = String(corpo.telefone ?? '').trim()
   const referencia = String(corpo.referencia ?? '').trim()
   const rastreio = String(corpo.rastreio ?? '').trim()
+  // Quem está levando. Vem do painel, que já sabe pelo despacho — e sem
+  // isso o cliente lia "já está com os Correios" num pacote da Jadlog.
+  const transportadora = String(corpo.transportadora ?? '').trim().slice(0, 60)
 
   if (!email) return json({ erro: 'Faltando o e-mail do cliente' }, 400)
   if (!rastreio) return json({ erro: 'Faltando o código de rastreio' }, 400)
@@ -44,14 +47,14 @@ export default async (req) => {
   // O zap sai primeiro e não derruba o e-mail se falhar. Quem comprou
   // olha o WhatsApp muito antes de olhar a caixa de entrada.
   const zap = telefone
-    ? await enviarZap({ telefone, texto: textoRastreio({ nome, referencia, rastreio }) }).catch(() => ({ enviado: false }))
+    ? await enviarZap({ telefone, texto: textoRastreio({ nome, referencia, rastreio, transportadora }) }).catch(() => ({ enviado: false }))
     : { enviado: false, erro: 'sem telefone' }
 
   try {
     const resultado = await enviar({
       para: email,
       assunto: `Seu pedido ${referencia || 'Aquiete'} saiu para entrega`,
-      html: htmlRastreio({ nome, referencia, rastreio }),
+      html: htmlRastreio({ nome, referencia, rastreio, transportadora }),
     })
     return json({ ok: true, zap, ...resultado })
   } catch (e) {

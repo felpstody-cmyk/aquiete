@@ -33,6 +33,8 @@
  * da instancia continua em us.api-wa.me — foi conferido no painel da
  * conta da Aquiete em 07/10/2026. O site novo documenta outro host;
  * vale o que o painel mostra. */
+import { linkDeRastreio } from './email.mjs'
+
 const BASE_PADRAO = {
   wame: 'https://us.api-wa.me',
   zapi: 'https://api.z-api.io',
@@ -315,13 +317,16 @@ export function textoPago({ nome, referencia }) {
   ].join('\n')
 }
 
-/** Código dos Correios. */
-export function textoRastreio({ nome, referencia, rastreio }) {
+/** Saiu pra entrega. O link vai pronto: ninguem copia codigo no celular. */
+export function textoRastreio({ nome, referencia, rastreio, transportadora }) {
+  const quem = String(transportadora || '').trim()
   return [
     `${oi(nome)} Seu pedido ${referencia || ''} saiu pra entrega 📦`,
     '',
-    `Código de rastreio: ${rastreio}`,
-    'Acompanha em: https://rastreamento.correios.com.br',
+    ...(quem ? [`Transportadora: ${quem}`] : []),
+    `Código: ${rastreio}`,
+    '',
+    `Acompanhe aqui: ${linkDeRastreio(rastreio)}`,
     '',
     'Qualquer coisa na entrega, fala comigo por aqui.',
   ].join('\n')

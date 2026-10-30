@@ -266,22 +266,41 @@ export function htmlRecuperarCarrinho({ nome, kit, etapa }) {
 }
 
 /** Código dos Correios colado no sistema — vai direto pro cliente. */
-export function htmlRastreio({ nome, referencia, rastreio }) {
+/*
+ * O rastreio NÃO é dos Correios.
+ *
+ * Isto mandava todo mundo pra rastreamento.correios.com.br. Só que o
+ * despacho escolhe a transportadora mais barata que aceita Declaração
+ * de Conteúdo — das três primeiras etiquetas de verdade, duas saíram na
+ * Jadlog e uma na Loggi, e nenhuma nos Correios. Quem clicasse não
+ * achava o pacote.
+ *
+ * O melhorrastreio.com.br é do mesmo grupo do Melhor Envio e resolve o
+ * código em qualquer transportadora. Testado com os códigos reais da
+ * Jadlog e da Loggi em 30/10/2026.
+ */
+export const linkDeRastreio = (codigo) =>
+  `https://www.melhorrastreio.com.br/rastreio/${encodeURIComponent(String(codigo || '').trim())}`
+
+export function htmlRastreio({ nome, referencia, rastreio, transportadora }) {
   const primeiro = esc(String(nome || '').split(' ')[0] || 'Olá')
-  const linkRastreio = `https://rastreamento.correios.com.br/app/index.php?objetos=${encodeURIComponent(rastreio)}`
+  const linkRastreio = linkDeRastreio(rastreio)
+  const quem = String(transportadora || '').trim()
 
   return MOLDURA(`
     <h1 style="font-family:Georgia,serif;font-size:22px;color:#2A1613;margin:0 0 16px;font-weight:normal">
       ${primeiro}, seu pedido saiu para envio.
     </h1>
     <p style="margin:0 0 16px">
-      Já está com os Correios a caminho do seu endereço.
+      ${quem ? `Já está com a ${esc(quem)}, a caminho` : 'Já está a caminho'} do seu endereço.
     </p>
     <table style="width:100%;border-collapse:collapse;margin:20px 0;font-size:14px">
       <tr><td style="padding:8px 0;border-bottom:1px solid #F1DFD9;color:#82655F">Pedido</td>
           <td style="padding:8px 0;border-bottom:1px solid #F1DFD9;text-align:right;color:#2A1613"><strong>${esc(referencia)}</strong></td></tr>
       <tr><td style="padding:8px 0;color:#82655F">Código de rastreio</td>
           <td style="padding:8px 0;text-align:right;color:#2A1613"><strong>${esc(rastreio)}</strong></td></tr>
+      ${quem ? `<tr><td style="padding:8px 0;border-top:1px solid #F1DFD9;color:#82655F">Transportadora</td>
+          <td style="padding:8px 0;border-top:1px solid #F1DFD9;text-align:right;color:#2A1613"><strong>${esc(quem)}</strong></td></tr>` : ''}
     </table>
     <table role="presentation" style="margin:22px auto 0"><tr><td style="border-radius:999px;background:#C8453E">
       <a href="${esc(linkRastreio)}" style="display:inline-block;padding:13px 28px;color:#fff;
