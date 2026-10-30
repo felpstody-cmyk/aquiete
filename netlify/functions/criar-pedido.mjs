@@ -107,7 +107,19 @@ export default async (req) => {
       fbc: typeof corpo.fbc === 'string' ? corpo.fbc.slice(0, 200) : null,
       // Visita do parceiro vai pro pixel dele. Vale pros dois eventos: o
       // Pix gerado, que sai daqui, e a compra, que sai do webhook.
-      parceiro: ehDoParceiro(corpo.origem),
+      //
+      // Quem decide e o navegador, na primeira pagina da visita, e manda
+      // a resposta pronta. Deduzir do aq_origem aqui dava divergencia em
+      // quem ja tinha vindo antes: o aq_origem guarda a PRIMEIRA origem
+      // de 30 dias e o pixel tem que seguir o clique de AGORA. Quem
+      // viera pelo parceiro e voltasse por um anuncio nosso tinha o
+      // funil no nosso pixel e a compra no dele.
+      //
+      // O ehDoParceiro fica de reserva, pra aba velha que ja estava
+      // aberta antes deste deploy e nao manda o campo.
+      parceiro: typeof corpo.parceiro === 'boolean'
+        ? corpo.parceiro
+        : ehDoParceiro(corpo.origem),
     }
 
     if (corpo.consent !== 'essencial') {

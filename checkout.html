@@ -1246,6 +1246,13 @@ img,svg{display:block;max-width:100%}
         consent: (function(){ try { return localStorage.getItem('aq_cookies'); } catch(e){ return null; } })(),
         fbp: aqCookie('_fbp'),
         fbc: aqCookie('_fbc'),
+        // De qual pixel e esta venda, decidido pela PRIMEIRA pagina da
+        // visita. Vai explicito porque o servidor senao teria que deduzir
+        // do aq_origem, e os dois discordam em quem ja tinha vindo antes:
+        // o aq_origem guarda a PRIMEIRA origem de 30 dias, e o pixel tem
+        // que seguir o clique de AGORA. Quando discordavam, o funil ia
+        // pra um pixel e a compra pro outro.
+        parceiro: aqDoParceiro(),
         cliente: {
           nome: el('nome').value, cpf: el('cpf').value,
           email: el('email').value, telefone: el('tel').value,
