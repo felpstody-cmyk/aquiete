@@ -41,24 +41,29 @@
  * Nunca o contrário: `caixaEnvio` maior que `caixa` seria vender frete
  * barato e postar pacote grande, e aí a diferença vem cobrada depois.
  *
- * MEDIDO EM 30/10/2026, e o resultado foi: não usar.
+ * MEDIDO EM 30/10/2026: a caixa menor NÃO economiza frete.
  *
- * Ele comprou uma caixinha de 11 x 11 x 6,5 pro envio de 1 frasco. O
- * cúbico dela cai de 266 g pra 141 g, mas o peso real é 100 g e todas as
- * faixas de preço cobrem os dois. Cotado de verdade contra São Paulo e
- * Mossoró, a diferença foi ZERO em Jadlog, Loggi e Correios — só um
- * centavo na Azul e R$ 3 na JeT, que ninguém escolhe porque custa o
- * triplo. A caixa menor vale pelo custo da caixa e pelo espaço na
- * prateleira, não pelo frete.
+ * A caixinha de 1 frasco é 11 x 11 x 6,5. O cúbico dela cai de 266 g pra
+ * 141 g, mas o peso real é 100 g e todas as faixas de preço cobrem os
+ * dois. Cotado de verdade contra São Paulo e Mossoró, a diferença foi
+ * ZERO em Jadlog, Loggi e Correios — um centavo na Azul e R$ 3 na JeT,
+ * que ninguém escolhe porque custa o triplo.
  *
- * `caixaEnvio` fica aqui porque a pergunta volta sempre, e agora tem
- * resposta medida. Pra refazer a conta com outra caixa:
+ * Então o `caixaEnvio` do kit de 1 está ligado por OUTRO motivo: a
+ * etiqueta passa a declarar o pacote que de fato sai daqui. Se alguém
+ * medir no balcão, confere. Não espere economia disto.
+ *
+ * Pra refazer a conta com outra caixa:
  *   /api/admin-envio?cep=01310100&c=11&l=11&a=7&p=0.1
  * ---------------------------------------------------------------
  */
 export const KITS = {
   '1': { rotulo: '1 unidade',  unidades: 1, preco:  69.99, frete: 14.99,
-         caixa: { altura: 19, largura: 12, comprimento:  7, peso: 0.10 } },
+         // Cota pela caixa grande, posta na pequena. Medidas arredondadas
+         // pra cima (6,5 vira 7): pra menos a transportadora cobraria a
+         // diferenca se medisse no balcao.
+         caixa:      { altura: 19, largura: 12, comprimento:  7, peso: 0.10 },
+         caixaEnvio: { altura:  7, largura: 11, comprimento: 11, peso: 0.10 } },
   '2': { rotulo: '2 unidades', unidades: 2, preco: 129.90, frete: 0,
          caixa: { altura: 19, largura: 12, comprimento:  7, peso: 0.17 } },
   '4': { rotulo: '4 unidades', unidades: 4, preco: 199.90, frete: 0,
