@@ -265,16 +265,22 @@ function montarPayload(d, servico) {
         unitary_value: (Number(d.subtotal || 0) / unidades).toFixed(2),
       },
     ],
-    // Uma caixa só nos três kits, 19 x 12 x 7 cm; o que muda é o peso.
+    // O que vai declarado na etiqueta é `caixaEnvio` quando o kit tem
+    // uma caixa de postagem própria (o de 1 frasco vai numa menor), e a
+    // mesma da cotação quando não tem. Ver catalogo.mjs.
+    //
     // Correios não aceita múltiplos volumes na mesma requisição, então
     // um volume por chamada é também o que a API pede.
     volumes: [
-      {
-        height: kit.caixa.altura,
-        width: kit.caixa.largura,
-        length: kit.caixa.comprimento,
-        weight: kit.caixa.peso,
-      },
+      (() => {
+        const cx = kit.caixaEnvio || kit.caixa
+        return {
+          height: cx.altura,
+          width: cx.largura,
+          length: cx.comprimento,
+          weight: cx.peso,
+        }
+      })(),
     ],
     options: {
       // Zero, igual à cotação (ver melhorenvio.mjs): seguro encarece o

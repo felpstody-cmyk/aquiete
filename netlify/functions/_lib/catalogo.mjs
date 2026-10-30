@@ -24,6 +24,23 @@
  * são cobrados por 266 g e o de 4 pelos 380 g reais. Os três continuam
  * dentro de faixas baratas, e caixa menor não mudaria nada: abaixo de
  * 16 x 11 x 2 o cálculo sobe pro mínimo dos Correios de qualquer jeito.
+ *
+ * ---------------------------------------------------------------
+ * `caixa` é o que a loja COTA. `caixaEnvio`, quando existe, é o que vai
+ * declarado na ETIQUETA.
+ *
+ * Os dois existem porque o de 1 frasco passou a ir numa caixinha menor,
+ * mas a loja continua cobrando pela caixa que cabe qualquer kit — a
+ * diferença fica com a loja.
+ *
+ * Isso é seguro na direção certa e só nela: transportadora cobra a mais
+ * quando você declara MENOS do que envia. Declarar o tamanho real, sendo
+ * ele menor que o cotado, é o caso bom, e é o único jeito de a etiqueta
+ * bater com o pacote se alguém medir no balcão.
+ *
+ * Nunca o contrário: `caixaEnvio` maior que `caixa` seria vender frete
+ * barato e postar pacote grande, e aí a diferença vem cobrada depois.
+ * ---------------------------------------------------------------
  */
 export const KITS = {
   '1': { rotulo: '1 unidade',  unidades: 1, preco:  69.99, frete: 14.99,
