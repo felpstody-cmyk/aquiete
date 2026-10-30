@@ -211,6 +211,8 @@ export default async (req) => {
         referencia, total, cliente,
         kitId: unidades, unidades,
         ip: ident.ip, ua: ident.ua, fbp: ident.fbp, fbc: ident.fbc,
+        // Gravado la na geracao do Pix, quando ainda havia navegador.
+        parceiro: !!ident.parceiro,
       })
     } catch (e) {
       console.error('[webhook] CAPI do Meta falhou:', e.message)

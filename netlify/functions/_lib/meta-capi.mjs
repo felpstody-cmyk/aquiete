@@ -6,7 +6,16 @@
  *   META_CAPI_TOKEN  token de acesso gerado no Gerenciador de Eventos
  *   META_TEST_EVENT  opcional: código TEST#### para ver o evento chegando
  *
+ *   META_PIXEL_ID_PARCEIRO    pixel do parceiro, criado no portfólio dele
+ *   META_CAPI_TOKEN_PARCEIRO  token dele, gerado no portfólio dele
+ *
  * Sem as duas primeiras, nada é enviado e nada quebra.
+ *
+ * Por que são dois pixels: o parceiro anuncia com a conta de anúncio e o
+ * dinheiro dele, e o Meta não deixou compartilhar o nosso enquanto o
+ * portfólio dele é novo ("após várias semanas seguindo nossas políticas").
+ * Então ele tem pixel próprio e o site escolhe qual atende cada visita.
+ * Os dois são independentes: evento que vai pra um não aparece no outro.
  *
  * Por que existe: o pixel do navegador perde de 20 a 40% dos eventos para
  * bloqueador de anúncio e iOS. O evento daqui não passa pelo navegador do
@@ -32,6 +41,31 @@ const hashTelefone = (tel) => {
 
 const semNulos = (obj) =>
   Object.fromEntries(Object.entries(obj).filter(([, v]) => v != null))
+
+/**
+ * De quem é esta visita, a partir da origem gravada na chegada.
+ *
+ * A marca é o `utm_source` começando com "parceiro". Prefixo e não nome
+ * exato, pra entrar um segundo parceiro sem mexer em código.
+ */
+export const ehDoParceiro = (origem) =>
+  typeof origem?.src === 'string' && origem.src.startsWith('parceiro')
+
+/** Qual pixel atende, e com qual token. */
+function credenciais(parceiro) {
+  if (parceiro) {
+    return {
+      pixel: process.env.META_PIXEL_ID_PARCEIRO,
+      token: process.env.META_CAPI_TOKEN_PARCEIRO,
+      dono: 'parceiro',
+    }
+  }
+  return {
+    pixel: process.env.META_PIXEL_ID,
+    token: process.env.META_CAPI_TOKEN,
+    dono: 'casa',
+  }
+}
 
 /**
  * Quem é a pessoa, do jeito que o Meta exige: tudo que identifica vai
@@ -63,10 +97,9 @@ function identidade(cliente, rede = {}) {
  * a referência do pedido, igual à que o checkout usa no eventID, então
  * o Meta junta os dois em vez de contar duas vezes.
  */
-export async function enviarPagamento({ referencia, total, cliente, kitId, unidades, ip, ua, fbp, fbc }) {
-  const pixel = process.env.META_PIXEL_ID
-  const token = process.env.META_CAPI_TOKEN
-  if (!pixel || !token) return { enviado: false, motivo: 'sem credenciais' }
+export async function enviarPagamento({ referencia, total, cliente, kitId, unidades, ip, ua, fbp, fbc, parceiro }) {
+  const { pixel, token, dono } = credenciais(parceiro)
+  if (!pixel || !token) return { enviado: false, motivo: `sem credenciais (${dono})` }
 
   const evento = {
     event_name: 'AddPaymentInfo',
@@ -97,12 +130,11 @@ export async function enviarPagamento({ referencia, total, cliente, kitId, unida
  * especial o _fbc, que carrega o fbclid — o Meta recebe a compra mas nao
  * sabe de qual anuncio ela veio, e a campanha fica sem compra nenhuma.
  */
-export async function enviarCompra({ referencia, total, cliente, kitId, unidades, ip, ua, fbp, fbc }) {
-  const pixel = process.env.META_PIXEL_ID
-  const token = process.env.META_CAPI_TOKEN
+export async function enviarCompra({ referencia, total, cliente, kitId, unidades, ip, ua, fbp, fbc, parceiro }) {
+  const { pixel, token, dono } = credenciais(parceiro)
   if (!pixel || !token) {
-    console.log('[capi] META_PIXEL_ID ou META_CAPI_TOKEN ausente — evento não enviado')
-    return { enviado: false, motivo: 'sem credenciais' }
+    console.log(`[capi] pixel ou token do ${dono} ausente — compra não enviada`)
+    return { enviado: false, motivo: `sem credenciais (${dono})`, dono }
   }
 
   const evento = {
@@ -124,7 +156,7 @@ export async function enviarCompra({ referencia, total, cliente, kitId, unidades
     },
   }
 
-  return postar(evento, pixel, token)
+  return { ...(await postar(evento, pixel, token)), dono }
 }
 
 /** O envio em si. Dois chamadores: a Compra e os eventos de funil. */
@@ -159,10 +191,9 @@ async function postar(evento, pixel, token) {
  */
 const DE_FUNIL = new Set(['PageView', 'ViewContent', 'InitiateCheckout'])
 
-export async function enviarSinal({ nome, eventId, url, ip, ua, fbp, fbc, valor }) {
-  const pixel = process.env.META_PIXEL_ID
-  const token = process.env.META_CAPI_TOKEN
-  if (!pixel || !token) return { enviado: false, motivo: 'sem credenciais' }
+export async function enviarSinal({ nome, eventId, url, ip, ua, fbp, fbc, valor, parceiro }) {
+  const { pixel, token, dono } = credenciais(parceiro)
+  if (!pixel || !token) return { enviado: false, motivo: `sem credenciais (${dono})` }
   if (!DE_FUNIL.has(nome)) return { enviado: false, motivo: 'evento fora da lista' }
   if (!eventId) return { enviado: false, motivo: 'sem id pra deduplicar' }
 

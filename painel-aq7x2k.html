@@ -2569,8 +2569,10 @@ function renderPedidos(){
 function metaTxt(p){
   var m = p.meta && p.meta.compra;
   if (!m) return '';
+  // Com dois pixels no ar, "chegou no Meta?" virou "chegou em qual".
+  var onde = m.dono === 'parceiro' ? ' no pixel do parceiro' : '';
   if (!m.enviado) return 'não foi' + (m.motivo ? ' (' + m.motivo + ')' : '');
-  return 'enviada' + (m.comFbc ? ', com _fbc' : ', SEM _fbc — não atribui');
+  return 'enviada' + onde + (m.comFbc ? ', com _fbc' : ', SEM _fbc — não atribui');
 }
 
 function abrirDetalhes(id){

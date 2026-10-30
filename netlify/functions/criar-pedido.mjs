@@ -15,7 +15,7 @@ import { marcarCarrinhoComPedido, guardarCliqueDoPedido, guardarIdentidadeDoPedi
 import { notificarPedidoGerado, podeNotificar } from './_lib/notificar.mjs'
 import { enviarZap, textoPixGerado, textoPixCodigo } from './_lib/zap.mjs'
 import { registrarZap } from './_lib/zaplog.mjs'
-import { enviarPagamento } from './_lib/meta-capi.mjs'
+import { enviarPagamento, ehDoParceiro } from './_lib/meta-capi.mjs'
 import { geoDe } from './_lib/geo.mjs'
 import { registrarPedidoUtmify } from './_lib/utmify.mjs'
 import { guardarDespacho } from './_lib/envio.mjs'
@@ -105,6 +105,9 @@ export default async (req) => {
       ua: req.headers.get('user-agent'),
       fbp: typeof corpo.fbp === 'string' ? corpo.fbp.slice(0, 120) : null,
       fbc: typeof corpo.fbc === 'string' ? corpo.fbc.slice(0, 200) : null,
+      // Visita do parceiro vai pro pixel dele. Vale pros dois eventos: o
+      // Pix gerado, que sai daqui, e a compra, que sai do webhook.
+      parceiro: ehDoParceiro(corpo.origem),
     }
 
     if (corpo.consent !== 'essencial') {

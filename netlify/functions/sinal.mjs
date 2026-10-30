@@ -43,6 +43,8 @@ export default async (req, contexto) => {
       fbp: typeof corpo.fbp === 'string' ? corpo.fbp.slice(0, 120) : null,
       fbc: typeof corpo.fbc === 'string' ? corpo.fbc.slice(0, 200) : null,
       valor: corpo.valor != null ? Number(corpo.valor) : null,
+      // Quem decidiu foi a primeira pagina da visita, no navegador.
+      parceiro: corpo.parceiro === true,
     })
   } catch (e) {
     console.log('[sinal] falhou:', e.message)

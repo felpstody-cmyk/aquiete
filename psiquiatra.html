@@ -754,7 +754,41 @@
    pra ca e o Meta nao sabia que a visita existiu, entao nao dava pra
    montar publico de quem leu o artigo. */
 (function(){
-  var META_PIXEL_ID = '1991105264740384';
+  var META_PIXEL_CASA = '1991105264740384';
+  var META_PIXEL_PARCEIRO = '4542956872628943';
+
+  /* De quem e esta visita.
+
+     O parceiro anuncia com a conta e o dinheiro dele e tem pixel proprio,
+     no portfolio dele: o Meta nao deixa compartilhar o nosso enquanto o
+     negocio dele e novo. Os dois sao independentes — o que vai pra um nao
+     aparece no outro.
+
+     A marca e o utm_source comecando com "parceiro". Prefixo e nao nome
+     exato, pra entrar um segundo parceiro sem mexer em codigo.
+
+     Quem decide e a PRIMEIRA pagina da visita, e a resposta fica na sessao:
+     o botao daqui pro checkout leva utm_source=advertorial, que no meio do
+     caminho sobrescreveria o do anuncio e mandaria a venda pro pixel errado. */
+  function doParceiro(){
+    var guardado = null;
+    try { guardado = sessionStorage.getItem('aq_pixel'); } catch(e){}
+    if (guardado) return guardado === 'parceiro';
+
+    var dele = false;
+    try {
+      var u = new URLSearchParams(location.search).get('utm_source') || '';
+      if (u) dele = u.indexOf('parceiro') === 0;
+      else {
+        var o = JSON.parse(localStorage.getItem('aq_origem') || 'null');
+        dele = !!(o && typeof o.src === 'string' && o.src.indexOf('parceiro') === 0);
+      }
+    } catch(e){}
+
+    try { sessionStorage.setItem('aq_pixel', dele ? 'parceiro' : 'casa'); } catch(e){}
+    return dele;
+  }
+  var META_PIXEL_ID = doParceiro() ? META_PIXEL_PARCEIRO : META_PIXEL_CASA;
   var cookies = document.getElementById('cookies');
   var carregado = false;
 
@@ -780,7 +814,8 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           evento: nome, id: id, pagina: location.href,
-          consent: lerConsent(), fbp: cookie('_fbp'), fbc: cookie('_fbc')
+          consent: lerConsent(), fbp: cookie('_fbp'), fbc: cookie('_fbc'),
+          parceiro: doParceiro()
         })
       }).catch(function(){});
     } catch(e){}

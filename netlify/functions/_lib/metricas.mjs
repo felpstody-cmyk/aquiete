@@ -200,10 +200,16 @@ export async function guardarIdentidadeDoPedido(referencia, dados = {}) {
       fbc: corta(dados.fbc, 200),
       ip: corta(dados.ip, 60),
       ua: corta(dados.ua, 400),
+      // De qual pixel e este pedido. Fica aqui porque o webhook manda a
+      // compra sem navegador nenhum na frente: no Pix a pessoa ja saiu
+      // pro app do banco e nao tem quem pergunte de onde ela veio.
+      parceiro: !!dados.parceiro,
       em: Date.now(),
     }
-    // Sem nada que sirva pra atribuicao nao vale guardar.
-    if (!registro.fbp && !registro.fbc && !registro.ip) return
+    // Sem nada que sirva pra atribuicao nao vale guardar. Pedido do
+    // parceiro grava de qualquer jeito: sem este registro a compra dele
+    // sairia pro pixel errado.
+    if (!registro.fbp && !registro.fbc && !registro.ip && !registro.parceiro) return
     const store = await loja('meta-pedido')
     await store.setJSON(String(referencia), registro)
   } catch { /* silêncio proposital */ }
@@ -241,6 +247,9 @@ export async function anotarCompraMeta(referencia, resultado = {}) {
         // Evento enviado sem _fbc chega no Gerenciador e nao atribui.
         // Guardado junto pra dar pra ver a diferenca pedido por pedido.
         comFbc: !!atual.fbc,
+        // Pra qual pixel foi. Com dois no ar, "a compra chegou no Meta?"
+        // vira "chegou em qual".
+        dono: resultado.dono || (atual.parceiro ? 'parceiro' : 'casa'),
         em: Date.now(),
       },
     })
