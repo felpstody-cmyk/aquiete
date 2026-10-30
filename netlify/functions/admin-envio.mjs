@@ -45,6 +45,34 @@ const tipo = (d) => {
   return n === 11 ? 'CPF' : n === 14 ? 'CNPJ' : n ? `${n} dígitos` : null
 }
 
+/**
+ * Cota um pacote de dimensões arbitrárias, pra comparar caixas antes de
+ * trocar a do catálogo.
+ *
+ * A cotação do site só sabe cotar os kits que existem. Aqui a pergunta é
+ * outra: "quanto mudaria se a caixa fosse assim?". Sem isso a resposta
+ * seria teoria — e teoria de cubagem erra, porque cada transportadora
+ * tem mínimo e faixa própria.
+ */
+async function cotarCaixa(cep, cx) {
+  const corpo = {
+    from: { postal_code: soDigitos(process.env.CEP_ORIGEM) },
+    to: { postal_code: soDigitos(cep) },
+    package: { height: cx.a, width: cx.l, length: cx.c, weight: cx.p },
+    options: { receipt: false, own_hand: false, insurance_value: 0 },
+  }
+  const lista = await chamar('/me/shipment/calculate', { corpo })
+  const fora = {}
+  for (const s of Array.isArray(lista) ? lista : []) {
+    const nome = `${s.company?.name || ''} ${s.name}`.trim()
+    fora[nome] = s.error ? `— ${s.error}` : Number(Number(s.price).toFixed(2))
+  }
+  return fora
+}
+
+/** O que a transportadora cobra: o maior entre o peso real e o cúbico. */
+const cubado = (cx) => Number(((cx.c * cx.l * cx.a) / 6000).toFixed(3))
+
 export default async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS })
 
@@ -53,6 +81,27 @@ export default async (req) => {
   if (req.headers.get('x-admin-token') !== esperado) return json({ erro: 'Token inválido' }, 401)
 
   const e = process.env
+
+  // Modo comparador de caixa: ?cep=01310100&c=11&l=11&a=7&p=0.1
+  // Cota a caixa atual e a proposta lado a lado, no mesmo CEP.
+  const q = new URL(req.url).searchParams
+  if (q.get('cep')) {
+    const nova = {
+      c: Number(q.get('c')), l: Number(q.get('l')),
+      a: Number(q.get('a')), p: Number(q.get('p') || 0.1),
+    }
+    const atual = { c: 19, l: 12, a: 7, p: Number(q.get('p') || 0.1) }
+    const [precoAtual, precoNovo] = await Promise.all([
+      cotarCaixa(q.get('cep'), atual).catch((err) => ({ erro: err.message })),
+      cotarCaixa(q.get('cep'), nova).catch((err) => ({ erro: err.message })),
+    ])
+    return json({
+      cep: q.get('cep'),
+      atual: { medidas: `${atual.c}x${atual.l}x${atual.a}`, cubado: cubado(atual), real: atual.p, precos: precoAtual },
+      nova: { medidas: `${nova.c}x${nova.l}x${nova.a}`, cubado: cubado(nova), real: nova.p, precos: precoNovo },
+    })
+  }
+
   const saida = {
     ambiente: (e.MELHORENVIO_AMBIENTE || 'producao').toLowerCase(),
     endereco: base(),
