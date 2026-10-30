@@ -298,11 +298,22 @@ function montarPayload(d, servico) {
        *
        * Setenta centavos pra cobrir setenta reais. Então o padrão passou
        * a ser segurar, e MELHORENVIO_SEGURAR=0 volta pro mínimo de R$ 1.
+       *
+       * E vai com FOLGA, a pedido dele: +30% arredondado pra cima no
+       * múltiplo de 10. R$ 69,99 vira 100, R$ 129,90 vira 170, R$ 199,90
+       * vira 260. Medido no mesmo trecho, a folga do kit de 1 custa 30
+       * centavos na Loggi e nos Correios, e zero na Jadlog.
+       *
+       * O que a folga faz e o que não faz: transportadora indeniza o
+       * prejuízo comprovado, e quem comprova é a declaração de conteúdo,
+       * que leva o valor real do produto (ver `products` acima). Então a
+       * folga protege de arredondamento e de divergência na vistoria —
+       * ela não multiplica a indenização.
        */
       insurance_value:
         process.env.MELHORENVIO_SEGURAR === '0'
           ? 1
-          : Math.max(1, Number(d.subtotal) || 0),
+          : Math.max(1, Math.ceil((Number(d.subtotal) || 0) * 1.3 / 10) * 10),
       receipt: false,
       own_hand: false,
       reverse: false,
