@@ -73,6 +73,62 @@ async function cotarCaixa(cep, cx) {
 /** O que a transportadora cobra: o maior entre o peso real e o cúbico. */
 const cubado = (cx) => Number(((cx.c * cx.l * cx.a) / 6000).toFixed(3))
 
+/**
+ * O cadastro comercial do gateway, pra montar o REMETENTE_* sem digitar.
+ *
+ * É a melhor fonte que existe pra isso: são os dados que ele já declarou
+ * pra receber dinheiro, conferidos contra a Receita na abertura da conta.
+ * Digitar de novo à mão é onde entra o erro de um dígito que só aparece
+ * quando a transportadora recusa o pacote.
+ *
+ * Isto devolve os valores INTEIROS, de propósito — eles são pra copiar e
+ * colar no Netlify, e nenhum deles é segredo: razão social, CNPJ e
+ * endereço do remetente vão impressos na etiqueta que o cliente recebe.
+ */
+async function cadastroDoGateway() {
+  const chave = process.env.ASAAS_API_KEY
+  if (!chave) return { erro: 'ASAAS_API_KEY não configurada' }
+
+  const base =
+    (process.env.ASAAS_AMBIENTE || 'producao').toLowerCase() === 'sandbox'
+      ? 'https://api-sandbox.asaas.com/v3'
+      : 'https://api.asaas.com/v3'
+
+  const r = await fetch(`${base}/myAccount/commercialInfo`, {
+    headers: { access_token: chave, 'Content-Type': 'application/json' },
+  })
+  const d = await r.json().catch(() => ({}))
+  if (!r.ok) return { erro: d?.errors?.[0]?.description || `HTTP ${r.status}` }
+
+  const doc = soDigitos(d.cpfCnpj)
+  return {
+    comoEstaNoAsaas: {
+      razaoSocial: d.name || null,
+      nomeFantasia: d.tradingName || null,
+      documento: doc,
+      tipo: doc.length === 14 ? 'CNPJ' : doc.length === 11 ? 'CPF' : '?',
+      telefone: soDigitos(d.mobilePhone || d.phone) || null,
+      endereco: [d.address, d.addressNumber, d.complement].filter(Boolean).join(', '),
+      bairro: d.province || null,
+      cidade: d.cityName || null,
+      uf: d.state || null,
+      cep: soDigitos(d.postalCode) || null,
+    },
+    // Pronto pra colar no Netlify.
+    paraColar: [
+      `REMETENTE_NOME=${d.name || ''}`,
+      doc.length === 14 ? `REMETENTE_CNPJ=${doc}` : `REMETENTE_CPF=${doc}`,
+      `REMETENTE_RUA=${d.address || ''}`,
+      `REMETENTE_NUMERO=${d.addressNumber || ''}`,
+      ...(d.complement ? [`REMETENTE_COMPLEMENTO=${d.complement}`] : []),
+      `REMETENTE_BAIRRO=${d.province || ''}`,
+      `REMETENTE_CIDADE=${d.cityName || ''}`,
+      `REMETENTE_UF=${d.state || ''}`,
+      `REMETENTE_TELEFONE=${soDigitos(d.mobilePhone || d.phone)}`,
+    ].join('\n'),
+  }
+}
+
 export default async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS })
 
@@ -85,6 +141,12 @@ export default async (req) => {
   // Modo comparador de caixa: ?cep=01310100&c=11&l=11&a=7&p=0.1
   // Cota a caixa atual e a proposta lado a lado, no mesmo CEP.
   const q = new URL(req.url).searchParams
+
+  // ?gateway=1 — monta o REMETENTE_* a partir do cadastro do Asaas.
+  if (q.get('gateway')) {
+    return json(await cadastroDoGateway().catch((err) => ({ erro: err.message })))
+  }
+
   if (q.get('cep')) {
     const nova = {
       c: Number(q.get('c')), l: Number(q.get('l')),
