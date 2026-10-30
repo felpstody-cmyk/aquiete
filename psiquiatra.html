@@ -242,8 +242,39 @@
     h1{font-size:25px}
     body{font-size:17px}
     .offer .deal{font-size:27px}
-    .kits{grid-template-columns:1fr}
-    .kitc[aria-pressed="true"]:after{bottom:-10px}
+    /* ---------- Oferta compacta ----------
+       Em pe, os tres cartoes passavam de meia tela e empurravam o botao
+       pra fora: a pessoa escolhia o kit e nao via onde clicar. Deitado,
+       oito linhas viram tres e o botao fica junto da escolha. */
+    .offer{margin:28px 0;padding:16px 13px}
+    .offer .pre{font-size:12.5px}
+    .offer .season{font-size:18px;margin:2px 0 0}
+    .offer .stock{font-size:12.5px}
+    .timer{gap:8px;margin:10px 0 12px}
+    .kits{grid-template-columns:1fr;gap:14px;margin:12px 0 2px}
+
+    .kitc{display:grid;grid-template-columns:1fr auto;align-items:center;
+      grid-template-areas:"nome valor" "frete de" "econ cada" "total total";
+      gap:1px 14px;padding:11px 13px;text-align:left}
+    .kitc .nome {grid-area:nome;  margin:0;font-size:15px}
+    .kitc .frete{grid-area:frete; margin:0;font-size:11.5px}
+    .kitc .econ {grid-area:econ;  margin:3px 0 0}
+    .kitc .valor{grid-area:valor; text-align:right;font-size:21px}
+    .kitc .de   {grid-area:de;    text-align:right;margin:0}
+    .kitc .cada {grid-area:cada;  text-align:right;margin:3px 0 0}
+    .kitc .total{grid-area:total; margin:5px 0 0}
+    /* O custo por dia e a linha mais dispensavel das tres e e justo ela
+       que acrescentaria uma quarta altura em cada cartao. Fica no
+       desktop, onde espaco nao e o problema. */
+    .kitc .dia{display:none}
+
+    /* As duas fitas saiam centralizadas em cima, o que no cartao deitado
+       cobre o nome do kit. Vao pros cantos, uma de cada lado. */
+    .kitc .fitinha{left:12px;right:auto;transform:none;top:-8px}
+    .kitc[aria-pressed="true"]:after{left:auto;right:12px;bottom:auto;top:-8px;margin:0}
+
+    .cta{padding:14px;font-size:17px}
+    .risco{margin-top:8px;font-size:11.5px}
   }
 </style>
 </head>
@@ -376,7 +407,6 @@
       <span class="de">R$ 179,80</span>
       <span class="cada">R$ 64,95 por frasco</span>
       <span class="econ">Economize R$ 49,90</span>
-      <span class="total">e n&atilde;o paga frete</span>
       <span class="dia">R$ 0,87 por dia</span>
     </div>
     <div class="kitc" data-kit="4" role="button" tabindex="0">
@@ -386,7 +416,6 @@
       <span class="de">R$ 359,60</span>
       <span class="cada">R$ 49,98 por frasco</span>
       <span class="econ">Economize R$ 159,70</span>
-      <span class="total">e n&atilde;o paga frete</span>
       <span class="dia">R$ 0,67 por dia</span>
     </div>
   </div>
