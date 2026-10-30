@@ -283,12 +283,26 @@ function montarPayload(d, servico) {
       })(),
     ],
     options: {
-      // Zero, igual à cotação (ver melhorenvio.mjs): seguro encarece o
-      // frete e repor um frasco custa menos que segurar um ano de
-      // pedidos. Se a DC-e vier recusada por divergência entre o valor
-      // declarado e o segurado, MELHORENVIO_SEGURAR=1 passa a declarar o
-      // valor do produto — e aí o frete sobe um pouco.
-      insurance_value: process.env.MELHORENVIO_SEGURAR === '1' ? Number(d.subtotal || 0) : 0,
+      /*
+       * Zero NÃO passa: a API recusa com "o valor segurado deve ser
+       * superior ou igual a R$ 1,00". Isso custou as três primeiras
+       * tentativas de despacho em 30/10/2026.
+       *
+       * E segurar o valor de verdade custa quase nada. Medido no mesmo
+       * dia, caixa de 1 frasco pra São Paulo, cobrindo R$ 69,99:
+       *
+       *   Jadlog .Package Centralizado   15,81 -> 15,81   (zero)
+       *   Jadlog .Com                    16,40 -> 16,40   (zero)
+       *   Correios PAC                   18,95 -> 19,39   (+0,44)
+       *   Loggi Ponto                    15,10 -> 15,79   (+0,69)
+       *
+       * Setenta centavos pra cobrir setenta reais. Então o padrão passou
+       * a ser segurar, e MELHORENVIO_SEGURAR=0 volta pro mínimo de R$ 1.
+       */
+      insurance_value:
+        process.env.MELHORENVIO_SEGURAR === '0'
+          ? 1
+          : Math.max(1, Number(d.subtotal) || 0),
       receipt: false,
       own_hand: false,
       reverse: false,
