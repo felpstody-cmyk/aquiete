@@ -53,17 +53,24 @@
  * etiqueta passa a declarar o pacote que de fato sai daqui. Se alguém
  * medir no balcão, confere. Não espere economia disto.
  *
- * Pra refazer a conta com outra caixa:
- *   /api/admin-envio?cep=01310100&c=11&l=11&a=7&p=0.1
+ * O peso declarado também é folgado de propósito: a montada pesa 115 g
+ * e vai como 150. Cotado em 115, 150 e 300 g contra os mesmos dois CEPs,
+ * o preço foi IDÊNTICO nos três — a faixa cobre tudo isso. Margem de
+ * graça, e o peso é o que mais costuma variar de uma montagem pra outra.
+ *
+ * Pra refazer a conta com outra caixa ou outro peso:
+ *   /api/admin-envio?cep=01310100&c=11&l=11&a=7&p=0.15
  * ---------------------------------------------------------------
  */
 export const KITS = {
   '1': { rotulo: '1 unidade',  unidades: 1, preco:  69.99, frete: 14.99,
-         // Cota pela caixa grande, posta na pequena. Medidas arredondadas
-         // pra cima (6,5 vira 7): pra menos a transportadora cobraria a
-         // diferenca se medisse no balcao.
+         // Cota pela caixa grande, posta na pequena. Tudo arredondado
+         // pra cima: 6,5 cm vira 7, e os 115 g pesados na balanca vao
+         // declarados como 150. Pra menos a transportadora cobraria a
+         // diferenca se medisse no balcao; pra mais nao custa nada, e
+         // isso foi medido (ver abaixo).
          caixa:      { altura: 19, largura: 12, comprimento:  7, peso: 0.10 },
-         caixaEnvio: { altura:  7, largura: 11, comprimento: 11, peso: 0.10 } },
+         caixaEnvio: { altura:  7, largura: 11, comprimento: 11, peso: 0.15 } },
   '2': { rotulo: '2 unidades', unidades: 2, preco: 129.90, frete: 0,
          caixa: { altura: 19, largura: 12, comprimento:  7, peso: 0.17 } },
   '4': { rotulo: '4 unidades', unidades: 4, preco: 199.90, frete: 0,
