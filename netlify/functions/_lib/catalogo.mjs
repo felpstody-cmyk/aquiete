@@ -40,6 +40,20 @@
  *
  * Nunca o contrário: `caixaEnvio` maior que `caixa` seria vender frete
  * barato e postar pacote grande, e aí a diferença vem cobrada depois.
+ *
+ * MEDIDO EM 30/10/2026, e o resultado foi: não usar.
+ *
+ * Ele comprou uma caixinha de 11 x 11 x 6,5 pro envio de 1 frasco. O
+ * cúbico dela cai de 266 g pra 141 g, mas o peso real é 100 g e todas as
+ * faixas de preço cobrem os dois. Cotado de verdade contra São Paulo e
+ * Mossoró, a diferença foi ZERO em Jadlog, Loggi e Correios — só um
+ * centavo na Azul e R$ 3 na JeT, que ninguém escolhe porque custa o
+ * triplo. A caixa menor vale pelo custo da caixa e pelo espaço na
+ * prateleira, não pelo frete.
+ *
+ * `caixaEnvio` fica aqui porque a pergunta volta sempre, e agora tem
+ * resposta medida. Pra refazer a conta com outra caixa:
+ *   /api/admin-envio?cep=01310100&c=11&l=11&a=7&p=0.1
  * ---------------------------------------------------------------
  */
 export const KITS = {
