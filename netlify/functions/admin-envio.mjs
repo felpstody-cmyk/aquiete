@@ -20,7 +20,7 @@
 
 import { chamar, base, configurado, soDigitos } from './_lib/melhorenvio.mjs'
 import { faltaNoRemetente } from './_lib/envio.mjs'
-import { listaDeVetos } from './_lib/dce.mjs'
+import { listaDeVetos, vetar } from './_lib/dce.mjs'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -142,6 +142,19 @@ export default async (req) => {
   // Modo comparador de caixa: ?cep=01310100&c=11&l=11&a=7&p=0.1
   // Cota a caixa atual e a proposta lado a lado, no mesmo CEP.
   const q = new URL(req.url).searchParams
+
+  /*
+   * ?vetar=<id do serviço>&uf=<UF>&nome=<rótulo>
+   *
+   * A lista do DC-e se preenche sozinha com as recusas, mas só a partir
+   * do momento em que ela passou a existir. Isto é pra plantar o que já
+   * se sabe de antes — e pra quando o suporte da transportadora disser
+   * que não atende um estado, antes de custar uma venda pra descobrir.
+   */
+  if (q.get('vetar')) {
+    await vetar(q.get('vetar'), String(q.get('uf') || '').toUpperCase(), q.get('nome') || '', 'anotado na mão')
+    return json({ ok: true, lista: await listaDeVetos() })
+  }
 
   // ?gateway=1 — monta o REMETENTE_* a partir do cadastro do Asaas.
   if (q.get('gateway')) {
