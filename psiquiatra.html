@@ -256,13 +256,17 @@
     .kitc{display:grid;grid-template-columns:1fr auto;align-items:center;
       grid-template-areas:"nome valor" "frete de" "econ cada" "total total";
       gap:1px 14px;padding:11px 13px;text-align:left}
-    .kitc .nome {grid-area:nome;  margin:0;font-size:15px}
-    .kitc .frete{grid-area:frete; margin:0;font-size:11.5px}
-    .kitc .econ {grid-area:econ;  margin:3px 0 0}
-    .kitc .valor{grid-area:valor; text-align:right;font-size:21px}
-    .kitc .de   {grid-area:de;    text-align:right;margin:0}
-    .kitc .cada {grid-area:cada;  text-align:right;margin:3px 0 0}
-    .kitc .total{grid-area:total; margin:5px 0 0}
+    /* Corpo maior que o do desktop, de proposito: o telefone fica mais
+       longe do olho que o monitor, e boa parte de quem compra isso passa
+       dos cinquenta. O que estava em 10,5 e 11px nao se le. */
+    .kitc .nome {grid-area:nome;  margin:0;font-size:16.5px}
+    .kitc .frete{grid-area:frete; margin:0;font-size:13px}
+    .kitc .econ {grid-area:econ;  margin:4px 0 0;font-size:13px}
+    .kitc .valor{grid-area:valor; text-align:right;font-size:24px}
+    .kitc .de   {grid-area:de;    text-align:right;margin:0;font-size:13.5px}
+    .kitc .cada {grid-area:cada;  text-align:right;margin:4px 0 0;font-size:13px;line-height:1.2}
+    .kitc .total{grid-area:total; margin:6px 0 0;font-size:12.5px}
+    .kitc .fitinha{font-size:10.5px}
     /* O custo por dia e a linha mais dispensavel das tres e e justo ela
        que acrescentaria uma quarta altura em cada cartao. Fica no
        desktop, onde espaco nao e o problema. */
@@ -273,8 +277,20 @@
     .kitc .fitinha{left:12px;right:auto;transform:none;top:-8px}
     .kitc[aria-pressed="true"]:after{left:auto;right:12px;bottom:auto;top:-8px;margin:0}
 
-    .cta{padding:14px;font-size:17px}
-    .risco{margin-top:8px;font-size:11.5px}
+    .cta{padding:15px;font-size:18px}
+    .risco{margin-top:9px;font-size:12.5px;line-height:1.5}
+
+    /* O quiz tem o mesmo problema: a contagem e o rotulo da barra eram
+       os dois menores da pagina, e sao justo os numeros que ela quer
+       conferir depois de marcar. */
+    .quiz{padding:16px 13px}
+    .quiz h3{font-size:18.5px}
+    .quiz .intro{font-size:14.5px}
+    .quiz label{font-size:15.5px;padding:12px 13px}
+    .quiz .rot{font-size:11.5px;letter-spacing:.05em}
+    .quiz .conta{font-size:14.5px}
+    .quiz .veredito{font-size:16px}
+    .quiz .irpraoferta{font-size:17px;padding:15px}
   }
 </style>
 </head>
