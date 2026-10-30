@@ -362,19 +362,56 @@ export async function despachar(referencia) {
   await store.setJSON(String(referencia), { ...d, tentandoEm: Date.now() })
 
   try {
-    // Sem serviço escolhido (frete grátis do kit de 2 e 4), cota agora e
-    // leva a opção mais barata — `cotar` já devolve ordenado por preço.
-    let servico = d.servico
-    let servicoNome = d.servicoNome
-    if (!servico) {
-      const opcoes = await cotar(d.kitId, d.cliente?.cep)
-      if (!opcoes.length) throw new Error('nenhum serviço disponível para este CEP')
-      servico = opcoes[0].id
-      servicoNome = `${opcoes[0].empresa} ${opcoes[0].nome}`.trim()
+    /*
+     * A mais barata nem sempre aceita o envio.
+     *
+     * MEI não emite nota, então tudo aqui vai com Declaração de
+     * Conteúdo — e transportadora recusa DC-e por estado de destino.
+     * Aconteceu de verdade em 30/10/2026: a Loggi Ponto era a mais
+     * barata pro Rio Grande do Norte e devolveu "esta transportadora
+     * não aceita envios com Declaração de Conteúdo para o estado de
+     * destino". Com uma tentativa só, a venda paga ficava sem etiqueta
+     * e ninguém sabia por quê.
+     *
+     * Então monta uma fila: o serviço que o cliente pagou primeiro (se
+     * houver), e atrás dele as outras opções em ordem de preço. Vai
+     * descendo até uma aceitar.
+     */
+    const fila = []
+    if (d.servico) fila.push({ id: d.servico, nome: d.servicoNome || '' })
+
+    // Cota sempre, mesmo quando já há serviço escolhido: a cotação não
+    // é o que vai ser usado, é a reserva pra caso o escolhido recuse.
+    const opcoes = await cotar(d.kitId, d.cliente?.cep).catch(() => [])
+    for (const o of opcoes) {
+      if (fila.some((f) => String(f.id) === String(o.id))) continue
+      fila.push({ id: o.id, nome: `${o.empresa} ${o.nome}`.trim() })
+    }
+    if (!fila.length) throw new Error('nenhum serviço disponível para este CEP')
+
+    let carrinho = null
+    let servicoNome = ''
+    const recusas = []
+    for (const opcao of fila.slice(0, 5)) {
+      try {
+        carrinho = await chamar('/me/cart', { corpo: montarPayload({ ...d, referencia }, opcao.id) })
+        servicoNome = opcao.nome
+        break
+      } catch (e) {
+        // 422 é recusa da transportadora: tenta a próxima. Qualquer
+        // outro erro é problema nosso ou deles, e aí parar é o certo.
+        if (!/ 422:/.test(e.message)) throw e
+        recusas.push(`${opcao.nome}: ${e.message.replace(/^Melhor Envio 422: /, '')}`)
+      }
+    }
+    if (!carrinho) {
+      throw new Error(`nenhuma transportadora aceitou. ${recusas.join(' | ')}`)
+    }
+    if (recusas.length) {
+      console.log('[envio] %s foi na %s depois de %d recusa(s): %s',
+        referencia, servicoNome, recusas.length, recusas.join(' | '))
     }
 
-    const payload = montarPayload({ ...d, referencia }, servico)
-    const carrinho = await chamar('/me/cart', { corpo: payload })
     const id = carrinho?.id
     if (!id) throw new Error('o Melhor Envio não devolveu o id do envio')
 
