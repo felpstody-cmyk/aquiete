@@ -1,7 +1,7 @@
 /**
  * Comentários nas páginas de artigo.
  *
- *   POST /api/comentario   { pagina, nome, texto }   público
+ *   POST /api/comentario   { pagina, nome, texto, zap? }   público
  *   GET  /api/comentario?pagina=motivos              público, só aprovados
  *
  * Nada aparece na página sem o Felipe aprovar. Comentário entra como
@@ -14,6 +14,7 @@
  */
 
 import { push, podeNotificar } from './_lib/notificar.mjs'
+import { numeroZap } from './_lib/zap.mjs'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -37,7 +38,13 @@ async function loja() {
   return getStore('comentarios')
 }
 
-/** Só o que vai pra tela. Sem IP, sem nada que identifique além do nome. */
+/*
+ * Só o que vai pra tela. Sem IP, sem nada que identifique além do nome.
+ *
+ * É lista branca de propósito, e é o que mantém o `zap` fora da página:
+ * campo novo no comentário não vaza por esquecimento, ele só aparece se
+ * alguém escrever o nome dele aqui.
+ */
 function publico(c) {
   return { id: c.id, nome: c.nome, texto: c.texto, em: c.em, resposta: c.resposta || null }
 }
@@ -74,6 +81,10 @@ export default async (req) => {
   const pagina = limpar(corpo.pagina, 40) || 'motivos'
   const nome = limpar(corpo.nome, MAX_NOME)
   const texto = limpar(corpo.texto, MAX_TEXTO)
+  // Opcional, e nunca chega na página. Serve pra ele saber quem é — a
+  // resposta sai pela conversa que ELA abre, não por envio daqui: a
+  // instância só entrega pra quem escreveu pra loja primeiro.
+  const zap = numeroZap(corpo.zap)
 
   if (texto.length < 3) return json({ erro: 'Escreva seu comentário.' }, 400)
   if (!nome) return json({ erro: 'Diga como quer ser chamada.' }, 400)
@@ -95,6 +106,7 @@ export default async (req) => {
     em: Date.now(),
     aprovado: false,
     resposta: null,
+    zap,
   }
   await store.setJSON('lista', [novo, ...todos].slice(0, LIMITE))
 
@@ -105,6 +117,7 @@ export default async (req) => {
       nome + ':',
       texto.slice(0, 220),
       '',
+      zap ? 'WhatsApp dela: +' + zap : 'Não deixou WhatsApp.',
       'Entra na página só depois que você aprovar.',
     ].join('\n'),
     'Aquiete — comentário pra aprovar',

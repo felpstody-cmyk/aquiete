@@ -462,10 +462,13 @@
       <input id="cnome" maxlength="40" autocomplete="name" placeholder="Seu primeiro nome">
       <label for="ctexto">Seu comentário</label>
       <textarea id="ctexto" maxlength="600" placeholder="Conte sua experiência ou faça uma pergunta."></textarea>
+      <label for="czap">Seu WhatsApp <span style="font-weight:400;color:var(--muted)">(opcional)</span></label>
+      <input id="czap" type="tel" maxlength="20" autocomplete="tel" inputmode="tel" placeholder="(49) 99999-9999">
       <button id="cenviar" type="button">Enviar comentário</button>
       <div class="fcaviso" id="caviso" hidden></div>
       <p class="fcregra">Todo comentário é lido antes de aparecer aqui.
-         Não pedimos e não publicamos e-mail nem telefone.</p>
+         O WhatsApp é opcional, <b>não aparece no site</b> e serve só pra eu
+         saber com quem estou falando.</p>
     </div>
   </div>
 </section>
@@ -662,20 +665,27 @@
   botao.onclick = function(){
     var nome = document.getElementById('cnome').value.trim();
     var texto = document.getElementById('ctexto').value.trim();
+    var zapEl = document.getElementById('czap');
+    var zap = zapEl ? zapEl.value.trim() : '';
     aviso.hidden = false; aviso.className = 'fcaviso';
     if (!nome) { aviso.className = 'fcaviso ruim'; aviso.textContent = 'Diga como quer ser chamada.'; return; }
     if (texto.length < 3) { aviso.className = 'fcaviso ruim'; aviso.textContent = 'Escreva seu comentário.'; return; }
     botao.disabled = true; aviso.textContent = 'Enviando…';
     fetch('/api/comentario', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pagina: PAGINA, nome: nome, texto: texto })
+      body: JSON.stringify({ pagina: PAGINA, nome: nome, texto: texto, zap: zap })
     })
     .then(function(r){ return r.json().then(function(j){ return { ok: r.ok, j: j }; }); })
     .then(function(res){
       if (!res.ok) { botao.disabled = false; aviso.className = 'fcaviso ruim';
         aviso.textContent = res.j.erro || 'Não consegui enviar. Tenta de novo.'; return; }
       aviso.className = 'fcaviso ok';
-      aviso.textContent = 'Recebido, obrigado. Seu comentário aparece aqui depois da leitura.';
+      aviso.innerHTML = 'Recebido, obrigado. Seu comentário aparece aqui depois da leitura.'
+        + '<br><br>Quer falar direto comigo, sem esperar? '
+        + '<a href="/api/falar?de=comentario&amp;nome=' + encodeURIComponent(nome) + '"'
+        + ' style="display:inline-block;margin-top:8px;background:#2f7d4a;color:#fff;'
+        + 'text-decoration:none;border-radius:8px;padding:11px 16px;font-weight:700">'
+        + 'Me chamar no WhatsApp</a>';
       document.getElementById('ctexto').value = '';
     })
     .catch(function(){ botao.disabled = false; aviso.className = 'fcaviso ruim';

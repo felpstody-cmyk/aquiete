@@ -32,6 +32,23 @@ const TEXTOS = {
   duvida: 'Oi! Tenho uma dúvida sobre o Aquiete.',
   rastreio: 'Oi! Quero acompanhar meu pedido da Aquiete. Meu pedido é o AQ-',
   golpe: 'Oi! Vi o anúncio do Aquiete e queria falar com alguém antes de comprar.',
+  comentario: 'Oi! Acabei de comentar na página do Aquiete e queria a resposta por aqui.',
+}
+
+/*
+ * O nome entra no texto quando vem.
+ *
+ * Importa mais do que parece: ele recebe o oi no celular sem contexto
+ * nenhum, e "Oi! Acabei de comentar" de um número desconhecido não diz
+ * qual comentário era. Com o nome, ele acha a pessoa no painel na hora.
+ */
+function comNome(texto, nome) {
+  const quem = String(nome || '').replace(/[^\p{L}\p{M} ]/gu, '').trim().slice(0, 40)
+  if (!quem) return texto
+  // "Meu nome é" e não "sou a": o formulário pergunta como a pessoa quer
+  // ser chamada, não o gênero dela.
+  const resto = texto.replace(/^Oi! /, '')
+  return `Oi! Meu nome é ${quem}, ${resto.charAt(0).toLowerCase()}${resto.slice(1)}`
 }
 
 /**
@@ -53,7 +70,7 @@ async function numeroDaLoja() {
 
 export default async (req) => {
   const q = new URL(req.url).searchParams
-  const texto = TEXTOS[q.get('de')] || TEXTOS.duvida
+  const texto = comNome(TEXTOS[q.get('de')] || TEXTOS.duvida, q.get('nome'))
 
   const numero = await numeroDaLoja()
 

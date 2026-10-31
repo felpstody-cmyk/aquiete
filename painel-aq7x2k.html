@@ -2205,7 +2205,13 @@ function renderComentarios(){
             '<button class="lnk" data-com-resp="'+c.id+'">aprovar com resposta</button>';
         return '<tr><td style="white-space:nowrap">' + esc(dataHoraBR(c.em)) + '</td>' +
           '<td>' + esc(c.pagina || '') + '</td>' +
-          '<td><b>' + esc(c.nome || '—') + '</b></td>' +
+          '<td><b>' + esc(c.nome || '—') + '</b>' +
+            /* O numero so existe se ela quis dar. Vira link: se ela abriu a
+               conversa, ele responde dali; se nao abriu, envio daqui nao
+               seria entregue de qualquer forma (janela de 24h). */
+            (c.zap ? '<br><a href="https://wa.me/' + esc(c.zap) + '" target="_blank" rel="noopener"'
+                   + ' style="font-size:12px">+' + esc(c.zap) + '</a>' : '') +
+          '</td>' +
           '<td style="font-size:13px">' + esc(c.texto || '') +
             (c.resposta ? '<br><span style="color:var(--rose-deep)">↳ ' + esc(c.resposta) + '</span>' : '') +
           '</td>' +
