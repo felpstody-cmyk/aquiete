@@ -1328,15 +1328,17 @@ body::after{
 
       <span class="nav__div" aria-hidden="true"></span>
 
-      <!-- ⚠️ TROQUE o href pela página de rastreio da sua plataforma
-           (Shopify, Nuvemshop, Yampi e Cartpanda já têm uma pronta) -->
-      <a class="nav__sec" href="#" data-link="rastreio">
+      <!-- Rastreio e no WhatsApp: o cliente manda o numero do pedido e a
+           gente responde. Era href="#", que nao levava a lugar nenhum. -->
+      <a class="nav__sec" href="/api/falar?de=rastreio" data-link="rastreio">
         <svg class="nav__ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7.5 4.3 9 5.2"/><path d="M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
         Rastrear pedido
       </a>
 
-      <!-- ⚠️ TROQUE pelo seu número: wa.me/5511999999999 -->
-      <a class="nav__sec" href="https://wa.me/55SEUNUMERO" data-link="whatsapp">
+      <!-- /api/falar pega o numero do chip que esta conectado na instancia,
+           pra nao ter numero chumbado aqui. Era wa.me/55SEUNUMERO, o
+           placeholder do template: o WhatsApp respondia numero invalido. -->
+      <a class="nav__sec" href="/api/falar?de=duvida" data-link="whatsapp">
         <svg class="nav__ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-12.6 7.3L3 20.5l1.8-5.3A8.4 8.4 0 1 1 21 11.5Z"/></svg>
         Falar conosco
       </a>
@@ -2103,6 +2105,12 @@ body::after{
     </p>
 
     <p style="margin-top:var(--s5);font-size:var(--t-xs);color:#7C6763">
+      68.601.075 FELIPE STRAUSS TODERATI · CNPJ 68.601.075/0001-61 · Chapecó/SC<br>
+      <a href="/api/falar?de=duvida">Falar no WhatsApp</a> ·
+      <a href="mailto:contato@aquieteagora.com.br">contato@aquieteagora.com.br</a>
+    </p>
+
+    <p style="margin-top:var(--s3);font-size:var(--t-xs);color:#7C6763">
       © <span id="yr">2026</span> Aquiete · Todos os direitos reservados.
     </p>
   </div>
