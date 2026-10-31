@@ -1,16 +1,21 @@
 /**
  * GET    /api/admin-comentarios            (x-admin-token)  tudo, inclusive o que espera
  * POST   /api/admin-comentarios            (x-admin-token)  aprova, responde ou apaga
- *        { id, acao: "aprovar" | "esconder" | "apagar", resposta?, zap? }
+ *        { id, acao: "aprovar" | "esconder" | "apagar" | "zap", resposta?, zap? }
  *
  * O comentário que chega fica invisível até passar por aqui. É o que
  * separa "comentário de verdade embaixo do artigo" de "qualquer um
  * escreve qualquer coisa no meu site".
  *
- * Com `zap: true`, a resposta também vai pro WhatsApp de quem comentou.
- * Sem isso, aprovar com resposta publica um texto que a pessoa nunca vai
- * ler: ela comentou e foi embora, e a página não tem como chamar ela de
- * volta.
+ * Responder é três coisas diferentes, e por isso são três caminhos:
+ *
+ *   aprovar + zap:true   publica o comentário com a resposta E manda o zap
+ *   aprovar              publica e não manda mensagem nenhuma
+ *   zap                  manda o zap e a página nem sabe que existiu
+ *
+ * O último é o que faltava. Responder alguém pelo WhatsApp não é motivo
+ * pra aquele comentário virar conteúdo do site: ele escolhe o que fica na
+ * página, e isso é independente de ele querer falar com a pessoa.
  */
 
 import { enviarZap, textoRespostaComentario } from './_lib/zap.mjs'
@@ -92,8 +97,21 @@ export default async (req) => {
     if (corpo.resposta) todos[i].resposta = String(corpo.resposta).trim().slice(0, 600)
   } else if (corpo.acao === 'esconder') {
     todos[i].aprovado = false
+  } else if (corpo.acao === 'zap') {
+    /*
+     * Resposta que vai SÓ pelo WhatsApp.
+     *
+     * Não toca em `aprovado` nem em `resposta` de propósito: é isso que
+     * mantém o comentário fora da página. Fica guardado em `respostaZap`,
+     * que a lista branca do `publico()` não devolve — então o registro
+     * conta o que foi dito e a página continua sem saber.
+     */
+    if (!corpo.resposta) return json({ erro: 'Faltando a resposta' }, 400)
+    if (!todos[i].zap) return json({ erro: 'Esse comentário não deixou WhatsApp' }, 400)
+    todos[i].respostaZap = String(corpo.resposta).trim().slice(0, 600)
+    todos[i].respostaZapEm = Date.now()
   } else {
-    return json({ erro: 'acao deve ser aprovar, esconder ou apagar' }, 400)
+    return json({ erro: 'acao deve ser aprovar, esconder, apagar ou zap' }, 400)
   }
 
   await store.setJSON('lista', todos)
@@ -101,26 +119,41 @@ export default async (req) => {
   /*
    * A resposta no WhatsApp dela.
    *
-   * O `wame` volta SEMPRE que der pra montar, mesmo sem `zap: true` e
-   * mesmo quando o envio deu certo. Não é enfeite: a API responde
-   * SENDING, que é "aceitei", e no log de zap da loja nenhuma mensagem
-   * chegou a confirmar entrega ainda. Então o painel precisa ter o
-   * caminho que não depende de provedor — a conversa aberta com o texto
-   * já escrito — à mão, não só quando aparece erro.
+   * O envio chega: conferido em 31/10/2026, mensagem recebida no celular.
+   *
+   * O que não dá pra usar como prova é o log. A API responde SENDING, que
+   * é "aceitei", e o webhook de status nunca confirmou entrega de nenhuma
+   * das mensagens da loja — ou seja, "aceita" parada no log não quer
+   * dizer que falhou. Por isso o `wame` volta SEMPRE que der pra montar:
+   * é a conversa aberta com o texto já escrito, pra ele mandar na mão se
+   * a pessoa disser que não recebeu.
    */
-  const alvo = corpo.acao === 'aprovar' ? todos[i] : null
+  const alvo = corpo.acao === 'apagar' ? null : todos[i]
+  const soNoZap = corpo.acao === 'zap'
+  const resposta = soNoZap
+    ? alvo?.respostaZap
+    : (corpo.acao === 'aprovar' ? alvo?.resposta : null)
+
   let zap = null
   let wame = null
 
-  if (alvo?.resposta && alvo?.zap) {
+  if (resposta && alvo?.zap) {
+    /*
+     * O link entra só quando a resposta está mesmo na página.
+     *
+     * Sem esse `!soNoZap` a mensagem diria "seu comentário já está
+     * publicado, com essa resposta embaixo" pra exatamente quem ele
+     * respondeu pra NÃO publicar. O texto se ajusta sozinho: sem link, a
+     * frase toda desaparece em vez de ficar meia.
+     */
     const texto = textoRespostaComentario({
       nome: alvo.nome,
-      resposta: alvo.resposta,
-      link: linkDoComentario(alvo.pagina),
+      resposta,
+      link: soNoZap ? '' : linkDoComentario(alvo.pagina),
     })
     wame = `https://wa.me/${alvo.zap}?text=${encodeURIComponent(texto)}`
 
-    if (corpo.zap) {
+    if (soNoZap || corpo.zap) {
       zap = await enviarZap({ telefone: alvo.zap, texto })
       // Entra no mesmo log dos outros envios, pra confirmação de entrega
       // cair aqui pelo webhook igual às do Pix e do rastreio.
@@ -128,7 +161,7 @@ export default async (req) => {
         referencia: 'comentário',
         nome: alvo.nome,
         telefone: alvo.zap,
-        etapa: 'resposta de comentário',
+        etapa: soNoZap ? 'resposta só no zap' : 'resposta de comentário',
         resultado: zap,
       })
     }
