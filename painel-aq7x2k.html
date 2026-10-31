@@ -1302,7 +1302,11 @@ function renderMarco100k(){
   el('marco100kBarra').style.width = pctv.toFixed(2) + '%';
   el('marco100kTxt').textContent = brl(total) + ' de ' + brl(META) + ' (' + pct(pctv) + ')';
 }
-var PAGINA_NOME = { index: 'Página inicial', oferta: 'Página de venda', checkout: 'Checkout' };
+/* Na ordem do funil, nao em ordem alfabetica: e a ordem em que a pessoa
+   passa por elas. Os mesmos apelidos do bloco de visitas, pra pagina nao
+   ter um nome num card e outro no card de baixo. */
+var PAGINA_NOME = { index: 'Página inicial', psiquiatra: 'Artigo do anúncio',
+  motivos: 'Artigo dos 6 motivos', oferta: 'Página de venda', checkout: 'Checkout' };
 var CTA_NOME = { header:'Cabeçalho', hero:'Topo (hero)', dock:'Flutuante (mobile)', fab:'Flutuante (desktop)', oferta:'Botão comprar', promo:'Cupom',
   'venda-topo':'Venda: topo', 'venda-kits':'Venda: escolha do kit', 'venda-meio':'Venda: meio', 'venda-final':'Venda: final', 'venda-dock':'Venda: barra fixa', 'voltar-loja':'Venda: voltou pra loja' };
 var comportamentoLimite = 10;
@@ -1524,13 +1528,21 @@ function renderComportamento(){
   var base = (c.sessoes || []).filter(function(s){ return noPeriodo(diaDeTs(s.ultimaAtividade)); });
 
   // Filtro por página: cada sessão guarda rolagem, tempo e cliques separados
-  // por página (index, oferta, checkout). Com uma página escolhida, a lista
+  // por página. Com uma página escolhida, a lista
   // mostra só quem passou por ela e os números passam a ser só dela, em vez
   // de somar tudo que a pessoa viu.
   var contagem = {};
   base.forEach(function(s){ Object.keys(s.paginas || {}).forEach(function(p){ contagem[p] = (contagem[p] || 0) + 1; }); });
-  if (comportamentoPagina !== 'todas' && !PAGINA_NOME[comportamentoPagina]) comportamentoPagina = 'todas';
-  var opcoes = [['todas','Todas']].concat(Object.keys(PAGINA_NOME).map(function(k){ return [k, PAGINA_NOME[k]]; }));
+  /* As paginas conhecidas aparecem sempre, mesmo com zero no periodo:
+     "Artigo do anuncio (0)" responde "ninguem entrou", e botao que
+     desaparece nao responde nada. Pagina que comecar a mandar sinal sem
+     estar no PAGINA_NOME entra depois delas, com o nome cru — era isso
+     que faltava, nao os nomes. */
+  var vistas = Object.keys(contagem);
+  var ordem = Object.keys(PAGINA_NOME).concat(
+    vistas.filter(function(p){ return !PAGINA_NOME[p]; }).sort());
+  if (comportamentoPagina !== 'todas' && ordem.indexOf(comportamentoPagina) === -1) comportamentoPagina = 'todas';
+  var opcoes = [['todas','Todas']].concat(ordem.map(function(k){ return [k, PAGINA_NOME[k] || k]; }));
   el('comportamentoFiltro').innerHTML = '<span style="font-size:12.5px;color:var(--ink-3)">Mostrar:</span>' + opcoes.map(function(o){
     var n = o[0] === 'todas' ? base.length : (contagem[o[0]] || 0);
     return '<button class="btn sec mini' + (comportamentoPagina === o[0] ? ' on' : '') + '" type="button" data-pag="' + o[0] + '">' + esc(o[1]) + ' (' + n + ')</button>';
