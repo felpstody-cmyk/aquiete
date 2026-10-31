@@ -424,7 +424,8 @@ td.sel,th.sel{width:34px;padding-right:0}
     <h3>Comentários <span class="tag" id="comResumo"></span></h3>
     <p class="sub" style="margin:0;padding:4px 18px 14px">Quem lê os artigos pode comentar.
        Nada aparece no site antes de você aprovar aqui. Aprovar com resposta publica a sua
-       resposta logo abaixo do comentário, como numa conversa.</p>
+       resposta logo abaixo do comentário, como numa conversa. Quem deixou WhatsApp
+       recebe essa resposta por lá, com o link da página.</p>
     <div class="acoes" style="padding:0 18px 14px">
       <button class="btn sec mini" id="comAtualizar">Atualizar</button>
     </div>
@@ -2199,10 +2200,18 @@ function renderComentarios(){
     ? '<thead><tr><th>Quando</th><th>Página</th><th>Quem</th><th>Comentário</th>' +
       '<th>Situação</th><th></th></tr></thead><tbody>' +
       comentarios.map(function(c){
+        /* Com numero, responder e mandar o zap sao a MESMA acao: separar
+           as duas daria um botao que publica e um que ele esqueceria de
+           apertar depois. Quem nao quiser mandar tem "so no site". */
+        var temZap = Boolean(c.zap);
         var acoes = c.aprovado
-          ? '<button class="lnk" data-com-esconder="'+c.id+'">esconder</button>'
+          ? (temZap && c.resposta
+              ? '<button class="lnk" data-com-zap="'+c.id+'">mandar no zap</button>' : '') +
+            '<button class="lnk" data-com-esconder="'+c.id+'">esconder</button>'
           : '<button class="lnk" data-com-ok="'+c.id+'">aprovar</button>' +
-            '<button class="lnk" data-com-resp="'+c.id+'">aprovar com resposta</button>';
+            '<button class="lnk" data-com-resp="'+c.id+'">' +
+              (temZap ? 'responder e mandar no zap' : 'aprovar com resposta') + '</button>' +
+            (temZap ? '<button class="lnk" data-com-site="'+c.id+'">responder só no site</button>' : '');
         return '<tr><td style="white-space:nowrap">' + esc(dataHoraBR(c.em)) + '</td>' +
           '<td>' + esc(c.pagina || '') + '</td>' +
           '<td><b>' + esc(c.nome || '—') + '</b>' +
@@ -2234,15 +2243,37 @@ function renderComentarios(){
     if (confirm('Apagar este comentário de vez?')) acaoComentario(id, 'apagar');
   });
   ligar('data-com-resp', function(id){
-    var r = prompt('Sua resposta (aparece embaixo do comentário):');
-    if (r && r.trim()) acaoComentario(id, 'aprovar', r.trim());
+    var c = comentarioPor(id);
+    var r = prompt(c && c.zap
+      ? 'Sua resposta. Publica na página E vai pro WhatsApp dela (+' + c.zap + '):'
+      : 'Sua resposta (aparece embaixo do comentário):');
+    if (r && r.trim()) acaoComentario(id, 'aprovar', r.trim(), Boolean(c && c.zap));
+  });
+  ligar('data-com-site', function(id){
+    var r = prompt('Sua resposta. Só publica na página, não manda zap:');
+    if (r && r.trim()) acaoComentario(id, 'aprovar', r.trim(), false);
+  });
+  /* Comentario ja aprovado: manda de novo a resposta que ja esta salva.
+     Serve pra quando o envio nao chegou — e e a unica forma de saber,
+     porque "aceita" no log nunca virou "entregue". */
+  ligar('data-com-zap', function(id){
+    var c = comentarioPor(id);
+    if (c && c.resposta) acaoComentario(id, 'aprovar', c.resposta, true);
   });
 }
 
-function acaoComentario(id, acao, resposta){
+function comentarioPor(id){
+  for (var i = 0; i < comentarios.length; i++) {
+    if (comentarios[i].id === id) return comentarios[i];
+  }
+  return null;
+}
+
+function acaoComentario(id, acao, resposta, zap){
   if (!cfg.url || !cfg.token) { alert('Configure a conexão com o site em Ajustes primeiro.'); return; }
   var corpo = { id: id, acao: acao };
   if (resposta) corpo.resposta = resposta;
+  if (zap) corpo.zap = true;
   fetch(urlComentarios(), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-admin-token': cfg.token },
@@ -2251,6 +2282,19 @@ function acaoComentario(id, acao, resposta){
     .then(function(r){ return r.json().then(function(j){ return { ok: r.ok, j: j }; }); })
     .then(function(res){
       if (!res.ok || !res.j.ok) { alert('Não consegui: ' + (res.j.erro || 'erro desconhecido')); return; }
+      /* O site ja esta certo aqui: a resposta foi publicada. O que pode
+         ter falhado e so o zap, e ai abre a conversa com o texto pronto
+         pra mandar na mao — um aperto no enviar, sem digitar nada. */
+      if (zap && res.j.zap && !res.j.zap.enviado) {
+        alert('Resposta publicada no site.\n\nO zap NÃO saiu: ' + (res.j.zap.erro || 'erro') +
+              '.\nVou abrir a conversa com o texto já escrito, é só apertar enviar.');
+        if (res.j.wame) window.open(res.j.wame, '_blank');
+      } else if (zap && res.j.zap && res.j.zap.enviado) {
+        alert('Resposta publicada e mandada pro WhatsApp dela.\n\nIsso quer dizer que a API ' +
+              'aceitou, não que chegou. A confirmação de entrega aparece no log de zap, ' +
+              'em Conexão. Se ficar em "aceita", abre a conversa pelo número na lista e ' +
+              'manda na mão.');
+      }
       return buscarComentarios();
     })
     .catch(function(e){ alert('Falha de conexão: ' + e.message); });

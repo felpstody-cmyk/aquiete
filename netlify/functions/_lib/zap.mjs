@@ -317,6 +317,27 @@ export function textoPago({ nome, referencia }) {
   ].join('\n')
 }
 
+/**
+ * A loja respondeu o comentário que a pessoa deixou no site.
+ *
+ * Vai a resposta inteira e o link, não só o aviso. Quem escreveu
+ * "funciona mesmo?" quer a resposta, não a notícia de que existe uma — e
+ * o link ainda entrega a segunda coisa, que é ver a própria pergunta
+ * publicada embaixo do artigo com a resposta da loja embaixo dela.
+ */
+export function textoRespostaComentario({ nome, resposta, link }) {
+  return [
+    `${oi(nome)} Aqui é o Felipe, da Aquiete 🌿`,
+    '',
+    'Você deixou um comentário no nosso site e eu te respondi:',
+    '',
+    `"${String(resposta || '').trim()}"`,
+    ...(link ? ['', `Seu comentário já está publicado na página, com essa resposta embaixo: ${link}`] : []),
+    '',
+    'Se quiser perguntar mais alguma coisa, responde aqui mesmo que eu vejo.',
+  ].join('\n')
+}
+
 /** Saiu pra entrega. O link vai pronto: ninguem copia codigo no celular. */
 export function textoRastreio({ nome, referencia, rastreio, transportadora }) {
   const quem = String(transportadora || '').trim()
