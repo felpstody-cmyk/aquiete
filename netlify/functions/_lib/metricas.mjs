@@ -397,13 +397,45 @@ export async function marcarCarrinhoPago({ email, referencia }) {
 
 /**
  * Sequência de lembrete: vai espaçando e para sozinha — não fica mandando
- * pra sempre. 3 toques: 2h, 1 dia, 3 dias. Depois disso, silêncio.
+ * pra sempre. 3 toques: 5 min, 1 dia, 3 dias. Depois disso, silêncio.
+ *
+ * O primeiro era de 2 horas, e com o agendador de hora em hora a mensagem
+ * saía entre 2h e 3h depois. Nessa altura ninguém está mais decidindo
+ * nada: ou comprou em outro lugar, ou esqueceu que existe. Cinco minutos
+ * pega a pessoa ainda no assunto.
+ *
+ * Em minutos, e não em horas, porque é isso que o primeiro toque passou a
+ * precisar medir.
  */
 export const ETAPAS_CARRINHO = [
-  { horasDesde: 2 },
-  { horasDesde: 24 },
-  { horasDesde: 72 },
+  { minutosDesde: 5 },
+  { minutosDesde: 24 * 60 },
+  { minutosDesde: 72 * 60 },
 ]
+
+/**
+ * Quem bateu presença no site agora, por sid.
+ *
+ * Uma leitura pra todos os carrinhos, não uma por carrinho — é a mesma
+ * loja do "ao vivo" do painel, e a chave dela já é o sid.
+ *
+ * A janela é maior que os 90s do painel porque aqui o custo dos dois
+ * erros não é o mesmo: deixar de mandar agora só adia o lembrete cinco
+ * minutos, e mandar pra quem está olhando a tela queima a mensagem.
+ */
+async function sidsNoSite(janelaMs = 150_000) {
+  const vivos = new Set()
+  try {
+    const store = await loja('ativos')
+    const { blobs } = await store.list()
+    const agora = Date.now()
+    await Promise.all((blobs || []).map(async (b) => {
+      const d = await store.get(b.key, { type: 'json' }).catch(() => null)
+      if (d && agora - Number(d.em || 0) <= janelaMs) vivos.add(b.key)
+    }))
+  } catch { /* sem isso o lembrete perde a trava, não para de rodar */ }
+  return vivos
+}
 
 /** Carrinhos na hora certa do próximo toque da sequência (e ainda não esgotaram os 3). */
 export async function carrinhosPendentesDeEmail() {
@@ -412,9 +444,15 @@ export async function carrinhosPendentesDeEmail() {
   try {
     const store = await loja('carrinhos')
     const { blobs } = await store.list()
+    const noSite = await sidsNoSite()
     await Promise.all(blobs.map(async (b) => {
       const d = await store.get(b.key, { type: 'json' }).catch(() => null)
       if (!d) return
+      // Ainda com a aba aberta: não abandonou nada. Com o primeiro toque
+      // em 2 horas isso não importava; em 5 minutos importa, porque cinco
+      // minutos é o tempo de ir buscar o CPF na gaveta — e aí a pessoa
+      // receberia "vi que você não finalizou" olhando a própria tela.
+      if (d.sid && noSite.has(d.sid)) return
       // E-mail que não é e-mail nunca sai da fila: o envio falha sempre,
       // a etapa nunca avança, e o carrinho fica cobrando pra sempre. Foi
       // o que aconteceu com "fulano@hotmail.com25", que mandou 17 zaps
@@ -424,9 +462,9 @@ export async function carrinhosPendentesDeEmail() {
       if (d.pago || aguardandoPagamento(d, agora)) return
       const etapa = d.etapa || 0
       if (etapa >= ETAPAS_CARRINHO.length) return
-      const horasDesde = (agora - d.em) / 3_600_000
-      if (horasDesde < ETAPAS_CARRINHO[etapa].horasDesde) return
-      if (horasDesde > 7 * 24) return
+      const minutosDesde = (agora - d.em) / 60_000
+      if (minutosDesde < ETAPAS_CARRINHO[etapa].minutosDesde) return
+      if (minutosDesde > 7 * 24 * 60) return
       // `desde` e quando esta compra comecou. Quem cobra usa isso pra
       // saber se um pagamento do mesmo cliente liquida ESTE carrinho ou
       // se era de uma compra anterior (ver _lib/pagantes.mjs).

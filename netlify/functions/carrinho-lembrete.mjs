@@ -1,9 +1,14 @@
 /**
- * Roda de hora em hora, agendada pelo Netlify (não tem URL pública).
+ * Roda de 5 em 5 minutos, agendada pelo Netlify (não tem URL pública).
  *
- * Sequência de 3 toques (2h / 1 dia / 3 dias) — cada carrinho avança uma
- * etapa por vez e a sequência para sozinha depois do terceiro e-mail.
+ * Sequência de 3 toques (5 min / 1 dia / 3 dias) — cada carrinho avança
+ * uma etapa por vez e a sequência para sozinha depois do terceiro e-mail.
  * Nunca fica mandando pra sempre.
+ *
+ * Os 5 minutos do primeiro toque dependem desta função acordar junto: com
+ * o `@hourly` de antes, a etapa podia vencer às 10h01 e a mensagem sair
+ * às 11h. O preço é que a mensagem cai entre 5 e 10 minutos, não em 5
+ * cravados — pra apertar mais é só baixar o intervalo aqui embaixo.
  */
 
 import {
@@ -82,4 +87,4 @@ export default async () => {
   })
 }
 
-export const config = { schedule: '@hourly' }
+export const config = { schedule: '*/5 * * * *' }

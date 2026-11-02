@@ -38,6 +38,10 @@ export default async (req) => {
         ? [...new Set(corpo.campos.map(String).filter((c) => CAMPOS_CONHECIDOS.has(c)))]
         : undefined
       const cidadeForm = String(corpo.cidade ?? '').trim().slice(0, 60)
+      // Guardado pro lembrete poder perguntar se a pessoa ainda esta no
+      // site. Nao identifica ninguem: e um numero aleatorio que morre
+      // quando a aba fecha.
+      const sid = String(corpo.sid ?? '').replace(/[^a-z0-9]/gi, '').slice(0, 40)
       // De qual anuncio essa pessoa veio. Vem do navegador porque so ele
       // sabe a PRIMEIRA visita: aqui no servidor chega so o ultimo clique.
       const o = corpo.origem && typeof corpo.origem === 'object' ? corpo.origem : null
@@ -58,6 +62,7 @@ export default async (req) => {
         kit: String(corpo.kit ?? '').trim(),
         em: Date.now(),
         ...(campos ? { campos } : {}),
+        ...(sid ? { sid } : {}),
         ...(cidadeForm ? { cidadeForm } : {}),
         ...(geo?.cidade ? { cidadeIp: geo.cidade, uf: geo.uf } : {}),
       })

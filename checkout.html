@@ -1734,6 +1734,11 @@ function aqGerouPagamento(dados){
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nome: dNome.value, email: email, telefone: dTel.value, kit: kitDoCarrinho,
           cidade: dCidade ? dCidade.value : '', campos: preenchidos,
+          // Quem ainda esta com a aba aberta nao abandonou nada. Este e o
+          // mesmo sid que bate em /api/ativo a cada 25s, e e por ele que o
+          // lembrete sabe a diferenca entre quem saiu do site e quem foi
+          // buscar o CPF na gaveta.
+          sid: (function(){ try { return sessionStorage.getItem('aq_sid') || ''; } catch(e){ return ''; } })(),
           // De qual anuncio veio. Guardado la na pagina de chegada, porque
           // o link de la pra ca carrega utm proprio e apagaria o original.
           origem: (function(){
