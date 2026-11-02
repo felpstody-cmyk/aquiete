@@ -138,7 +138,8 @@ export function htmlAguardando({ nome, referencia, descricao, total, metodo, pay
 
   const prazo = ehPix
     ? `<p style="margin:0 0 18px;padding:12px 14px;border-left:3px solid #C8453E;background:#FDF8F6;font-size:14px">
-         Se em algum momento o código não funcionar, é só responder este e-mail que a gente gera outro.
+         <b style="color:#2A1613">Este código vale por 30 minutos.</b>
+         Depois disso é só responder este e-mail que a gente gera outro.
        </p>`
     : `<p style="margin:0 0 18px;font-size:14px">O boleto leva até 3 dias úteis para compensar depois do pagamento.</p>`
 

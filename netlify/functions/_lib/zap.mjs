@@ -249,7 +249,7 @@ export function textoPixGerado({ nome, descricao, total, payload }) {
    * loja gera outro.
    */
   const fim = payload
-    ? 'Te mando o código do Pix na mensagem de baixo: é só copiar e colar no app do banco. Se em algum momento ele não funcionar, me chama aqui que eu gero outro na hora.\n\n' + recebedor
+    ? 'Te mando o código do Pix na mensagem de baixo: é só copiar e colar no app do banco. Ele vale por 30 minutos.\n\n' + recebedor
     : 'Se travou alguma coisa na hora de pagar, é só responder aqui que a gente resolve.\n\n' + recebedor
   return [
     `${oi(nome)} Aqui é da Aquiete 🌿`,

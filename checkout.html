@@ -583,7 +583,8 @@ img,svg{display:block;max-width:100%}
               <!-- Dizia "o gateway devolve o codigo". Quem esta com o
                    cartao na mao nao precisa saber o nome do encanamento, e
                    palavra tecnica em tela de pagamento assusta. -->
-              <p>O código copia-e-cola e o QR aparecem na tela seguinte.</p>
+              <p>O código copia-e-cola e o QR aparecem na tela seguinte,
+                 e valem por 30 minutos.</p>
             </div>
           </div></div>
         </div>
@@ -800,6 +801,13 @@ img,svg{display:block;max-width:100%}
     el('bumpT').textContent = oferta.titulo;
     el('bumpS').textContent = oferta.nota;
     caixa.hidden = false;
+    /* Quem gerou um Pix com bump e teve que gerar de novo (o codigo
+       vence em 30 min) volta pelo link com ?bump=1. Sem isto ela
+       perderia o frasco a mais e teria que lembrar de marcar de novo. */
+    if (new URLSearchParams(location.search).get('bump') === '1') {
+      ck.checked = true;
+      bumpAtivo = true;
+    }
     ck.addEventListener('change', function(){
       bumpAtivo = ck.checked;
       totalAtual = pintarResumo();
@@ -1399,6 +1407,14 @@ img,svg{display:block;max-width:100%}
     h.textContent = 'Escaneie ou copie o código';
     caixa.appendChild(h);
 
+    /* Relogio regressivo. Preenchido mais abaixo, quando o codigo e o
+       botao de copiar ja existem — o contador precisa dos dois pra
+       desligar tudo quando zerar. */
+    var relogio = d.createElement('p');
+    relogio.style.cssText = 'margin:.5rem 0 0;font-size:.9375rem;line-height:1.4;'
+      + 'color:var(--ink-2)';
+    caixa.appendChild(relogio);
+
     /* O banco mostra a razao social do MEI, nao "Aquiete". Sem avisar antes,
        o cliente ve um nome que nao reconhece na hora de confirmar e desiste —
        ou paga e contesta depois.
@@ -1439,6 +1455,64 @@ img,svg{display:block;max-width:100%}
     dica.style.cssText = 'margin-top:.5rem;font-size:.8125rem;color:var(--ink-3);line-height:1.4';
     dica.textContent = 'Copie o código, abra o app do banco e escolha Pix Copia e Cola.';
     caixa.appendChild(dica);
+
+    /* ---------- Os 30 minutos ----------
+       O BANCO NAO MOSTRA ESSE PRAZO, e nao tem como. O QR estatico e um
+       BR Code puro e o padrao nao tem campo de validade: a regra dos 30
+       minutos vive no Asaas, que recusa o pagamento atrasado. Por isso o
+       app do banco oferece agendar pra daqui a anos — ele genuinamente
+       nao sabe.
+       Entao este relogio e o unico lugar onde a pessoa ve o tempo
+       correndo. Sem ele, ela descobre que venceu levando recusa no banco. */
+    var expiraMs = (function(){
+      /* Vem do Asaas como "2026-11-02 16:13:24", hora de Brasilia e sem
+         fuso. O -03:00 entra na mao: sem ele o navegador interpreta como
+         hora local, e quem estiver em outro fuso ve o relogio errado. */
+      var s = String(dados.expiraEm || '').trim();
+      if (!s) return 0;
+      var t = Date.parse(s.replace(' ', 'T') + '-03:00');
+      return isNaN(t) ? 0 : t;
+    })();
+
+    if (expiraMs) {
+      var tiquetaque = null;
+      var venceu = function(){
+        if (tiquetaque) clearInterval(tiquetaque);
+        relogio.innerHTML = '<b style="color:var(--brand-700)">Este código venceu.</b>'
+          + ' Gere um novo pra finalizar o pedido.';
+        ta.value = '';
+        ta.disabled = true;
+        ta.style.opacity = '.4';
+        copiar.disabled = true;
+        copiar.style.opacity = '.4';
+        copiar.style.cursor = 'default';
+        copiar.textContent = 'Código vencido';
+        dica.textContent = '';
+        if (!d.getElementById('pixDeNovo')) {
+          var denovo = d.createElement('a');
+          denovo.id = 'pixDeNovo';
+          denovo.href = 'checkout.html?kit=' + encodeURIComponent(kitId)
+            + (bumpAtivo ? '&bump=1' : '');
+          denovo.textContent = 'Gerar um código novo';
+          denovo.style.cssText = 'display:block;margin-top:.6rem;padding:.9rem 1rem;'
+            + 'border-radius:10px;background:var(--brand);color:#fff;text-align:center;'
+            + 'text-decoration:none;font:700 1rem/1 inherit;font-family:inherit';
+          caixa.insertBefore(denovo, dica);
+        }
+      };
+      var bater = function(){
+        var falta = Math.round((expiraMs - Date.now()) / 1000);
+        if (falta <= 0) { venceu(); return; }
+        var m = Math.floor(falta / 60), s = falta % 60;
+        /* Nos ultimos 5 minutos muda de cor. Nao e enfeite: e o aviso de
+           que nao da mais tempo de ir buscar a senha do banco com calma. */
+        var cor = falta <= 300 ? 'var(--brand-700)' : 'var(--ok)';
+        relogio.innerHTML = 'Este código vale por mais <b style="color:' + cor + '">'
+          + m + ':' + (s < 10 ? '0' : '') + s + '</b>';
+      };
+      bater();
+      tiquetaque = setInterval(bater, 1000);
+    }
 
     var p = d.createElement('p');
     p.style.marginTop = '.6rem';
