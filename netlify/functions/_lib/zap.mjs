@@ -233,9 +233,20 @@ export function textoPixGerado({ nome, descricao, total, payload }) {
   // avisado antes ve um nome estranho na hora de confirmar e desiste.
   // O texto abaixo e exatamente o campo 59 do codigo Pix.
   const recebedor = 'No banco o recebedor aparece como 68601075 FELIPE STRAUSS, de Chapecó — é o CNPJ da Aquiete.'
+  /*
+   * "Vence em 24h" era falso, e custou uma venda.
+   *
+   * A cobrança é emitida com vencimento HOJE, e sem chave Pix cadastrada
+   * no Asaas o QR fica vinculado a uma instituição parceira e só é
+   * pagável até as 23:59 deste mesmo dia. Nem 24 horas, nem os 12 meses
+   * do fluxo com chave: meia-noite.
+   *
+   * Em 02/11/2026 uma cliente leu "24h", entendeu que dava pra pagar no
+   * dia seguinte e agendou o Pix pro dia 3. Aquele agendamento falha.
+   */
   const fim = payload
-    ? 'Te mando o código do Pix na mensagem de baixo: é só copiar e colar no app do banco. Vence em 24h.\n\n' + recebedor
-    : 'Se travou alguma coisa na hora de pagar, é só responder aqui que a gente resolve. O código vence em 24h.\n\n' + recebedor
+    ? 'Te mando o código do Pix na mensagem de baixo: é só copiar e colar no app do banco. Ele vale até a meia-noite de hoje.\n\n' + recebedor
+    : 'Se travou alguma coisa na hora de pagar, é só responder aqui que a gente resolve. O código vale até a meia-noite de hoje.\n\n' + recebedor
   return [
     `${oi(nome)} Aqui é da Aquiete 🌿`,
     '',
