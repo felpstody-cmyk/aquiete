@@ -36,6 +36,8 @@ import {
   textoPixCodigo, pausa,
 } from './_lib/zap.mjs'
 import { jaPagou } from './_lib/pagantes.mjs'
+import { registrarZap } from './_lib/zaplog.mjs'
+import { diaBR } from './_lib/metricas.mjs'
 
 const BASES = {
   sandbox: 'https://api-sandbox.asaas.com/v3',
@@ -88,23 +90,46 @@ const ASSUNTOS_PIX = [
 const LIMITE_MINUTOS = 20 * 60
 
 /**
- * Em que toque esta cobrança está.
+ * Em que toque esta cobrança está, e desde quando conta o relógio.
  *
- * -1 quer dizer "já pagou, não mexe mais".
+ * `{ toque: -1 }` quer dizer "já pagou, não mexe mais".
  *
- * Valor antigo é string solta, de quando existia um lembrete só. Conta
- * como sequência TERMINADA: quem já recebeu aquele não pode levar quatro
- * de uma vez só porque isto subiu.
+ * O relógio é `visto`, a primeira vez que esta varredura enxergou a
+ * cobrança — e NÃO o `dateCreated` do Asaas.
+ *
+ * Isso não é preciosismo. `dateCreated` vem só com a data, sem hora:
+ * `new Date('2026-11-02')` é meia-noite UTC, que em Brasília é 21h do dia
+ * anterior. Às 6h30 da manhã a conta dava 570 minutos de vida, e cada
+ * rodada do agendador queimava um toque — em 02/11/2026 uma cliente levou
+ * os quatro em treze minutos e pediu pra parar. Como isto roda de 5 em 5
+ * minutos, `visto` fica a no máximo 5 minutos do nascimento de verdade e
+ * não depende do formato de data de ninguém.
+ *
+ * Cobrança de um dia anterior nasce já marcada como terminada: ela perdeu
+ * a janela, e abrir quatro toques em cima de quem gerou Pix ontem é o
+ * mesmo erro de novo.
+ *
+ * Valor antigo é string solta, de quando existia um lembrete só. Também
+ * conta como terminada.
  */
-async function toqueDe(store, id) {
+async function estadoDe(store, id, dataCriacao) {
   const bruto = await store.get(id)
-  if (!bruto) return 0
-  if (bruto === 'pago') return -1
+
+  if (bruto === 'pago') return { toque: -1, visto: 0 }
+
+  if (!bruto) {
+    const deHoje = String(dataCriacao || '').slice(0, 10) === diaBR()
+    const novo = { toque: deHoje ? 0 : TOQUES.length, visto: Date.now() }
+    await store.setJSON(id, novo)
+    return novo
+  }
+
   try {
     const d = JSON.parse(bruto)
-    return Number.isFinite(Number(d?.toque)) ? Number(d.toque) : TOQUES.length
+    const toque = Number.isFinite(Number(d?.toque)) ? Number(d.toque) : TOQUES.length
+    return { toque, visto: Number(d?.visto) || 0 }
   } catch {
-    return TOQUES.length
+    return { toque: TOQUES.length, visto: 0 }
   }
 }
 
@@ -161,16 +186,21 @@ export default async () => {
     const agora = Date.now()
 
     for (const p of pagina.data || []) {
-      const criado = new Date(p.dateCreated).getTime()
-      const minutos = (agora - criado) / 60_000
-      if (minutos > LIMITE_MINUTOS) continue
-
-      // A conta barata primeiro: sem isso cada varredura (agora são 288
-      // por dia) gastaria duas chamadas de API por cobrança pendente.
-      const toque = await toqueDe(store, p.id)
+      // A conta barata primeiro: sem isso cada varredura (288 por dia)
+      // gastaria duas chamadas de API por cobrança pendente.
+      const { toque, visto } = await estadoDe(store, p.id, p.dateCreated)
       if (toque < 0 || toque >= TOQUES.length) continue
+
+      const minutos = (agora - visto) / 60_000
+      if (minutos > LIMITE_MINUTOS) continue
       if (minutos < TOQUES[toque].minutos) continue
       const agenda = TOQUES[toque]
+
+      // `criado` é só pra perguntar ao Asaas o que esta pessoa pagou
+      // DEPOIS desta cobrança nascer. Aqui a data sem hora serve: ela
+      // erra pra trás (meia-noite UTC do dia), e errar pra trás só torna
+      // a pergunta mais abrangente, o que é o lado seguro.
+      const criado = new Date(p.dateCreated).getTime()
 
       // Trava 3, antes de gastar a busca do cliente: o próprio Asaas diz
       // se esta pessoa já pagou outra cobrança depois desta ser gerada.
@@ -209,7 +239,7 @@ export default async () => {
       // depois do e-mail, e-mail que falhava deixava a cobrança sem marca
       // nenhuma e o zap saía de novo a cada hora, pra sempre — foi o que
       // aconteceu com a sequência do carrinho (ver carrinho-lembrete).
-      await store.setJSON(p.id, { toque: toque + 1, em: Date.now() })
+      await store.setJSON(p.id, { toque: toque + 1, visto, em: Date.now() })
       enviados++
 
       let payload = null
@@ -222,13 +252,24 @@ export default async () => {
       // ainda sai — os dois juntos, porque não dá pra saber qual ela vê.
       if (cliente.mobilePhone || cliente.phone) {
         const paraZap = cliente.mobilePhone || cliente.phone
-        await enviarZap({
+        const r = await enviarZap({
           telefone: paraZap,
           texto: agenda.zap({
             nome: cliente.name, total: p.value, payload,
             kit: kitDaDescricao(p.description),
           }),
-        }).catch(() => {})
+        }).catch((e) => ({ enviado: false, erro: String(e?.message || e) }))
+        // Esta funcao mandava sem registrar nada, e foi por isso que a
+        // enxurrada de 02/11 ficou invisivel: o painel mostrava "pix
+        // gerado" as 6h27 e mais nada, enquanto quatro mensagens saiam.
+        // Envio que nao aparece no log e envio que ninguem audita.
+        await registrarZap({
+          referencia: p.externalReference || '',
+          nome: cliente.name,
+          telefone: paraZap,
+          etapa: ['pix 5min', 'pix 3h', 'pix cupom', 'pix 12h'][toque] || 'pix lembrete',
+          resultado: r,
+        })
         // O copia-e-cola vai sozinho na mensagem seguinte, senao copiar a
         // mensagem leva a conversa junto. Nao vai no toque do cupom: la a
         // pessoa foi convidada a refazer o pedido, e mandar o codigo do
