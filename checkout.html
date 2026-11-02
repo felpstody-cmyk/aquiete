@@ -580,7 +580,10 @@ img,svg{display:block;max-width:100%}
           <div><div class="panel__in">
             <div class="slot" style="border-style:solid;background:var(--ok-100);border-color:#B9DCCB">
               <h3 style="color:var(--ok)">QR Code gerado após confirmar</h3>
-              <p>O gateway devolve o código Pix copia-e-cola e o QR na tela seguinte.</p>
+              <!-- Dizia "o gateway devolve o codigo". Quem esta com o
+                   cartao na mao nao precisa saber o nome do encanamento, e
+                   palavra tecnica em tela de pagamento assusta. -->
+              <p>O código copia-e-cola e o QR aparecem na tela seguinte.</p>
             </div>
           </div></div>
         </div>
@@ -722,9 +725,9 @@ img,svg{display:block;max-width:100%}
     '1': { preco: 35.99,
            titulo: 'Leve mais 1 frasco por R$ 35,99',
            nota: 'R$ 34 abaixo do frasco avulso, e vai na mesma caixa: o frete não muda.' },
-    '2': { preco: 50.00,
-           titulo: 'Leve mais 1 frasco por R$ 50,00',
-           nota: 'Três frascos por R$ 179,90, com frete grátis.' }
+    '2': { preco: 40.00,
+           titulo: 'Leve mais 1 frasco por R$ 40,00',
+           nota: 'Três frascos por R$ 169,90, com frete grátis.' }
   };
   var bumpAtivo = false;
 
@@ -732,6 +735,7 @@ img,svg{display:block;max-width:100%}
      Espelho do que existe em netlify/functions/_lib/catalogo.mjs. Serve só
      para mostrar o valor na tela: quem decide o desconto é o servidor. */
   var CUPONS = {
+    PRIMEIRA10:  { percentual: 0.10, rotulo: '10% na primeira compra' },
     TESTEAQ0821: { percentual: 1.00, rotulo: 'Pedido de teste' }
   };
   var cupomAtivo = null;

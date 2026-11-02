@@ -397,7 +397,8 @@ export async function marcarCarrinhoPago({ email, referencia }) {
 
 /**
  * Sequência de lembrete: vai espaçando e para sozinha — não fica mandando
- * pra sempre. 3 toques: 5 min, 1 dia, 3 dias. Depois disso, silêncio.
+ * pra sempre. 3 toques: 5 min, 3 horas, no dia seguinte. Depois disso,
+ * silêncio. Cada toque tem texto próprio, e o terceiro leva o cupom.
  *
  * O primeiro era de 2 horas, e com o agendador de hora em hora a mensagem
  * saía entre 2h e 3h depois. Nessa altura ninguém está mais decidindo
@@ -409,8 +410,8 @@ export async function marcarCarrinhoPago({ email, referencia }) {
  */
 export const ETAPAS_CARRINHO = [
   { minutosDesde: 5 },
+  { minutosDesde: 3 * 60 },
   { minutosDesde: 24 * 60 },
-  { minutosDesde: 72 * 60 },
 ]
 
 /**

@@ -92,8 +92,8 @@ export const KITS = {
  *                      mão é melhor que 84,98, e o segundo frasco sai
  *                      R$ 34 abaixo do avulso.
  *
- *   kit 2 + 50,00  ->  179,90 por 3 frascos (frete grátis)
- *                      sai a 59,97 o frasco, ACIMA dos 49,98 do kit de 4.
+ *   kit 2 + 40,00  ->  169,90 por 3 frascos (frete grátis)
+ *                      sai a 56,63 o frasco, ACIMA dos 49,98 do kit de 4.
  *                      Quem faz essa conta volta e sobe de kit, que é o
  *                      que a gente quer que aconteça.
  *
@@ -106,7 +106,7 @@ export const KITS = {
  */
 export const BUMP = {
   '1': { preco: 35.99, unidades: 1 },
-  '2': { preco: 50.00, unidades: 1 },
+  '2': { preco: 40.00, unidades: 1 },
 }
 
 /**
@@ -137,9 +137,23 @@ export const METODOS = new Set(['pix', 'card', 'boleto'])
  * assim os pedidos antigos continuam explicáveis.
  */
 export const CUPONS = {
-  // Desligado em 05/10: a oferta passou a ser o proprio compre-1-leve-2,
-  // e dar 10% por cima dela comia a margem duas vezes.
-  PRIMEIRA10: { percentual: 0.10, rotulo: '10% na primeira compra', ativo: false },
+  /*
+   * Religado em 02/11/2026, com um papel novo e estreito.
+   *
+   * Foi desligado em 05/10 porque a oferta virou o próprio compre-1-leve-2
+   * e dar 10% por cima comia a margem duas vezes. Isso continua valendo
+   * pra quem está comprando: ele não aparece em lugar nenhum da loja.
+   *
+   * Agora ele é a última carta do carrinho abandonado — vai só no terceiro
+   * toque, no dia seguinte, pra quem já foi embora sem comprar. Ali os
+   * 10% não disputam com a oferta: disputam com zero.
+   *
+   * O preço disso: código em link é público assim que sai. Quem receber
+   * pode passar adiante, e quem digitar PRIMEIRA10 no checkout ganha os
+   * 10% sem nunca ter abandonado nada. Pra fechar isso de verdade seria
+   * preciso um código por pessoa, que é outra conversa.
+   */
+  PRIMEIRA10: { percentual: 0.10, rotulo: '10% na primeira compra', ativo: true },
 
   // Desligado — era so para o teste de compra real do dono.
   TESTEAQ0821: { percentual: 1.00, rotulo: 'Pedido de teste', ativo: false },

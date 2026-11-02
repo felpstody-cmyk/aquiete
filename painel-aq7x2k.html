@@ -1212,6 +1212,12 @@ function precoKit(un){
   return n * (Number(cfg.p1) || 0);
 }
 
+/* O preco do avulso, do servidor. Tres lugares ainda liam do Ajustes e
+   erravam: o alerta de CAC, a estimativa de frascos da meta e o valor que
+   vem preenchido no pedido manual. Ajustes vira reserva, igual em
+   precoKit. */
+function precoAvulso(){ return precoKit(1) || Number(cfg.p1) || 0; }
+
 /** Frete de tabela pro kit, também vindo do servidor. */
 function freteKit(un){
   var n = Number(un) || 0;
@@ -1648,7 +1654,8 @@ function renderPainel(){
   var venc = lotes.filter(function(l){ return l.val && l.val < hoje(); });
   if (venc.length) alertas.push('<b>' + venc.length + ' lote(s) vencido(s)</b> na aba Estoque.');
   var mCac = calcularCacGeral();
-  if (mCac.cac && mCac.cac > (cfg.p1 - cfg.custo)) alertas.push('CAC geral de <b>' + brl(mCac.cac) + '</b> passou da sua margem no frasco avulso (' + brl(cfg.p1-cfg.custo) + ').');
+  var margemAvulso = precoAvulso() - cfg.custo;
+  if (mCac.cac && mCac.cac > margemAvulso) alertas.push('CAC geral de <b>' + brl(mCac.cac) + '</b> passou da sua margem no frasco avulso (' + brl(margemAvulso) + ').');
   if (!cfg.url) alertas.push('Conexão com o site não configurada — os pedidos não entram sozinhos. Vá em <b>Ajustes</b>.');
   el('alertas').innerHTML = alertas.map(function(a){ return '<div class="aviso alerta">'+a+'</div>'; }).join('');
 
@@ -1708,7 +1715,7 @@ function renderPainel(){
   el('metaBox').innerHTML = cfg.meta > 0
     ? '<div style="font-size:24px;font-weight:650">'+brl(m.receita)+' <span style="font-size:14px;color:var(--ink-3);font-weight:400">de '+brl(cfg.meta)+'</span></div>' +
       '<div class="meta"><i style="width:'+Math.min(100, m.receita/cfg.meta*100)+'%"></i></div>' +
-      '<p class="sub" style="margin:0">'+(falta ? 'Faltam '+brl(falta)+' — cerca de '+Math.ceil(falta/(cfg.p1||97))+' frascos.' : 'Meta batida. 🎉')+'</p>'
+      '<p class="sub" style="margin:0">'+(falta ? 'Faltam '+brl(falta)+' — cerca de '+Math.ceil(falta/(precoAvulso()||97))+' frascos.' : 'Meta batida. 🎉')+'</p>'
     : '<p class="sub" style="margin:0">Defina uma meta em Ajustes pra acompanhar aqui.</p>';
 
   var q = [['Custo dos frascos', m.custoProd], ['Taxas do gateway', m.taxas],
@@ -2780,7 +2787,7 @@ el('ca_add').onclick = function(){
 el('p_kit').onchange = function(){
   var k = this.value; if (k==='0') return;
   el('p_un').value = k;
-  el('p_valor').value = (k==='1'?cfg.p1:k==='2'?cfg.p2:cfg.p4).toFixed(2);
+  el('p_valor').value = (precoKit(Number(k)) || (k==='1'?cfg.p1:k==='2'?cfg.p2:cfg.p4)).toFixed(2);
   el('p_frete').value = (k==='1'?cfg.frete:0).toFixed(2);
 };
 el('fPedido').onsubmit = function(e){

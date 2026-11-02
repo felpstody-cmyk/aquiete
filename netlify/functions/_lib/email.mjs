@@ -225,10 +225,23 @@ export function htmlLembretePix({ nome, referencia, descricao, total, payload, l
  * Carrinho abandonado — 3 toques (2h / 1 dia / 3 dias), cada um mais
  * direto que o anterior. Depois do terceiro, a sequência para sozinha.
  */
-export function htmlRecuperarCarrinho({ nome, kit, etapa }) {
+/**
+ * `cupom` liga os 10% nesta mensagem.
+ *
+ * Existe porque antes o desconto ia nos três e-mails: a frase prometia
+ * 10% e o link levava ?cupom=PRIMEIRA10 desde sempre. Só que o PRIMEIRA10
+ * foi desligado em 05/10, então a promessa chegava e o checkout recusava.
+ * Agora ele volta a existir, e só é prometido no toque em que é dado.
+ */
+export function htmlRecuperarCarrinho({ nome, kit, etapa, cupom = false }) {
   const primeiro = esc(String(nome || '').split(' ')[0] || 'Olá')
+  const params = new URLSearchParams()
+  if (kit) params.set('kit', String(kit))
+  if (cupom) params.set('cupom', 'PRIMEIRA10')
+  params.set('utm_source', 'email')
+  params.set('utm_medium', `carrinho${etapa + 1}`)
   const link = kit
-    ? `https://aquieteagora.com.br/checkout.html?kit=${encodeURIComponent(kit)}&cupom=PRIMEIRA10`
+    ? `https://aquieteagora.com.br/checkout.html?${params}`
     : 'https://aquieteagora.com.br/'
 
   const textos = [
@@ -242,7 +255,7 @@ export function htmlRecuperarCarrinho({ nome, kit, etapa }) {
     },
     {
       titulo: `${primeiro}, essa é a última vez que mandamos isso.`,
-      corpo: 'Depois de hoje não vamos mais te lembrar desse carrinho. Se ainda quiser, o desconto continua valendo.',
+      corpo: 'Depois de hoje não vamos mais te lembrar desse carrinho.',
     },
   ]
   const t = textos[Math.min(etapa, textos.length - 1)]
@@ -252,7 +265,9 @@ export function htmlRecuperarCarrinho({ nome, kit, etapa }) {
       ${t.titulo}
     </h1>
     <p style="margin:0 0 16px">
-      ${t.corpo} Separamos <strong style="color:#2A1613">10% de desconto</strong> pra essa primeira compra.
+      ${t.corpo}${cupom
+        ? ' Separamos <strong style="color:#2A1613">10% de desconto</strong> pra essa primeira compra, já aplicado no botão abaixo.'
+        : ''}
     </p>
     <table role="presentation" style="margin:22px auto 0"><tr><td style="border-radius:999px;background:#C8453E">
       <a href="${esc(link)}" style="display:inline-block;padding:13px 28px;color:#fff;

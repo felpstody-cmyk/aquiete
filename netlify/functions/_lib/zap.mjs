@@ -306,6 +306,69 @@ export function textoCarrinhoParado({ nome }) {
   ].join('\n')
 }
 
+/**
+ * Segundo toque, três horas depois.
+ *
+ * Mensagem diferente da primeira de propósito: repetir o mesmo texto é o
+ * que faz a pessoa ler "robô" e bloquear. A primeira constata que ela
+ * parou; esta pergunta por quê, e pergunta de um jeito que dá pra
+ * responder com uma palavra.
+ */
+export function textoCarrinhoTresHoras({ nome, kit }) {
+  const primeiro = primeiroNome(nome)
+  return [
+    primeiro ? `Oi de novo, ${primeiro}.` : 'Oi de novo.',
+    '',
+    'Seu pedido continua guardado aqui, com os dados que você já preencheu.',
+    '',
+    'Só me diz uma coisa pra eu te ajudar: foi dúvida sobre o produto, ou travou alguma coisa no pagamento?',
+    '',
+    `Se quiser retomar direto: ${linkCheckout(kit, null, 'carrinho3h')}`,
+  ].join('\n')
+}
+
+/**
+ * Terceiro e último toque, no dia seguinte, com o cupom.
+ *
+ * O desconto vem só aqui. Nos dois primeiros a pessoa ainda estava
+ * decidindo e dar 10% seria pagar por uma venda que ia acontecer de
+ * qualquer jeito. No dia seguinte ela já foi embora, e aí os 10% não
+ * disputam com a oferta — disputam com zero.
+ *
+ * E é o último: depois disto a sequência para sozinha.
+ */
+export function textoCarrinhoCupom({ nome, kit }) {
+  const primeiro = primeiroNome(nome)
+  return [
+    primeiro ? `${primeiro}, última vez que eu falo desse pedido.` : 'Última vez que eu falo desse pedido.',
+    '',
+    'Separei 10% de desconto pra sua primeira compra. O cupom é PRIMEIRA10 e já vai aplicado no link:',
+    '',
+    linkCheckout(kit, 'PRIMEIRA10', 'carrinho1d'),
+    '',
+    'Depois de hoje eu não te escrevo mais sobre ele. Se já comprou, é só ignorar.',
+  ].join('\n')
+}
+
+/**
+ * Link do checkout com o kit que ELA escolheu já selecionado.
+ *
+ * O kit importa: mandar pra loja de novo é pedir pra pessoa refazer uma
+ * escolha que ela já tinha feito, e cada escolha a mais é gente que
+ * desiste no caminho.
+ *
+ * O utm é por toque, não por canal: sem isso as três mensagens chegam
+ * como "whatsapp/carrinho" e não dá pra saber qual delas trouxe a venda.
+ */
+function linkCheckout(kit, cupom, medium) {
+  const p = new URLSearchParams()
+  if (kit) p.set('kit', String(kit))
+  if (cupom) p.set('cupom', cupom)
+  p.set('utm_source', 'whatsapp')
+  p.set('utm_medium', medium)
+  return `https://aquieteagora.com.br/checkout.html?${p}`
+}
+
 /** Pagamento confirmado. */
 export function textoPago({ nome, referencia }) {
   return [
