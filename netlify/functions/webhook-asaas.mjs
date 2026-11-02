@@ -24,6 +24,7 @@ import {
   marcarCarrinhoPago, registrarVendaPaga, lerIdentidadeDoPedido, anotarCompraMeta,
 } from './_lib/metricas.mjs'
 import { marcarPagante } from './_lib/pagantes.mjs'
+import { referenciaDoQr, marcarPixPago } from './_lib/pixqr.mjs'
 import { despachar } from './_lib/envio.mjs'
 import { marcarPagoUtmify } from './_lib/utmify.mjs'
 import { enviarZap, textoPago } from './_lib/zap.mjs'
@@ -104,7 +105,46 @@ export default async (req) => {
   const pgto = corpo?.payment
   if (!evento || !pgto) return json({ ok: true, ignorado: 'sem evento' })
 
-  const referencia = pgto.externalReference || pgto.id
+  /*
+   * Achar de qual pedido é este pagamento.
+   *
+   * `externalReference` é o caminho normal e continua sendo o primeiro.
+   *
+   * O segundo existe por causa do Pix de 30 minutos: ali o cliente paga
+   * um QR ESTÁTICO, e a cobrança é criada pelo Asaas no instante do
+   * pagamento. A doc deles não promete que essa cobrança herda o
+   * `externalReference` do QR — promete sim o campo `pixQrCodeId`. Sem
+   * este caminho, o pedido chegaria com o id do Asaas como referência e
+   * ficaria órfão: sem etiqueta, sem atribuição no Meta, sem baixa no
+   * carrinho.
+   */
+  const idDoQr = pgto.pixQrCodeId || pgto.pixQrCode?.id || null
+  const referencia =
+    pgto.externalReference
+    || (idDoQr ? await referenciaDoQr(idDoQr).catch(() => null) : null)
+    || pgto.id
+
+  // Para a sequência de lembretes deste Pix na hora, sem esperar a
+  // próxima varredura.
+  if (idDoQr) await marcarPixPago(idDoQr).catch(() => {})
+
+  /*
+   * Pagamento que não deu pra casar com pedido nenhum: grita.
+   *
+   * Aqui o dinheiro entrou e a loja não sabe de quem é. Em silêncio isso
+   * vira um cliente que pagou e nunca recebeu — o pior defeito possível.
+   * Melhor acordar ele no WhatsApp e resolver na mão.
+   */
+  if (referencia === pgto.id && EVENTOS_PAGOS.has(evento)) {
+    push(
+      [`⚠️ Pagamento de R$ ${Number(pgto.value || 0).toFixed(2).replace('.', ',')} `
+        + 'chegou SEM pedido identificado.', '',
+       `Cobranca do Asaas: ${pgto.id}`,
+       idDoQr ? `QR: ${idDoQr} (nao achei no nosso registro)` : 'Sem pixQrCodeId no aviso.',
+       '', 'Tem que achar o cliente e despachar na mao.'].join('\n'),
+      'Aquiete — pagamento orfao',
+    ).catch(() => {})
+  }
 
   // Cada etapa é isolada: falha em uma não impede as outras nem o 200.
   let cliente = null

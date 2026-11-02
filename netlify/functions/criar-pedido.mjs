@@ -19,6 +19,7 @@ import { enviarPagamento, ehDoParceiro } from './_lib/meta-capi.mjs'
 import { geoDe } from './_lib/geo.mjs'
 import { registrarPedidoUtmify } from './_lib/utmify.mjs'
 import { guardarDespacho } from './_lib/envio.mjs'
+import { guardarPixQr } from './_lib/pixqr.mjs'
 
 const json = (dados, status = 200) =>
   new Response(JSON.stringify(dados), {
@@ -66,6 +67,31 @@ export default async (req) => {
     const cobranca = await gateway.criarCobranca({
       pedido, cliente, referencia, origem: corpo.origem, ip: ipCliente,
     })
+
+    /*
+     * O Pix de 30 minutos fica guardado AQUI, não no Asaas.
+     *
+     * O QR estático não cria cobrança: ela só nasce quando alguém paga.
+     * Então sem este registro ninguém saberia que este Pix existe — nem o
+     * lembrete, que antes varria as cobranças pendentes, nem o webhook,
+     * que precisa achar o pedido a partir do id do QR.
+     *
+     * Só grava quando o caminho estático foi o que valeu. Se caiu na
+     * cobrança, o fluxo de sempre dá conta.
+     */
+    if (cobranca.estatico) {
+      await guardarPixQr({
+        id: cobranca.id,
+        referencia,
+        nome: cliente.nome,
+        telefone: cliente.telefone,
+        email: cliente.email,
+        kit: pedido.kitId,
+        total: pedido.total,
+        expiraEm: cobranca.expiraEm,
+        payload: cobranca.pix?.payload || '',
+      }).catch(() => {})
+    }
 
     // Pedido gerado ainda não é venda: quem gera o Pix e não paga tem que
     // voltar pra lista de abandonados sozinho depois do prazo. Por isso o

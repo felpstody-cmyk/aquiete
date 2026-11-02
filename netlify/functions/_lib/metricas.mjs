@@ -333,7 +333,17 @@ export async function salvarCarrinho(email, dados) {
  * carrinho fica guardado com o pedido e só sai quando o pagamento cai.
  * Boleto demora pra compensar, então espera bem mais antes de acusar.
  */
-export const PRAZO_PAGAMENTO_MIN = { pix: 90, card: 90, boleto: 72 * 60 }
+/*
+ * Quanto tempo esperar antes de considerar que a pessoa não vai pagar.
+ *
+ * Pix caiu de 90 pra 35 minutos: o código agora é um QR estático que
+ * expira em 30 (ver PIX_SEGUNDOS no adaptador do Asaas), e 35 é isso mais
+ * a folga da varredura. Antes dos 35 quem fala com ela é o lembrete-pix;
+ * depois, esta sequência.
+ *
+ * Cartão e boleto não mudaram.
+ */
+export const PRAZO_PAGAMENTO_MIN = { pix: 35, card: 90, boleto: 72 * 60 }
 
 function prazoDe(metodo) {
   return PRAZO_PAGAMENTO_MIN[metodo] ?? PRAZO_PAGAMENTO_MIN.pix
@@ -462,20 +472,18 @@ export async function carrinhosPendentesDeEmail() {
       // Pagou, ou ainda tá no prazo de pagar: não cobra.
       if (d.pago || aguardandoPagamento(d, agora)) return
       /*
-       * Gerou Pix: daqui pra frente quem fala com ela é o lembrete-pix,
-       * e só ele.
+       * Quem gerou Pix volta pra esta sequência, e isso é novo.
        *
-       * Os dois perseguiam a mesma pessoa em paralelo e sem saber um do
-       * outro: o lembrete de Pix caía entre 3h e 20h, e o toque de 3h
-       * daqui caía junto — duas mensagens na mesma hora sobre o mesmo
-       * pedido. Quem fica é o lembrete-pix, porque ele tem o valor, a
-       * referência e o copia-e-cola, e aqui não tem nenhum dos três.
+       * A trava que ficava aqui existia porque o lembrete-pix perseguia a
+       * pessoa por até 20 horas, e as duas sequências se encontravam no
+       * meio do caminho. Agora o código do Pix morre em 30 minutos e o
+       * lembrete acaba no toque de 31: a partir daí ela é um carrinho
+       * abandonado de verdade, com um código vencido na mão, e é aqui que
+       * mora o cupom que pode trazer ela de volta.
        *
-       * Só Pix. Cartão e boleto continuam nesta sequência: o lembrete-pix
-       * não olha pra eles, e sem isto ninguém chamaria essas pessoas de
-       * volta.
+       * Quem segura o encontro é o PRAZO_PAGAMENTO_MIN do Pix, 35
+       * minutos: antes disso `aguardandoPagamento` barra logo acima.
        */
-      if (d.pedido?.metodo === 'pix') return
       const etapa = d.etapa || 0
       if (etapa >= ETAPAS_CARRINHO.length) return
       const minutosDesde = (agora - d.em) / 60_000

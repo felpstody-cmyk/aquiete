@@ -286,6 +286,65 @@ export function textoPixCodigo(payload) {
 }
 
 /**
+ * Cinco minutos depois, com o relogio correndo.
+ *
+ * O codigo agora morre em 30 minutos, e dizer quanto falta e a unica
+ * urgencia honesta que a loja tem: o prazo existe de verdade e esta
+ * escrito no proprio QR.
+ *
+ * `minutos` ja vem calculado por quem chama, do `expiraEm` que o Asaas
+ * devolveu. Se vier zerado por qualquer motivo, a frase do prazo some em
+ * vez de sair "voce tem 0 minutos".
+ */
+export function textoPixAindaDaTempo({ nome, total, minutos }) {
+  const falta = Number(minutos) > 0 ? Math.round(Number(minutos)) : 0
+  return [
+    `${oi(nome)} Seu Pix de ${brl(total)} ainda não caiu aqui.`,
+    '',
+    falta
+      ? `O código vale por mais ${falta} ${falta === 1 ? 'minuto' : 'minutos'}. Mando ele de novo logo abaixo, é só copiar e colar no app do banco.`
+      : 'Mando o código de novo logo abaixo, é só copiar e colar no app do banco.',
+    '',
+    'Se travou alguma coisa no banco, me fala por aqui que eu te ajudo.',
+  ].join('\n')
+}
+
+/**
+ * O codigo venceu.
+ *
+ * Esta mensagem so existe porque agora o codigo vence DE VERDADE, em 30
+ * minutos. Ela faz duas coisas: avisa, pra pessoa nao descobrir sozinha
+ * tentando pagar e levando recusa do banco; e manda o caminho de volta,
+ * porque um Pix novo precisa de um pedido novo.
+ *
+ * Sem cupom e sem desconto. O cupom e a carta do carrinho abandonado, que
+ * assume a conversa a partir daqui.
+ */
+export function textoPixVenceu({ nome, total, kit }) {
+  return [
+    `${oi(nome)} O código do seu Pix de ${brl(total)} venceu — ele vale 30 minutos e esse tempo já passou.`,
+    '',
+    'Se você ainda quiser, é só refazer o pedido por aqui que eu gero um código novo na hora:',
+    '',
+    linkCheckout(kit, null, 'pixvencido'),
+    '',
+    'Se ficou alguma dúvida antes de pagar, me pergunta que eu te respondo.',
+  ].join('\n')
+}
+
+/* ------------------------------------------------------------------
+ * FORA DE USO a partir de 02/11/2026.
+ *
+ * Daqui ate textoPixEstamosAqui sao os textos da sequencia de QUATRO
+ * toques do Pix, que durou algumas horas. Ela morreu junto com a
+ * cobranca: o Pix virou QR estatico de 30 minutos, e sobraram dois
+ * toques (textoPixAindaDaTempo e textoPixVenceu, la em cima).
+ *
+ * Ficam porque sao textos bons e o git nao e lugar de procurar frase.
+ * Nenhum deles e importado por ninguem — conferido.
+ * ------------------------------------------------------------------ */
+
+/**
  * Cinco minutos depois: o codigo sozinho, de novo.
  *
  * Parece cedo e nao e. O copia-e-cola ja foi mandado na hora da compra,

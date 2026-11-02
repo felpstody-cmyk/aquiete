@@ -1,323 +1,133 @@
 /**
  * Roda de 5 em 5 minutos, agendada pelo Netlify (não tem URL pública).
  *
- * Varre os Pix pendentes no Asaas e chama de volta quem gerou o código e
- * ainda não pagou. São quatro toques, cada um com texto próprio,
- * espalhados por dois dias:
+ * Chama de volta quem gerou o Pix e não pagou. São DOIS toques, e só:
  *
- *   5 min   o copia-e-cola de novo, sozinho numa mensagem
- *   6 h     entra o cupom de 10% da primeira compra
- *   12 h    o pedido continua reservado, e o código também
- *   24 h    só "estou por aqui" — este NÃO oferece compra
+ *   5 min    "ainda dá X minutos pra pagar" + o código de novo
+ *   31 min   "o código venceu" + o link pra refazer o pedido
  *
- * Quem cuida dessa pessoa é esta função, e só ela: a sequência do
- * carrinho abandonado para de perseguir quem gerou Pix, justamente pra
- * não mandar duas mensagens na mesma hora sobre o mesmo pedido. Aqui tem
- * o valor, a referência e o copia-e-cola; lá não tem nenhum dos três.
+ * Depois disso quem conversa é o carrinho abandonado: o código morreu de
+ * verdade, a pessoa virou carrinho de novo, e é lá que mora o cupom.
  *
- * O estado de cada cobrança fica no Blobs. Sem isso cada varredura
- * reenviaria tudo de novo até o Pix expirar.
+ * ---------------------------------------------------------------
+ * Esta função NÃO varre mais o Asaas.
  *
- * "Ainda não pagou" é a parte difícil, e foi o que deu errado na primeira
- * venda. Quem clica em pagar duas vezes gera DUAS cobranças, paga uma e
- * deixa a outra PENDING pra sempre. Olhar só o status da cobrança faz a
- * loja cobrar quem já pagou — e pior, mandando o código do Pix errado.
- * Por isso aqui tem três travas, nesta ordem:
+ * O Pix agora é um QR Code estático, que não cria cobrança até alguém
+ * pagar — então não existe `/payments?status=PENDING` pra varrer. A fonte
+ * virou o nosso próprio registro, `_lib/pixqr.mjs`.
  *
- *   1. já lembramos desta cobrança  (Blobs)
- *   2. esta pessoa pagou algo depois que esta cobrança nasceu?  (Blobs,
- *      escrito pelo webhook no instante do pagamento)
- *   3. o Asaas tem alguma cobrança paga deste cliente?  (a verdade está
- *      lá, e isto cobre webhook perdido e pagamento anterior ao conserto)
+ * O ganho não é só esse. O relógio passou a ser nosso. A versão anterior
+ * lia `dateCreated` do Asaas, que vem só com a data e sem hora: em
+ * 02/11/2026 isso fez uma cliente levar os quatro toques da sequência em
+ * treze minutos, às 6h30 da manhã, depois de ela já ter respondido. Aqui
+ * o horário é gravado em milissegundos na hora em que o Pix nasce.
+ * ---------------------------------------------------------------
+ *
+ * Quem pagou não recebe nada. Duas redes: a marca que o webhook escreve
+ * no registro do QR no instante do pagamento, e a consulta de pagantes
+ * por e-mail E por telefone, que pega quem pagou por outro cadastro. A
+ * janela inteira é de 31 minutos, então a exposição é curta — a versão
+ * antiga perseguia a pessoa por 20 horas.
  */
 
-import { enviar, htmlLembretePix } from './_lib/email.mjs'
-import {
-  enviarZap, textoPixCincoMin, textoPixComCupom, textoPixAindaAberto,
-  textoPixEstamosAqui, textoPixCodigo, pausa,
-} from './_lib/zap.mjs'
+import { pixPendentes, avancarToquePix } from './_lib/pixqr.mjs'
 import { jaPagou } from './_lib/pagantes.mjs'
 import { registrarZap } from './_lib/zaplog.mjs'
-import { diaBR } from './_lib/metricas.mjs'
-
-const BASES = {
-  sandbox: 'https://api-sandbox.asaas.com/v3',
-  producao: 'https://api.asaas.com/v3',
-}
-
-function credenciais() {
-  const chave = process.env.ASAAS_API_KEY
-  if (!chave) throw new Error('ASAAS_API_KEY não configurada')
-  const base = BASES[(process.env.ASAAS_AMBIENTE || 'producao').toLowerCase()] || BASES.producao
-  return { chave, base }
-}
-
-async function asaas(caminho) {
-  const { chave, base } = credenciais()
-  const r = await fetch(base + caminho, {
-    headers: { 'Content-Type': 'application/json', access_token: chave },
-  })
-  const corpo = await r.json().catch(() => ({}))
-  if (!r.ok) throw new Error(`Asaas ${r.status}: ${corpo?.errors?.[0]?.description || r.statusText}`)
-  return corpo
-}
-
-async function loja() {
-  const { getStore } = await import('@netlify/blobs')
-  return getStore('lembretes-pix')
-}
+import {
+  enviarZap, textoPixAindaDaTempo, textoPixVenceu, textoPixCodigo, pausa,
+} from './_lib/zap.mjs'
 
 /*
- * Os quatro toques, em minutos desde a cobrança aparecer na varredura.
+ * Os dois toques, em minutos desde o Pix nascer.
  *
- * Saiu o de 3h: era repetição do de 5 minutos, e quatro mensagens numa
- * manhã é o que fez uma cliente pedir pra parar em 02/11/2026.
- *
- * `codigo` diz se o copia-e-cola vai junto, numa segunda mensagem.
+ * O segundo é 31 e não 30 de propósito: o código expira aos 30, e um
+ * minuto de folga garante que a mensagem "venceu" não chegue antes de ele
+ * ter vencido mesmo. Com a varredura de 5 em 5 minutos, ela cai entre 31
+ * e 36 minutos.
  */
 const TOQUES = [
-  { minutos: 5,       zap: textoPixCincoMin,    email: false, cupom: false, codigo: true },
-  { minutos: 6 * 60,  zap: textoPixComCupom,    email: true,  cupom: true,  codigo: false },
-  { minutos: 12 * 60, zap: textoPixAindaAberto, email: true,  cupom: false, codigo: true },
-  // O último não oferece compra: sem link, sem cupom, sem código.
-  { minutos: 24 * 60, zap: textoPixEstamosAqui, email: false, cupom: false, codigo: false },
+  { aos: 5,  zap: textoPixAindaDaTempo, codigo: true,  rotulo: 'pix 5min' },
+  { aos: 31, zap: textoPixVenceu,       codigo: false, rotulo: 'pix venceu' },
 ]
 
-const ASSUNTOS_PIX = [
-  '',
-  'Seus 10% de desconto na primeira compra',
-  'Seu pedido ainda está reservado',
-  '',
-]
-
-// Folga em cima do último toque de 24h. Depois disto não se fala mais.
-const LIMITE_MINUTOS = 30 * 60
-
-/**
- * Em que toque esta cobrança está, e desde quando conta o relógio.
- *
- * `{ toque: -1 }` quer dizer "já pagou, não mexe mais".
- *
- * O relógio é `visto`, a primeira vez que esta varredura enxergou a
- * cobrança — e NÃO o `dateCreated` do Asaas.
- *
- * Isso não é preciosismo. `dateCreated` vem só com a data, sem hora:
- * `new Date('2026-11-02')` é meia-noite UTC, que em Brasília é 21h do dia
- * anterior. Às 6h30 da manhã a conta dava 570 minutos de vida, e cada
- * rodada do agendador queimava um toque — em 02/11/2026 uma cliente levou
- * os quatro em treze minutos e pediu pra parar. Como isto roda de 5 em 5
- * minutos, `visto` fica a no máximo 5 minutos do nascimento de verdade e
- * não depende do formato de data de ninguém.
- *
- * Cobrança de um dia anterior nasce já marcada como terminada: ela perdeu
- * a janela, e abrir quatro toques em cima de quem gerou Pix ontem é o
- * mesmo erro de novo.
- *
- * Valor antigo é string solta, de quando existia um lembrete só. Também
- * conta como terminada.
- */
-async function estadoDe(store, id, dataCriacao) {
-  const bruto = await store.get(id)
-
-  if (bruto === 'pago') return { toque: -1, visto: 0 }
-
-  if (!bruto) {
-    const deHoje = String(dataCriacao || '').slice(0, 10) === diaBR()
-    const novo = { toque: deHoje ? 0 : TOQUES.length, visto: Date.now() }
-    await store.setJSON(id, novo)
-    return novo
-  }
-
-  try {
-    const d = JSON.parse(bruto)
-    const toque = Number.isFinite(Number(d?.toque)) ? Number(d.toque) : TOQUES.length
-    return { toque, visto: Number(d?.visto) || 0 }
-  } catch {
-    return { toque: TOQUES.length, visto: 0 }
-  }
-}
-
-/**
- * Qual kit, lido da descrição ("Aquiete — 2 unidades").
- *
- * Serve pro link do cupom já vir com o kit escolhido. Três frascos é
- * pedido com bump e não tem kit próprio, então nesse caso vai sem — o
- * checkout cai no de 1 e ela escolhe de novo, que é melhor que um link
- * pra um kit que ela não pediu.
- */
-function kitDaDescricao(descricao) {
-  const m = /(\d+)\s*unidade/i.exec(String(descricao ?? ''))
-  const n = m ? Number(m[1]) : 0
-  return [1, 2, 4].includes(n) ? String(n) : ''
-}
-
-/** Os status do Asaas em que o dinheiro entrou de verdade. */
-const STATUS_PAGO = new Set(['RECEIVED', 'CONFIRMED', 'RECEIVED_IN_CASH'])
-
-/**
- * Este cliente pagou alguma cobrança depois desta ser gerada?
- *
- * A segunda rede, e a que não depende de nada nosso: a verdade do
- * pagamento está no Asaas. Uma chamada por lembrete, e são poucos por
- * hora.
- *
- * Devolve `sabe: false` quando a consulta falha. Nesse caso o lembrete
- * não sai E a cobrança não é marcada, pra tentar de novo na próxima hora:
- * mandar no escuro é o erro que esta função existe pra evitar, e marcar
- * no escuro perderia o lembrete pra sempre.
- */
-async function pagouOutraCobranca(customerId, desdeMs) {
-  try {
-    const r = await asaas(`/payments?customer=${encodeURIComponent(customerId)}&limit=100`)
-    const pagou = (r.data || []).some((c) => {
-      if (!STATUS_PAGO.has(String(c.status || '').toUpperCase())) return false
-      const quando = c.paymentDate || c.confirmedDate || c.clientPaymentDate || c.dateCreated
-      return new Date(quando).getTime() >= desdeMs
-    })
-    return { sabe: true, pagou }
-  } catch (e) {
-    console.error('[lembrete-pix] não deu pra checar os pagamentos do cliente:', e.message)
-    return { sabe: false, pagou: false }
-  }
-}
+/** Passado disto não se fala mais: o carrinho abandonado assume. */
+const LIMITE_MINUTOS = 3 * 60
 
 export default async () => {
-  const store = await loja()
   let enviados = 0
 
   try {
-    const pagina = await asaas('/payments?status=PENDING&billingType=PIX&limit=100')
     const agora = Date.now()
+    const pendentes = await pixPendentes()
 
-    for (const p of pagina.data || []) {
-      // A conta barata primeiro: sem isso cada varredura (288 por dia)
-      // gastaria duas chamadas de API por cobrança pendente.
-      const { toque, visto } = await estadoDe(store, p.id, p.dateCreated)
-      if (toque < 0 || toque >= TOQUES.length) continue
+    for (const p of pendentes) {
+      const toque = Number(p.toque) || 0
+      if (toque >= TOQUES.length) continue
 
-      const minutos = (agora - visto) / 60_000
+      const minutos = (agora - Number(p.criadoEm || 0)) / 60_000
       if (minutos > LIMITE_MINUTOS) continue
-      if (minutos < TOQUES[toque].minutos) continue
+
       const agenda = TOQUES[toque]
+      if (minutos < agenda.aos) continue
 
-      // `criado` é só pra perguntar ao Asaas o que esta pessoa pagou
-      // DEPOIS desta cobrança nascer. Aqui a data sem hora serve: ela
-      // erra pra trás (meia-noite UTC do dia), e errar pra trás só torna
-      // a pergunta mais abrangente, o que é o lado seguro.
-      const criado = new Date(p.dateCreated).getTime()
-
-      // Trava 3, antes de gastar a busca do cliente: o próprio Asaas diz
-      // se esta pessoa já pagou outra cobrança depois desta ser gerada.
-      const outra = await pagouOutraCobranca(p.customer, criado)
-      if (!outra.sabe) continue
-      if (outra.pagou) {
-        console.log('[lembrete-pix] %s não cobrado: o cliente já pagou outra cobrança', p.id)
-        await store.set(p.id, 'pago')
-        continue
-      }
-
-      let cliente
-      try {
-        cliente = await asaas(`/customers/${p.customer}`)
-      } catch (e) {
-        console.error('[lembrete-pix] cliente não encontrado', p.id, e.message)
-        continue
-      }
-      if (!cliente?.email) continue
-
-      // Trava 2: o registro que o webhook escreve no instante do
-      // pagamento. Pega o caso em que a pessoa pagou por outro e-mail ou
-      // outro cadastro no Asaas e o cliente desta cobrança não é o mesmo.
+      // Pagou por outro cadastro, ou o webhook não achou este QR: a
+      // pergunta aqui é pela PESSOA, por e-mail e por telefone.
       const pagante = await jaPagou({
-        email: cliente.email,
-        telefone: cliente.mobilePhone || cliente.phone,
-        desde: criado,
+        email: p.email,
+        telefone: p.telefone,
+        desde: Number(p.criadoEm) || 0,
       })
       if (pagante) {
-        console.log('[lembrete-pix] %s não cobrado: pagou no pedido %s', p.id, pagante.referencia)
-        await store.set(p.id, 'pago')
+        console.log('[lembrete-pix] %s nao cobrado: pagou no pedido %s', p.referencia, pagante.referencia)
+        await avancarToquePix(p.id, TOQUES.length)
         continue
       }
 
-      // A marca vai ANTES dos envios, de propósito. Quando ela ficava
-      // depois do e-mail, e-mail que falhava deixava a cobrança sem marca
-      // nenhuma e o zap saía de novo a cada hora, pra sempre — foi o que
-      // aconteceu com a sequência do carrinho (ver carrinho-lembrete).
-      await store.setJSON(p.id, { toque: toque + 1, visto, em: Date.now() })
-      enviados++
-
-      let payload = null
-      try {
-        const qr = await asaas(`/payments/${p.id}/pixQrCode`)
-        payload = qr?.payload || null
-      } catch { /* manda sem o copia-e-cola se o QR não vier */ }
-
-      // Zap antes do e-mail: é onde a pessoa olha. Se falhar, o e-mail
-      // ainda sai — os dois juntos, porque não dá pra saber qual ela vê.
-      if (cliente.mobilePhone || cliente.phone) {
-        const paraZap = cliente.mobilePhone || cliente.phone
-        const r = await enviarZap({
-          telefone: paraZap,
-          texto: agenda.zap({
-            nome: cliente.name, total: p.value, payload,
-            kit: kitDaDescricao(p.description),
-          }),
-        }).catch((e) => ({ enviado: false, erro: String(e?.message || e) }))
-        // Esta funcao mandava sem registrar nada, e foi por isso que a
-        // enxurrada de 02/11 ficou invisivel: o painel mostrava "pix
-        // gerado" as 6h27 e mais nada, enquanto quatro mensagens saiam.
-        // Envio que nao aparece no log e envio que ninguem audita.
-        await registrarZap({
-          referencia: p.externalReference || '',
-          nome: cliente.name,
-          telefone: paraZap,
-          etapa: ['pix 5min', 'pix cupom', 'pix reservado', 'pix estou aqui'][toque] || 'pix lembrete',
-          resultado: r,
-        })
-        /*
-         * O copia-e-cola vai sozinho na mensagem seguinte, senao copiar a
-         * mensagem leva a conversa junto.
-         *
-         * Nao vai em todo toque. No do cupom a pessoa foi convidada a
-         * refazer o pedido, e mandar o codigo velho logo embaixo e
-         * convidar ela a pagar o valor cheio. No ultimo nao se oferece
-         * nada.
-         *
-         * Aqui dá pra esperar de verdade antes de mandar: isto roda sem
-         * ninguem olhando a tela, e duas mensagens coladas sao o que faz o
-         * WhatsApp derrubar a sessao.
-         */
-        if (payload && agenda.codigo) {
-          await pausa(2500)
-          await enviarZap({ telefone: paraZap, texto: textoPixCodigo(payload) }).catch(() => {})
-        }
+      if (!p.telefone) {
+        // Sem telefone não há o que mandar daqui. Avança assim mesmo pra
+        // não ficar reavaliando este registro a cada cinco minutos.
+        await avancarToquePix(p.id, toque)
+        continue
       }
 
-      // E-mail só em dois dos quatro toques. Aos 5 minutos a pessoa
-      // acabou de sair do checkout e e-mail ali é ruído; às 12h o que ela
-      // lê é o zap. Os dois do meio são os que valem a caixa de entrada.
-      if (agenda.email) {
-        try {
-          const kit = kitDaDescricao(p.description)
-          await enviar({
-            para: cliente.email,
-            assunto: ASSUNTOS_PIX[toque] || `Seu Pix do pedido ${p.externalReference || ''} ainda não caiu`,
-            html: htmlLembretePix({
-              nome: cliente.name,
-              referencia: p.externalReference || p.id,
-              descricao: p.description || 'Aquiete',
-              total: p.value,
-              payload,
-              link: p.invoiceUrl || null,
-              cupomLink: agenda.cupom
-                ? `https://aquieteagora.com.br/checkout.html?${kit ? `kit=${kit}&` : ''}`
-                  + 'cupom=PRIMEIRA10&utm_source=email&utm_medium=pix6h'
-                : null,
-            }),
-          })
-        } catch (e) {
-          console.error('[lembrete-pix] envio falhou para', p.id, e.message)
-        }
+      // A marca vai ANTES do envio, de propósito. Quando ela ficava
+      // depois, envio que falhava deixava o registro na mesma etapa e a
+      // mensagem saía de novo a cada varredura, pra sempre.
+      await avancarToquePix(p.id, toque)
+      enviados++
+
+      // Quanto ainda falta pro código morrer. Vai pra dentro do texto: é
+      // a única urgência honesta que a loja tem, porque está escrita no
+      // próprio QR.
+      const faltam = Number(p.expiraEm) ? (Number(p.expiraEm) - agora) / 60_000 : 0
+
+      const r = await enviarZap({
+        telefone: p.telefone,
+        texto: agenda.zap({
+          nome: p.nome, total: p.total, kit: p.kit, minutos: faltam,
+        }),
+      }).catch((e) => ({ enviado: false, erro: String(e?.message || e) }))
+
+      await registrarZap({
+        referencia: p.referencia || '',
+        nome: p.nome,
+        telefone: p.telefone,
+        etapa: agenda.rotulo,
+        resultado: r,
+      })
+
+      /*
+       * O copia-e-cola vai sozinho na mensagem seguinte: no WhatsApp,
+       * copiar uma mensagem copia o texto inteiro dela, e o banco recusa
+       * o código colado junto com a conversa.
+       *
+       * Só no primeiro toque. No segundo o código já venceu, e mandar
+       * seria pedir pra pessoa tentar pagar uma coisa que vai ser
+       * recusada.
+       */
+      if (agenda.codigo && p.payload) {
+        await pausa(2500)
+        await enviarZap({ telefone: p.telefone, texto: textoPixCodigo(p.payload) }).catch(() => {})
       }
     }
   } catch (e) {

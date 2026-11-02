@@ -118,7 +118,98 @@ function vencimento(diasAFrente) {
   return diaBR(new Date(Date.now() + diasAFrente * 86400000))
 }
 
+/** Quanto tempo o codigo do Pix vive. Decidido por ele em 02/11/2026. */
+export const PIX_SEGUNDOS = 30 * 60
+
+/** A chave Pix da conta. A primeira ativa serve: e sempre a mesma loja. */
+async function chavePixDaConta() {
+  const r = await chamar('/pix/addressKeys')
+  const viva = (r?.data || []).find((k) => String(k.status).toUpperCase() === 'ACTIVE')
+  return viva?.key || null
+}
+
+/**
+ * Pix como QR Code ESTÁTICO, com 30 minutos de validade.
+ *
+ * O caminho da cobrança gera um BR Code `cobv` — "cobrança com
+ * vencimento". O banco trata cobv como conta a pagar e oferece agendar, e
+ * com chave Pix cadastrada a validade é de 12 meses depois do vencimento:
+ * em 02/11/2026 uma cliente agendou o pagamento pro dia seguinte porque
+ * foi a única opção que o app dela deu, e depois o app passou a mostrar
+ * 2027. Mexer no `dueDate` não resolve isso.
+ *
+ * O QR estático é um BR Code puro, com a chave embutida e sem URL de PSP.
+ * Não tem vencimento pro banco pendurar agendamento em cima, e aceita
+ * expiração em segundos.
+ *
+ * Três campos são obrigatórios por motivo de dinheiro, não de estilo:
+ *   value                   sem ele, a doc diz que o PAGADOR escolhe
+ *                           quanto pagar
+ *   allowsMultiplePayments  vem `true` por padrão; sem `false` o mesmo
+ *                           código pode ser pago várias vezes
+ *   externalReference       primeira tentativa de amarrar no pedido (a
+ *                           segunda é o id do QR, guardado por nós)
+ *
+ * Conferido no sandbox em 02/11/2026: devolve `payload` (o copia-e-cola),
+ * `encodedImage` (a imagem) e `expirationDate` 30 minutos à frente, e o
+ * payload carrega a tag 54 com o valor travado.
+ */
+async function criarPixEstatico({ pedido, referencia }) {
+  const addressKey = await chavePixDaConta()
+  if (!addressKey) throw new ErroDeGateway('conta sem chave Pix cadastrada')
+
+  const qr = await chamar('/pix/qrCodes/static', {
+    method: 'POST',
+    body: JSON.stringify({
+      addressKey,
+      // Hífen, não travessão: o Asaas COME o travessão e devolve "Aquiete
+      // 2 unidades". Isto importa porque o webhook lê a quantidade de
+      // frascos desta frase quando a cobrança nasce sozinha.
+      description: String(pedido.descricao || 'Aquiete').replace(/—/g, '-'),
+      value: pedido.total,
+      format: 'ALL',
+      expirationSeconds: PIX_SEGUNDOS,
+      allowsMultiplePayments: false,
+      externalReference: referencia,
+    }),
+  })
+
+  if (!qr?.payload || !qr?.encodedImage) {
+    throw new ErroDeGateway('QR estático veio sem payload ou sem imagem')
+  }
+
+  return {
+    // É o id do QR, não de uma cobrança: ela só vai existir quando alguém
+    // pagar. É por ele que o webhook vai achar este pedido.
+    id: qr.id,
+    metodo: 'pix',
+    total: pedido.total,
+    redirectUrl: null,
+    // Não existe fatura: sem cobrança, não há página do Asaas pra abrir.
+    invoiceUrl: null,
+    expiraEm: qr.expirationDate || null,
+    estatico: true,
+    pix: { payload: qr.payload, qrBase64: qr.encodedImage },
+  }
+}
+
 export async function criarCobranca({ pedido, cliente, referencia }) {
+  /*
+   * Pix tenta o QR estático primeiro, e CAI no caminho antigo se falhar.
+   *
+   * A queda não é zelo exagerado: isto é o checkout. Se o Asaas mudar o
+   * endpoint, se a chave Pix sumir da conta, se der timeout — o pedido
+   * continua saindo como cobrança, igual a antes. O pior caso vira
+   * "funciona como ontem", nunca "a loja parou de vender".
+   */
+  if (pedido.metodo === 'pix') {
+    try {
+      return await criarPixEstatico({ pedido, referencia })
+    } catch (e) {
+      console.error('[asaas] QR estatico falhou, caindo na cobranca:', e.message)
+    }
+  }
+
   const customerId = await acharOuCriarCliente(cliente)
 
   const cobranca = await chamar('/payments', {
