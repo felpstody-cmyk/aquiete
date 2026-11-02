@@ -472,18 +472,27 @@ export async function carrinhosPendentesDeEmail() {
       // Pagou, ou ainda tá no prazo de pagar: não cobra.
       if (d.pago || aguardandoPagamento(d, agora)) return
       /*
-       * Quem gerou Pix volta pra esta sequência, e isso é novo.
+       * Pix só vira carrinho abandonado quando o código MORREU.
        *
-       * A trava que ficava aqui existia porque o lembrete-pix perseguia a
-       * pessoa por até 20 horas, e as duas sequências se encontravam no
-       * meio do caminho. Agora o código do Pix morre em 30 minutos e o
-       * lembrete acaba no toque de 31: a partir daí ela é um carrinho
-       * abandonado de verdade, com um código vencido na mão, e é aqui que
-       * mora o cupom que pode trazer ela de volta.
+       * Quem gerou Pix voltou pra esta sequência porque agora o código
+       * dura 30 minutos — passou disso, a pessoa está mesmo sem meio de
+       * pagar e o cupom daqui pode trazer ela de volta.
        *
-       * Quem segura o encontro é o PRAZO_PAGAMENTO_MIN do Pix, 35
-       * minutos: antes disso `aguardandoPagamento` barra logo acima.
+       * Mas isso só vale pros Pix de 30 minutos. O caminho antigo gerava
+       * código válido por 12 MESES, e cobrar quem tem um código vivo na
+       * mão é cobrar quem ainda vai pagar. Em 02/11/2026 foi exatamente o
+       * que aconteceu: a cliente que tinha AGENDADO o pagamento recebeu
+       * "seu pedido continua guardado, travou alguma coisa?", e o toque
+       * seguinte seria o cupom de 10% em cima de um pagamento de R$ 129,90
+       * que ela já tinha agendado.
+       *
+       * `expiraEm` no pedido é o que separa os dois: só o QR estático
+       * grava. Sem ele, o Pix é dos antigos e esta sequência fica quieta.
+       *
+       * O encontro com o lembrete-pix quem segura é o PRAZO_PAGAMENTO_MIN
+       * do Pix, 35 minutos, no `aguardandoPagamento` logo acima.
        */
+      if (d.pedido?.metodo === 'pix' && !d.pedido?.expiraEm) return
       const etapa = d.etapa || 0
       if (etapa >= ETAPAS_CARRINHO.length) return
       const minutosDesde = (agora - d.em) / 60_000

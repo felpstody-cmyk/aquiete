@@ -183,6 +183,10 @@ export default async (req) => {
       desconto: pedido.desconto,
       frete: pedido.frete,
       total: pedido.total,
+      // Quando o codigo do Pix morre. So existe no caminho do QR
+      // estatico, e e por ele que o carrinho abandonado sabe que pode
+      // cobrar: Pix do caminho antigo vale 12 meses e nao se cobra.
+      ...(cobranca.expiraEm ? { expiraEm: cobranca.expiraEm } : {}),
     }).catch(() => {})
 
     // Preenchido so se o zap do "pedido reservado" for disparado; e lido
