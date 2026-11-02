@@ -24,6 +24,7 @@ import {
   marcarCarrinhoPago, registrarVendaPaga, lerIdentidadeDoPedido, anotarCompraMeta,
 } from './_lib/metricas.mjs'
 import { marcarPagante } from './_lib/pagantes.mjs'
+import { registrarZap } from './_lib/zaplog.mjs'
 import { referenciaDoQr, marcarPixPago } from './_lib/pixqr.mjs'
 import { despachar } from './_lib/envio.mjs'
 import { marcarPagoUtmify } from './_lib/utmify.mjs'
@@ -211,6 +212,22 @@ export default async (req) => {
       telefone: cliente.telefone,
       texto: textoPago({ nome: cliente.nome, referencia }),
     }).catch(() => ({ enviado: false }))
+    /*
+     * No log, igual a todo envio da loja.
+     *
+     * Esta era a mensagem MAIS importante que a loja manda e a unica
+     * que nao aparecia em lugar nenhum. Em 02/11/2026 ela nao foi
+     * entregue num pedido pago (o telefone digitado tinha dois digitos
+     * a menos) e nao havia onde olhar pra saber: o painel mostrava o
+     * pedido como Pago e mais nada.
+     */
+    await registrarZap({
+      referencia,
+      nome: cliente.nome,
+      telefone: cliente.telefone,
+      etapa: 'pagamento confirmado',
+      resultado: resultados.zapCliente,
+    }).catch(() => {})
   }
 
   if (cliente?.email) {
