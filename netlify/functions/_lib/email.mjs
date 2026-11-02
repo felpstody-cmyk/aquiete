@@ -228,9 +228,7 @@ export function htmlLembretePix({ nome, referencia, descricao, total, payload, l
         Refazer com 10% de desconto
       </a>
     </td></tr></table>` : botao}
-    <p style="margin:22px 0 0;font-size:12px;color:#82655F;text-align:center">
-      Já pagou? Pode ignorar este e-mail.
-    </p>`)
+`)
 }
 
 /**
@@ -293,9 +291,7 @@ export function htmlRecuperarCarrinho({ nome, kit, etapa, cupom = false }) {
         Voltar e finalizar
       </a>
     </td></tr></table>
-    <p style="margin:22px 0 0;font-size:12px;color:#82655F;text-align:center">
-      Já comprou? Pode ignorar este e-mail.
-    </p>`)
+`)
 }
 
 /** Código dos Correios colado no sistema — vai direto pro cliente. */

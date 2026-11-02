@@ -326,8 +326,10 @@ export function textoPixUltimo({ nome, total, payload }) {
     payload
       ? 'Mando ele aqui embaixo mais uma vez, caso ainda dê tempo.'
       : 'Se ele já tiver vencido e você ainda quiser, me chama por aqui que eu gero outro.',
-    '',
-    'Se já pagou, pode ignorar.',
+    // Não tem "se já pagou, pode ignorar". Quem pagou não chega aqui: a
+    // varredura só lê cobrança PENDING, e antes de mandar ainda pergunta
+    // ao registro de pagantes e ao próprio Asaas. A frase não tranquiliza
+    // ninguém — admite uma falha que não existe.
   ].join('\n')
 }
 
