@@ -312,20 +312,30 @@ export function textoPixComCupom({ nome, total, kit }) {
 }
 
 /**
- * Doze horas, o ultimo.
+ * Doze horas: o codigo vence a meia-noite.
  *
- * Aqui da pra falar em prazo porque o prazo e de verdade: o Pix vence em
- * 24h a partir da geracao (ver vencimento() no adaptador do Asaas). E a
- * unica urgencia que existe em texto nenhum da loja, e ela nao foi
- * inventada pra apressar ninguem.
+ * Aqui da pra falar em prazo porque agora o prazo e de verdade: o Pix e
+ * emitido com vencimento no mesmo dia (ver vencimento() no adaptador do
+ * Asaas). Antes esta mensagem dizia "o codigo vale 24 horas", o que a
+ * propria doc do Asaas desmente — com chave Pix cadastrada o QR vale 12
+ * MESES depois do vencimento. Era urgencia inventada.
+ *
+ * `mesmoDia` falso quer dizer que a varredura so chegou aqui depois da
+ * virada. Nesse caso o codigo ja morreu, e mandar ele de novo seria pedir
+ * pra pessoa tentar pagar uma coisa que o banco vai recusar.
  */
-export function textoPixUltimo({ nome, total, payload }) {
+export function textoPixVenceHoje({ nome, total, mesmoDia }) {
+  if (!mesmoDia) {
+    return [
+      `${oi(nome)} O código do seu Pix de ${brl(total)} venceu à meia-noite.`,
+      '',
+      'Se você ainda quiser o pedido, me chama aqui que eu gero outro na hora — leva um minuto.',
+    ].join('\n')
+  }
   return [
-    `${oi(nome)} Seu Pix de ${brl(total)} vence hoje: o código vale 24 horas a partir da hora que foi gerado.`,
+    `${oi(nome)} Seu Pix de ${brl(total)} vence hoje à meia-noite.`,
     '',
-    payload
-      ? 'Mando ele aqui embaixo mais uma vez, caso ainda dê tempo.'
-      : 'Se ele já tiver vencido e você ainda quiser, me chama por aqui que eu gero outro.',
+    'Se ainda quiser, mando o código aqui embaixo mais uma vez.',
     // Não tem "se já pagou, pode ignorar". Quem pagou não chega aqui: a
     // varredura só lê cobrança PENDING, e antes de mandar ainda pergunta
     // ao registro de pagantes e ao próprio Asaas. A frase não tranquiliza
@@ -333,7 +343,36 @@ export function textoPixUltimo({ nome, total, payload }) {
   ].join('\n')
 }
 
-/** Umas horas depois, se o Pix continua sem pagar. */
+/**
+ * Vinte e quatro horas: o ultimo, e NAO oferece compra.
+ *
+ * Pedido dele, com estas palavras: "uma mensagem mais leve, estaremos
+ * aqui para o que voce precisar, sem oferecer compra na ultima mensagem".
+ *
+ * E a unica coisa que cabe aqui. A essa altura o codigo morreu na
+ * meia-noite e o cupom ja foi oferecido as 6h — insistir uma terceira vez
+ * nao vende nada, so gasta a paciencia de alguem que ja disse nao com o
+ * silencio dela.
+ *
+ * Sem link, sem cupom, sem copia-e-cola. Nao promete silencio tambem: a
+ * loja volta a falar com essa pessoa em campanha, e "nao te escrevo mais"
+ * seria uma promessa que a proxima mensagem desmente.
+ */
+export function textoPixEstamosAqui({ nome }) {
+  return [
+    `${oi(nome)} Passando só pra dizer que estou por aqui pro que você precisar.`,
+    '',
+    'Qualquer dúvida sobre o Aquiete, ou qualquer coisa que tenha travado no pagamento, é só me chamar que eu te respondo.',
+  ].join('\n')
+}
+
+/**
+ * Umas horas depois, se o Pix continua sem pagar.
+ *
+ * FORA DE USO desde 02/11/2026: era o toque de 3h da sequencia do Pix,
+ * e ele cortou esse toque por ser repeticao do de 5 minutos. Fica aqui
+ * porque o texto e bom e e so recolocar em TOQUES se ele quiser de volta.
+ */
 export function textoLembretePix({ nome, total, payload }) {
   return [
     `${oi(nome)} Passando só pra lembrar: seu Pix de ${brl(total)} ainda não caiu.`,

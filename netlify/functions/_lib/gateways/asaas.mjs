@@ -12,6 +12,9 @@
  */
 
 import { ErroDeGateway } from './index.mjs'
+// diaBR porque o vencimento tem que ser o dia de BRASILIA, nao o de UTC.
+// metricas.mjs nao importa nada no topo, entao isto nao faz ciclo.
+import { diaBR } from '../metricas.mjs'
 
 export const nome = 'asaas'
 
@@ -101,9 +104,18 @@ export async function situacaoDoPedido(referencia) {
   }
 }
 
+/**
+ * Data de vencimento no formato do Asaas (AAAA-MM-DD), em Brasília.
+ *
+ * NÃO usa toISOString(). Aquilo devolve a data em UTC, e entre 21h e
+ * meia-noite de Brasília o "hoje" de lá já é amanhã: pedido feito às 22h
+ * saía com vencimento dois dias à frente. Com o Pix vencendo no mesmo
+ * dia, isso deixaria de ser um detalhe e viraria o bug inteiro.
+ *
+ * `diaBR` é a mesma função que decide o dia de toda métrica do sistema.
+ */
 function vencimento(diasAFrente) {
-  const d = new Date(Date.now() + diasAFrente * 86400000)
-  return d.toISOString().slice(0, 10)
+  return diaBR(new Date(Date.now() + diasAFrente * 86400000))
 }
 
 export async function criarCobranca({ pedido, cliente, referencia }) {
@@ -115,8 +127,23 @@ export async function criarCobranca({ pedido, cliente, referencia }) {
       customer: customerId,
       billingType: BILLING[pedido.metodo],
       value: pedido.total,
-      // Pix expira rápido de propósito; boleto precisa de folga bancária
-      dueDate: vencimento(pedido.metodo === 'boleto' ? 3 : 1),
+      /*
+       * O Pix vence HOJE. A pessoa tem até a meia-noite pra pagar.
+       *
+       * Com vencimento de amanhã, o payload saía como
+       * `pix.asaas.com/qr/cobv/...` — cobrança COM VENCIMENTO. O banco
+       * mostra cobv como conta a pagar e oferece agendar, e em
+       * 02/11/2026 uma cliente agendou pro dia seguinte porque foi a
+       * única opção que o app deu. Vencendo hoje não existe data futura
+       * pra oferecer.
+       *
+       * Boleto continua com 3 dias (precisa de folga bancária) e cartão
+       * com 1: o dueDate do cartão não agenda captura nenhuma, e mexer
+       * nele não resolveria nada.
+       */
+      dueDate: vencimento(
+        pedido.metodo === 'boleto' ? 3 : pedido.metodo === 'pix' ? 0 : 1,
+      ),
       description: pedido.descricao,
       externalReference: referencia,
       // Cartao e boleto saem daqui pra pagina do Asaas. Sem isto, quem
