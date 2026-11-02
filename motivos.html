@@ -728,5 +728,28 @@
   </div>
 </div>
 
+<script>
+/* Contagem de visita desta pagina.
+   Mesmo contrato das outras: /api/visita?p=motivos. Sem isto a pagina e
+   invisivel no painel, que foi o caso desta ate 02/11/2026.
+   Respeita o modo teste (?semrastreio=1) igual ao resto do site. */
+try {
+  if (new URLSearchParams(location.search).get('semrastreio') === '1') {
+    localStorage.setItem('aq_teste', '1');
+  }
+} catch(e){}
+try {
+  if (localStorage.getItem('aq_teste') !== '1') {
+    var aqQs = new URLSearchParams();
+    var aqUrl = new URLSearchParams(location.search);
+    ['utm_source','utm_medium','utm_campaign','fbclid','gclid'].forEach(function(k){
+      var v = aqUrl.get(k); if (v) aqQs.set(k, v);
+    });
+    if (document.referrer) aqQs.set('ref', document.referrer);
+    aqQs.set('p', 'motivos');
+    fetch('/api/visita?' + aqQs.toString(), { method:'GET', keepalive:true }).catch(function(){});
+  }
+} catch(e){}
+</script>
 </body>
 </html>

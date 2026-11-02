@@ -2836,6 +2836,10 @@ try { if (!aqEmTeste()) {
     var v = aqParamsUrl.get(k); if (v) aqOrigemQs.set(k, v);
   });
   if (document.referrer) aqOrigemQs.set('ref', document.referrer);
+  // A home nao se identificava, e o painel tinha que deduzir ela por
+  // subtracao (total menos a soma das outras). Deduzir erra calado assim
+  // que uma pagina para de reportar.
+  aqOrigemQs.set('p', 'index');
   var aqOrigemStr = aqOrigemQs.toString();
   fetch('/api/visita' + (aqOrigemStr ? '?' + aqOrigemStr : ''), { method:'GET', keepalive:true }).catch(function(){});
 } } catch(e){}

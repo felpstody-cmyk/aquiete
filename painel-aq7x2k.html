@@ -1308,11 +1308,22 @@ function renderMarco100k(){
   el('marco100kBarra').style.width = pctv.toFixed(2) + '%';
   el('marco100kTxt').textContent = brl(total) + ' de ' + brl(META) + ' (' + pct(pctv) + ')';
 }
-/* Na ordem do funil, nao em ordem alfabetica: e a ordem em que a pessoa
-   passa por elas. Os mesmos apelidos do bloco de visitas, pra pagina nao
-   ter um nome num card e outro no card de baixo. */
-var PAGINA_NOME = { index: 'Página inicial', psiquiatra: 'Artigo do anúncio',
-  motivos: 'Artigo dos 6 motivos', oferta: 'Página de venda', checkout: 'Checkout' };
+/* O CAMINHO da URL, nao apelido editorial.
+   Estava escrito "Artigo do anuncio" e "Artigo dos 6 motivos", nomes que
+   eu inventei e que nao dizem qual pagina e. O que ele quer saber e
+   quantas pessoas entraram na /psiquiatra, e e isso que tem que estar
+   escrito.
+   Na ordem do funil, que e a ordem em que a pessoa passa por elas. */
+var PAGINA_NOME = {
+  index: 'Página inicial  /',
+  psiquiatra: '/psiquiatra',
+  motivos: '/motivos',
+  'relato-agua': '/relato-agua',
+  oferta: '/oferta',
+  checkout: '/checkout',
+  obrigado: '/obrigado',
+  termos: '/termos'
+};
 var CTA_NOME = { header:'Cabeçalho', hero:'Topo (hero)', dock:'Flutuante (mobile)', fab:'Flutuante (desktop)', oferta:'Botão comprar', promo:'Cupom',
   'venda-topo':'Venda: topo', 'venda-kits':'Venda: escolha do kit', 'venda-meio':'Venda: meio', 'venda-final':'Venda: final', 'venda-dock':'Venda: barra fixa', 'voltar-loja':'Venda: voltou pra loja' };
 var comportamentoLimite = 10;
@@ -1795,8 +1806,9 @@ function renderAoVivo(){
   // <pagina>-visita que o /api/visita grava, então uma página nova aparece
   // aqui sem eu mexer no painel. A home é o total menos a soma das outras,
   // o que também deixa certos os dias antes de cada página existir.
-  var APELIDO = { oferta: 'Página de venda', psiquiatra: 'Artigo do anúncio',
-                  motivos: 'Artigo dos 6 motivos' };
+  // Mesma tabela do resto do painel: uma pagina nao pode ter um nome aqui
+  // e outro no card de baixo.
+  var APELIDO = PAGINA_NOME;
   var paginas = {};
   Object.keys(remotos.metricas || {}).forEach(function(k){
     var m = /^([a-z0-9-]+)-(visita|checkout):/.exec(k);
@@ -1806,16 +1818,29 @@ function renderAoVivo(){
     return '<div style="padding-left:14px;color:var(--ink-3);font-size:12.5px">↳ ' + nome + ': <b style="color:var(--ink)">' + v + '</b> visita' + (v===1?'':'s') +
       ' · <b style="color:var(--ink)">' + ck + '</b> checkout' + (ck===1?'':'s') + (v ? ' (' + Math.round(ck / v * 100) + '% foi pro checkout)' : '') + '</div>';
   };
-  var somaVis = 0, somaChk = 0, outras = [];
-  Object.keys(paginas).sort().forEach(function(nome){
+  /* Ordem do funil primeiro, depois o que nao esta na tabela.
+     A home deixou de ser deduzida por subtracao: a index.html passou a
+     mandar p=index. A subtracao fica so de reserva, pros dias ANTES dessa
+     mudanca, em que nao existe contador proprio dela. */
+  var vistas = Object.keys(paginas);
+  var ordem = Object.keys(PAGINA_NOME).filter(function(p){ return vistas.indexOf(p) !== -1; })
+    .concat(vistas.filter(function(p){ return !PAGINA_NOME[p]; }).sort());
+  var somaVis = 0, somaChk = 0;
+  ordem.forEach(function(nome){
+    if (nome === 'index') return;
+    somaVis += somaMetrica(nome + '-visita');
+    somaChk += somaMetrica(nome + '-checkout');
+  });
+  var vHome = somaMetrica('index-visita');
+  if (!vHome) vHome = Math.max(0, visitasPer - somaVis);
+  linhas.push(linhaPagina(PAGINA_NOME.index, vHome,
+      Math.max(0, checkoutsPer - somaChk)));
+  ordem.forEach(function(nome){
+    if (nome === 'index') return;
     var v = somaMetrica(nome + '-visita'), ck = somaMetrica(nome + '-checkout');
     if (!v && !ck) return;
-    somaVis += v; somaChk += ck;
-    outras.push(linhaPagina(APELIDO[nome] || (nome.charAt(0).toUpperCase() + nome.slice(1)), v, ck));
+    linhas.push(linhaPagina(APELIDO[nome] || '/' + nome, v, ck));
   });
-  linhas.push(linhaPagina('Página inicial',
-      Math.max(0, visitasPer - somaVis), Math.max(0, checkoutsPer - somaChk)));
-  outras.forEach(function(l){ linhas.push(l); });
   linhas.push('<div><b>'+carrinhosPer+'</b> carrinho'+(carrinhosPer===1?'':'s')+' novo'+(carrinhosPer===1?'':'s')+' '+rotuloPer+'</div>');
   // Pedido gerado e dinheiro na mesa saem nos cards lá em cima, com a
   // quebra de produto e frete. Repetir aqui embaixo só enchia a tela.
