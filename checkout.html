@@ -197,6 +197,36 @@ img,svg{display:block;max-width:100%}
 
 /* ---------- Pagamento ---------- */
 .pays{display:grid;gap:var(--s3)}
+/* ---------- Order bump ----------
+   Quadrado e dourado de proposito: redondo e vermelho ali em cima e
+   "escolha uma forma de pagamento", e isto aqui nao e uma escolha entre
+   opcoes, e um sim ou nao. */
+.bump{
+  position:relative;display:flex;align-items:flex-start;gap:var(--s3);
+  margin-top:var(--s4);padding:var(--s4);cursor:pointer;
+  background:var(--accent-100);border:1.5px dashed var(--accent);
+  border-radius:var(--r-md);
+  transition:background-color .25s var(--ease), border-color .25s var(--ease);
+}
+.bump:hover{border-color:var(--accent-ink)}
+.bump input{position:absolute;opacity:0;width:0;height:0}
+.bump__mark{
+  width:20px;height:20px;flex:none;border-radius:5px;margin-top:1px;
+  border:2px solid var(--accent);background:var(--surface);
+  display:grid;place-items:center;transition:background-color .2s, border-color .2s;
+}
+.bump__mark::after{
+  content:"";width:11px;height:6px;margin-top:-2px;
+  border-left:2.5px solid #fff;border-bottom:2.5px solid #fff;
+  transform:rotate(-45deg) scale(0);transition:transform .25s var(--spring);
+}
+.bump input:checked ~ .bump__mark{background:var(--accent-ink);border-color:var(--accent-ink)}
+.bump input:checked ~ .bump__mark::after{transform:rotate(-45deg) scale(1)}
+.bump input:focus-visible ~ .bump__mark{outline:2px solid var(--accent-ink);outline-offset:2px}
+.bump__txt{display:flex;flex-direction:column;gap:3px}
+.bump__txt b{font:600 14.5px/1.35 var(--font-body);color:var(--accent-ink)}
+.bump__txt small{font:13px/1.45 var(--font-body);color:var(--ink-2)}
+
 .pay{
   position:relative;display:flex;align-items:center;gap:var(--s4);
   padding:var(--s4);cursor:pointer;
@@ -555,6 +585,21 @@ img,svg{display:block;max-width:100%}
           </div></div>
         </div>
 
+        <!-- ============ ORDER BUMP ============
+             Fica aqui, no pagamento, e nao na pagina de oferta. Ali a
+             pessoa ainda esta decidindo se compra; aqui ela ja decidiu, e
+             um frasco a mais e uma decisao pequena em cima de uma grande
+             que ja foi tomada.
+             Escondido por padrao: o JS mostra so nos kits que tem bump. -->
+        <label class="bump" id="bump" hidden>
+          <input type="checkbox" id="bumpCk">
+          <span class="bump__mark" aria-hidden="true"></span>
+          <span class="bump__txt">
+            <b id="bumpT"></b>
+            <small id="bumpS"></small>
+          </span>
+        </label>
+
         <!-- Segundo botao, no fim do fluxo. No celular o resumo (e o botao
              dele) fica depois de tudo; quem acabou de escolher o pagamento
              tem que conseguir finalizar sem procurar. Mesmo form, mesmo
@@ -661,13 +706,27 @@ img,svg{display:block;max-width:100%}
      só para o servidor e esta tabela ficou para trás: o checkout exibia
      R$ 149,90 no kit de 2 enquanto a cobrança saía R$ 129,90. */
   var KITS = {
-    '1': { rotulo: '1 unidade',  preco:  69.99, frete: 14.99 },
-    '2': { rotulo: '2 unidades', preco: 129.90, frete: 0 },
-    '4': { rotulo: '4 unidades', preco: 199.90, frete: 0 }
+    '1': { rotulo: '1 unidade',  unidades: 1, preco:  69.99, frete: 14.99 },
+    '2': { rotulo: '2 unidades', unidades: 2, preco: 129.90, frete: 0 },
+    '4': { rotulo: '4 unidades', unidades: 4, preco: 199.90, frete: 0 }
   };
   var kitId = new URLSearchParams(location.search).get('kit');
   if (!KITS[kitId]) kitId = '1';
   var kit = KITS[kitId];
+
+  /* ---------- Order bump ----------
+     Espelho do BUMP de catalogo.mjs, e vale o mesmo aviso de cima: quem
+     cobra e o servidor, e preco mudado la tem que mudar aqui.
+     O texto e so daqui — o servidor nao precisa dele pra cobrar. */
+  var BUMP = {
+    '1': { preco: 35.99,
+           titulo: 'Leve mais 1 frasco por R$ 35,99',
+           nota: 'R$ 34 abaixo do frasco avulso, e vai na mesma caixa: o frete não muda.' },
+    '2': { preco: 50.00,
+           titulo: 'Leve mais 1 frasco por R$ 50,00',
+           nota: 'Três frascos por R$ 179,90, com frete grátis.' }
+  };
+  var bumpAtivo = false;
 
   /* ---------- Cupons ----------
      Espelho do que existe em netlify/functions/_lib/catalogo.mjs. Serve só
@@ -699,14 +758,21 @@ img,svg{display:block;max-width:100%}
   /* ---------- Resumo ---------- */
   var el = function(id){ return d.getElementById(id); };
   function pintarResumo(){
+    var bump = bumpAtivo ? BUMP[kitId] : null;
+    var subtotal = +(kit.preco + (bump ? bump.preco : 0)).toFixed(2);
+    // Mesma regra do servidor: o cupom pega o kit, nunca o bump — o bump
+    // ja e o desconto, e descontar em cima dele seria duas vezes.
     var desconto = cupomAtivo ? +(kit.preco * cupomAtivo.percentual).toFixed(2) : 0;
     var norte = ehNorte(cepDigitado);
     var frete = envioEscolhido ? envioEscolhido.preco : (norte ? FRETE_NORTE : kit.frete);
-    var total = kit.preco - desconto + frete;
+    var total = subtotal - desconto + frete;
 
-    el('itemT').textContent  = kit.rotulo;
-    el('itemP').textContent  = brl(kit.preco);
-    el('sub').textContent    = brl(kit.preco);
+    // Pela quantidade, igual a descricao que o servidor monta: com bump o
+    // kit continua sendo o de 1 e saem dois frascos.
+    var unid = kit.unidades + (bump ? bump.unidades || 1 : 0);
+    el('itemT').textContent  = unid + (unid === 1 ? ' unidade' : ' unidades');
+    el('itemP').textContent  = brl(subtotal);
+    el('sub').textContent    = brl(subtotal);
     el('frete').innerHTML    = frete === 0
       ? '<span class="free">Grátis</span>'
       : brl(frete);
@@ -727,6 +793,19 @@ img,svg{display:block;max-width:100%}
     el('total').textContent  = brl(total);
     return total;
   }
+  /* Aparece so onde existe. No kit de 4 nao existe: a caixa cabe 4. */
+  (function(){
+    var caixa = el('bump'), ck = el('bumpCk'), oferta = BUMP[kitId];
+    if (!caixa || !ck || !oferta) return;
+    el('bumpT').textContent = oferta.titulo;
+    el('bumpS').textContent = oferta.nota;
+    caixa.hidden = false;
+    ck.addEventListener('change', function(){
+      bumpAtivo = ck.checked;
+      totalAtual = pintarResumo();
+    });
+  })();
+
   var totalAtual = pintarResumo();
 
   /* ---------- Aplicar cupom ---------- */
@@ -1224,6 +1303,9 @@ img,svg{display:block;max-width:100%}
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         kit: kitId,
+        // Sim ou nao. O preco do frasco a mais sai do catalogo no
+        // servidor, igual ao preco do kit — daqui nunca vai valor.
+        bump: bumpAtivo,
         cupom: cupomAtivo ? cupomAtivo.codigo : null,
         clique: (function(){
           // Vai junto pro servidor: e o que liga a venda paga ao anuncio.

@@ -49,7 +49,9 @@ export default async (req) => {
     const envio = corpo.envio
       ? await conferir(corpo.kit, corpo.cliente?.cep, corpo.envio).catch(() => null)
       : null
-    const pedido = montarPedido(corpo.kit, corpo.metodo, corpo.cupom, corpo.cliente?.cep, envio)
+    const pedido = montarPedido(
+      corpo.kit, corpo.metodo, corpo.cupom, corpo.cliente?.cep, envio, corpo.bump === true,
+    )
     const cliente = validarCliente(corpo.cliente)
     const referencia = gerarReferencia()
 
@@ -132,7 +134,9 @@ export default async (req) => {
         total: pedido.total,
         cliente,
         kitId: pedido.kitId,
-        unidades: Number(pedido.kitId) || 1,
+        // Do pedido, não do id do kit: com bump o kit continua sendo o
+        // de 1 e saem dois frascos.
+        unidades: pedido.unidades,
         ...identidadeMeta,
       }).catch((e) => console.log('[capi] Pix gerado nao foi:', e.message))
     }

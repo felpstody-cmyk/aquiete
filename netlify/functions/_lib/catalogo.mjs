@@ -77,6 +77,56 @@ export const KITS = {
          caixa: { altura: 19, largura: 12, comprimento:  7, peso: 0.38 } },
 }
 
+/**
+ * Order bump: mais um frasco, oferecido na hora de pagar.
+ *
+ * Aparece no pagamento e não na página de oferta de propósito. Ali a
+ * pessoa ainda está decidindo se compra; aqui ela já decidiu, e um frasco
+ * a mais é uma decisão pequena em cima de uma grande que já foi tomada.
+ *
+ * Os dois preços puxam pra lados diferentes, e isso é intencional:
+ *
+ *   kit 1 + 35,99  ->  120,97 por 2 frascos (frete cobrado)
+ *                      fica R$ 8,93 ABAIXO do kit de 2. Quem escolheu 1
+ *                      frasco já recusou o kit de 2 na oferta; 120,97 na
+ *                      mão é melhor que 84,98, e o segundo frasco sai
+ *                      R$ 34 abaixo do avulso.
+ *
+ *   kit 2 + 50,00  ->  179,90 por 3 frascos (frete grátis)
+ *                      sai a 59,97 o frasco, ACIMA dos 49,98 do kit de 4.
+ *                      Quem faz essa conta volta e sobe de kit, que é o
+ *                      que a gente quer que aconteça.
+ *
+ * Não existe bump no kit de 4: a caixa cabe 4 frascos.
+ *
+ * Custa R$ 19 e mais nada. A caixa é a mesma de 1 a 4 frascos e o cubado
+ * dela (0,266 kg) é o que a transportadora cobra em todas as faixas —
+ * cotado em 02/11/2026 contra SP, Porto Alegre, Campo Grande, Fortaleza e
+ * Manaus, o frete não muda com o frasco a mais.
+ */
+export const BUMP = {
+  '1': { preco: 35.99, unidades: 1 },
+  '2': { preco: 50.00, unidades: 1 },
+}
+
+/**
+ * A caixa que cabe N frascos.
+ *
+ * Existe porque o bump muda a quantidade sem mudar o kit. O de 1 frasco
+ * posta numa caixinha de 11 x 11 x 6,5 que não fecha com dois dentro, e
+ * sem perguntar pela quantidade a etiqueta sairia declarando um pacote
+ * que não existe.
+ *
+ * Escolhe a menor que serve. Como o cubado é o mesmo nas três, subir de
+ * caixa aqui não muda o frete em nada — o que muda é a etiqueta bater com
+ * o pacote se alguém medir no balcão.
+ */
+export function kitDaQuantidade(n) {
+  const alvo = Math.max(1, Number(n) || 1)
+  const ids = Object.keys(KITS).sort((a, b) => KITS[a].unidades - KITS[b].unidades)
+  return KITS[ids.find((id) => KITS[id].unidades >= alvo) ?? ids[ids.length - 1]]
+}
+
 export const METODOS = new Set(['pix', 'card', 'boleto'])
 
 /**
@@ -141,28 +191,41 @@ export function freteDoKit(kit, cep) {
  * o que o navegador mandou. Sem ela, cai na tabela fixa de sempre, que e
  * o que mantem a loja vendendo se a integracao estiver fora.
  */
-export function montarPedido(kitId, metodo, codigoCupom, cep, envio = null) {
+export function montarPedido(kitId, metodo, codigoCupom, cep, envio = null, comBump = false) {
   const kit = KITS[String(kitId)]
   if (!kit) throw new ErroDeEntrada(`Kit inválido: ${kitId}`)
   if (!METODOS.has(metodo)) throw new ErroDeEntrada(`Método inválido: ${metodo}`)
 
+  // `comBump` é só um sim/não do navegador. O preço e a quantidade saem
+  // DAQUI, como todo o resto: o que vem da tela nunca entra na conta.
+  const bump = comBump ? BUMP[String(kitId)] ?? null : null
+  const unidades = kit.unidades + (bump?.unidades || 0)
+
   const cupom = acharCupom(codigoCupom)
   const centavos = (v) => Number(v.toFixed(2))
+  // O desconto incide só no kit, nunca no bump: o bump JÁ é o desconto.
+  // Dar cupom em cima dele seria descontar duas vezes a mesma coisa.
   const desconto = cupom ? centavos(kit.preco * cupom.percentual) : 0
   const frete = envio ? centavos(envio.preco) : freteDoKit(kit, cep)
 
   return {
     kitId: String(kitId),
     metodo,
-    descricao: `Aquiete — ${kit.rotulo}`,
-    subtotal: kit.preco,
+    // Pela QUANTIDADE, não pelo rótulo do kit. O webhook do Asaas
+    // reconstrói quantos frascos foram vendidos lendo esta frase, e a
+    // etiqueta declara o que estiver aqui — "1 unidade" num pedido de
+    // dois seria uma declaração errada, não um detalhe de texto.
+    descricao: `Aquiete — ${unidades} ${unidades === 1 ? 'unidade' : 'unidades'}`,
+    unidades,
+    bump: bump ? { preco: bump.preco, unidades: bump.unidades } : null,
+    subtotal: centavos(kit.preco + (bump?.preco || 0)),
     cupom: cupom?.codigo ?? null,
     desconto,
     frete,
     // Guardado pra etiqueta: na hora de postar ele precisa saber qual
     // servico o cliente pagou, nao so quanto.
     envio: envio ? { id: envio.id, nome: envio.nome, empresa: envio.empresa, prazo: envio.prazo } : null,
-    total: centavos(kit.preco - desconto + frete),
+    total: centavos(kit.preco + (bump?.preco || 0) - desconto + frete),
   }
 }
 

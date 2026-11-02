@@ -35,7 +35,7 @@
  * criado na mão, como era antes.
  */
 
-import { KITS } from './catalogo.mjs'
+import { KITS, kitDaQuantidade } from './catalogo.mjs'
 import { chamar, cotar, configurado, soDigitos } from './melhorenvio.mjs'
 import { ufDoCep, ehRecusaDeDce, vetar } from './dce.mjs'
 
@@ -163,6 +163,9 @@ export async function guardarDespacho(referencia, { cliente, pedido }) {
     await store.setJSON(String(referencia), {
       em: Date.now(),
       kitId: pedido.kitId,
+      // Separada do kit porque o bump as desencontra: kit de 1 com bump
+      // manda dois frascos. É por ela que a caixa da etiqueta é escolhida.
+      unidades: pedido.unidades,
       descricao: pedido.descricao,
       subtotal: pedido.subtotal,
       // `null` quando o frete saiu da tabela fixa (kit de 2 e 4 vão de
@@ -213,10 +216,19 @@ export async function lerDespachos() {
 }
 
 function montarPayload(d, servico) {
-  const kit = KITS[String(d.kitId)] || KITS['1']
   const c = d.cliente || {}
   const { cidade, uf } = cidadeEstado(c.cidade, c.cep)
-  const unidades = kit.unidades || 1
+  /*
+   * A quantidade manda, e a caixa vem dela.
+   *
+   * `unidades` só existe nos despachos criados depois do bump, então os
+   * antigos caem no kit como sempre. Perguntar pela quantidade importa:
+   * o kit de 1 posta numa caixinha de 11 x 11 x 6,5 que não fecha com
+   * dois frascos dentro, e a etiqueta declararia um pacote que não
+   * existe.
+   */
+  const unidades = Number(d.unidades) || KITS[String(d.kitId)]?.unidades || 1
+  const kit = kitDaQuantidade(unidades)
 
   return {
     service: Number(servico),
