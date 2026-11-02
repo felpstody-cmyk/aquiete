@@ -234,19 +234,23 @@ export function textoPixGerado({ nome, descricao, total, payload }) {
   // O texto abaixo e exatamente o campo 59 do codigo Pix.
   const recebedor = 'No banco o recebedor aparece como 68601075 FELIPE STRAUSS, de Chapecó — é o CNPJ da Aquiete.'
   /*
-   * "Vence em 24h" era falso, e custou uma venda.
+   * Aqui NÃO se fala em prazo, e isso é regra.
    *
-   * A cobrança é emitida com vencimento HOJE, e sem chave Pix cadastrada
-   * no Asaas o QR fica vinculado a uma instituição parceira e só é
-   * pagável até as 23:59 deste mesmo dia. Nem 24 horas, nem os 12 meses
-   * do fluxo com chave: meia-noite.
+   * A conta tem chave Pix cadastrada (conferido no painel em 02/11/2026),
+   * e nesse caso a doc do Asaas diz que o QR expira 12 MESES depois do
+   * vencimento. Então não existe prazo curto pra avisar.
    *
-   * Em 02/11/2026 uma cliente leu "24h", entendeu que dava pra pagar no
-   * dia seguinte e agendou o Pix pro dia 3. Aquele agendamento falha.
+   * Duas versões erradas passaram por aqui: "Vence em 24h" e, depois,
+   * "vale até a meia-noite de hoje". As duas erravam pra menos, e a
+   * primeira fez uma cliente agendar o pagamento pro dia seguinte achando
+   * que o código ia morrer.
+   *
+   * O que entra no lugar é verdadeiro e útil: se parar de funcionar, a
+   * loja gera outro.
    */
   const fim = payload
-    ? 'Te mando o código do Pix na mensagem de baixo: é só copiar e colar no app do banco. Ele vale até a meia-noite de hoje.\n\n' + recebedor
-    : 'Se travou alguma coisa na hora de pagar, é só responder aqui que a gente resolve. O código vale até a meia-noite de hoje.\n\n' + recebedor
+    ? 'Te mando o código do Pix na mensagem de baixo: é só copiar e colar no app do banco. Se em algum momento ele não funcionar, me chama aqui que eu gero outro na hora.\n\n' + recebedor
+    : 'Se travou alguma coisa na hora de pagar, é só responder aqui que a gente resolve.\n\n' + recebedor
   return [
     `${oi(nome)} Aqui é da Aquiete 🌿`,
     '',
@@ -323,30 +327,26 @@ export function textoPixComCupom({ nome, total, kit }) {
 }
 
 /**
- * Doze horas: o codigo vence a meia-noite.
+ * Doze horas: o pedido continua reservado.
  *
- * Aqui da pra falar em prazo porque agora o prazo e de verdade: o Pix e
- * emitido com vencimento no mesmo dia (ver vencimento() no adaptador do
- * Asaas). Antes esta mensagem dizia "o codigo vale 24 horas", o que a
- * propria doc do Asaas desmente — com chave Pix cadastrada o QR vale 12
- * MESES depois do vencimento. Era urgencia inventada.
+ * Esta mensagem nasceu falando de prazo — primeiro "o codigo vale 24
+ * horas", depois "vence hoje a meia-noite", e chegou a ter uma variante
+ * que dizia "o codigo venceu". Tudo errado: a conta tem chave Pix
+ * cadastrada, e com chave o QR vale 12 MESES depois do vencimento. A pior
+ * das versoes mandava a pessoa jogar fora um codigo que funciona.
  *
- * `mesmoDia` falso quer dizer que a varredura so chegou aqui depois da
- * virada. Nesse caso o codigo ja morreu, e mandar ele de novo seria pedir
- * pra pessoa tentar pagar uma coisa que o banco vai recusar.
+ * Sem prazo, ela precisa de outro motivo pra existir, e o motivo honesto
+ * e esse: o pedido esta guardado e o codigo continua valendo. Quem nao
+ * pagou em 12 horas provavelmente travou em alguma coisa — a pergunta no
+ * fim e pra isso.
  */
-export function textoPixVenceHoje({ nome, total, mesmoDia }) {
-  if (!mesmoDia) {
-    return [
-      `${oi(nome)} O código do seu Pix de ${brl(total)} venceu à meia-noite.`,
-      '',
-      'Se você ainda quiser o pedido, me chama aqui que eu gero outro na hora — leva um minuto.',
-    ].join('\n')
-  }
+export function textoPixAindaAberto({ nome, total }) {
   return [
-    `${oi(nome)} Seu Pix de ${brl(total)} vence hoje à meia-noite.`,
+    `${oi(nome)} Seu pedido continua reservado aqui, e o Pix de ${brl(total)} segue valendo.`,
     '',
-    'Se ainda quiser, mando o código aqui embaixo mais uma vez.',
+    'Mando o código mais uma vez logo abaixo, caso você queira finalizar.',
+    '',
+    'E se foi alguma dúvida sobre o produto que te segurou, me pergunta que eu te respondo.',
     // Não tem "se já pagou, pode ignorar". Quem pagou não chega aqui: a
     // varredura só lê cobrança PENDING, e antes de mandar ainda pergunta
     // ao registro de pagantes e ao próprio Asaas. A frase não tranquiliza

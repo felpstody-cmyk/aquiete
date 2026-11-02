@@ -7,7 +7,7 @@
  *
  *   5 min   o copia-e-cola de novo, sozinho numa mensagem
  *   6 h     entra o cupom de 10% da primeira compra
- *   12 h    o código vence à meia-noite, e isso agora é verdade
+ *   12 h    o pedido continua reservado, e o código também
  *   24 h    só "estou por aqui" — este NÃO oferece compra
  *
  * Quem cuida dessa pessoa é esta função, e só ela: a sequência do
@@ -33,7 +33,7 @@
 
 import { enviar, htmlLembretePix } from './_lib/email.mjs'
 import {
-  enviarZap, textoPixCincoMin, textoPixComCupom, textoPixVenceHoje,
+  enviarZap, textoPixCincoMin, textoPixComCupom, textoPixAindaAberto,
   textoPixEstamosAqui, textoPixCodigo, pausa,
 } from './_lib/zap.mjs'
 import { jaPagou } from './_lib/pagantes.mjs'
@@ -74,14 +74,11 @@ async function loja() {
  * manhã é o que fez uma cliente pedir pra parar em 02/11/2026.
  *
  * `codigo` diz se o copia-e-cola vai junto, numa segunda mensagem.
- * `soHoje` marca o toque que só manda o código enquanto ele vale — depois
- * da meia-noite ele morreu, e mandar seria pedir pra pessoa tentar pagar
- * uma coisa que o banco recusa.
  */
 const TOQUES = [
   { minutos: 5,       zap: textoPixCincoMin,    email: false, cupom: false, codigo: true },
   { minutos: 6 * 60,  zap: textoPixComCupom,    email: true,  cupom: true,  codigo: false },
-  { minutos: 12 * 60, zap: textoPixVenceHoje,   email: true,  cupom: false, codigo: true, soHoje: true },
+  { minutos: 12 * 60, zap: textoPixAindaAberto, email: true,  cupom: false, codigo: true },
   // O último não oferece compra: sem link, sem cupom, sem código.
   { minutos: 24 * 60, zap: textoPixEstamosAqui, email: false, cupom: false, codigo: false },
 ]
@@ -89,7 +86,7 @@ const TOQUES = [
 const ASSUNTOS_PIX = [
   '',
   'Seus 10% de desconto na primeira compra',
-  'Seu Pix vence hoje à meia-noite',
+  'Seu pedido ainda está reservado',
   '',
 ]
 
@@ -203,11 +200,6 @@ export default async () => {
       if (minutos < TOQUES[toque].minutos) continue
       const agenda = TOQUES[toque]
 
-      // O código do Pix morre à meia-noite do dia em que foi gerado.
-      // Saber se ainda é esse dia muda o texto do toque de 12h e decide
-      // se o copia-e-cola vai junto.
-      const mesmoDia = diaBR(new Date(visto)) === diaBR()
-
       // `criado` é só pra perguntar ao Asaas o que esta pessoa pagou
       // DEPOIS desta cobrança nascer. Aqui a data sem hora serve: ela
       // erra pra trás (meia-noite UTC do dia), e errar pra trás só torna
@@ -267,7 +259,7 @@ export default async () => {
         const r = await enviarZap({
           telefone: paraZap,
           texto: agenda.zap({
-            nome: cliente.name, total: p.value, payload, mesmoDia,
+            nome: cliente.name, total: p.value, payload,
             kit: kitDaDescricao(p.description),
           }),
         }).catch((e) => ({ enviado: false, erro: String(e?.message || e) }))
@@ -279,7 +271,7 @@ export default async () => {
           referencia: p.externalReference || '',
           nome: cliente.name,
           telefone: paraZap,
-          etapa: ['pix 5min', 'pix cupom', 'pix vence hoje', 'pix estou aqui'][toque] || 'pix lembrete',
+          etapa: ['pix 5min', 'pix cupom', 'pix reservado', 'pix estou aqui'][toque] || 'pix lembrete',
           resultado: r,
         })
         /*
@@ -289,14 +281,13 @@ export default async () => {
          * Nao vai em todo toque. No do cupom a pessoa foi convidada a
          * refazer o pedido, e mandar o codigo velho logo embaixo e
          * convidar ela a pagar o valor cheio. No ultimo nao se oferece
-         * nada. E no de 12h so vai enquanto o codigo vale: depois da
-         * meia-noite o banco recusa.
+         * nada.
          *
          * Aqui dá pra esperar de verdade antes de mandar: isto roda sem
          * ninguem olhando a tela, e duas mensagens coladas sao o que faz o
          * WhatsApp derrubar a sessao.
          */
-        if (payload && agenda.codigo && (!agenda.soHoje || mesmoDia)) {
+        if (payload && agenda.codigo) {
           await pausa(2500)
           await enviarZap({ telefone: paraZap, texto: textoPixCodigo(payload) }).catch(() => {})
         }
