@@ -270,6 +270,67 @@ export function textoPixCodigo(payload) {
   return String(payload || '').trim()
 }
 
+/**
+ * Cinco minutos depois: o codigo sozinho, de novo.
+ *
+ * Parece cedo e nao e. O copia-e-cola ja foi mandado na hora da compra,
+ * e em cinco minutos de conversa ele ja desceu pra cima. Aqui ele volta
+ * no formato que da pra copiar: uma mensagem so com ele dentro.
+ */
+export function textoPixCincoMin({ nome, total }) {
+  return [
+    `${oi(nome)} Seu Pix de ${brl(total)} ainda não caiu aqui.`,
+    '',
+    'Se o código sumiu no meio da conversa, mando ele de novo logo abaixo. É só copiar e colar no app do banco.',
+    '',
+    'Qualquer coisa que tenha travado, me fala por aqui.',
+  ].join('\n')
+}
+
+/**
+ * Seis horas: entra o desconto.
+ *
+ * O cupom so aparece aqui. Nos dois primeiros toques a pessoa ainda esta
+ * indo pro banco, e dar 10% seria pagar por uma venda que ia acontecer de
+ * qualquer jeito.
+ *
+ * E tem que dizer o que fazer com o codigo velho. A cobranca antiga
+ * continua existindo no gateway pelo valor cheio: se ela pagar aquela
+ * depois de ler isto, pagou a mais. "Vence sozinho, nao precisa fazer
+ * nada" e a frase que evita isso.
+ */
+export function textoPixComCupom({ nome, total, kit }) {
+  return [
+    `${oi(nome)} Seu Pix de ${brl(total)} continua em aberto.`,
+    '',
+    'Se foi o valor que te segurou, separei um cupom de 10% pra primeira compra: PRIMEIRA10.',
+    '',
+    `Pra usar é só refazer o pedido por aqui, que ele já vai aplicado: ${linkCheckout(kit, 'PRIMEIRA10', 'pix6h')}`,
+    '',
+    'O código de antes vence sozinho, não precisa fazer nada com ele.',
+  ].join('\n')
+}
+
+/**
+ * Doze horas, o ultimo.
+ *
+ * Aqui da pra falar em prazo porque o prazo e de verdade: o Pix vence em
+ * 24h a partir da geracao (ver vencimento() no adaptador do Asaas). E a
+ * unica urgencia que existe em texto nenhum da loja, e ela nao foi
+ * inventada pra apressar ninguem.
+ */
+export function textoPixUltimo({ nome, total, payload }) {
+  return [
+    `${oi(nome)} Seu Pix de ${brl(total)} vence hoje: o código vale 24 horas a partir da hora que foi gerado.`,
+    '',
+    payload
+      ? 'Mando ele aqui embaixo mais uma vez, caso ainda dê tempo.'
+      : 'Se ele já tiver vencido e você ainda quiser, me chama por aqui que eu gero outro.',
+    '',
+    'Se já pagou, pode ignorar.',
+  ].join('\n')
+}
+
 /** Umas horas depois, se o Pix continua sem pagar. */
 export function textoLembretePix({ nome, total, payload }) {
   return [

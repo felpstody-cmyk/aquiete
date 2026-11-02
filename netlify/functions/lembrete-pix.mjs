@@ -1,9 +1,21 @@
 /**
- * Roda de hora em hora, agendada pelo Netlify (não tem URL pública).
+ * Roda de 5 em 5 minutos, agendada pelo Netlify (não tem URL pública).
  *
- * Varre os Pix pendentes no Asaas e manda um lembrete pra quem gerou o
- * código e ainda não pagou. Só um lembrete por cobrança — guardado no
- * Blobs, sem isso reenviaria a cada hora até o Pix expirar.
+ * Varre os Pix pendentes no Asaas e chama de volta quem gerou o código e
+ * ainda não pagou. São quatro toques, cada um com texto próprio:
+ *
+ *   5 min   o copia-e-cola de novo, sozinho numa mensagem
+ *   3 h     "deu algum problema no banco?"
+ *   6 h     entra o cupom de 10% da primeira compra
+ *   12 h    o último; o código vence em 24h e aqui dá pra dizer isso
+ *
+ * Quem cuida dessa pessoa é esta função, e só ela: a sequência do
+ * carrinho abandonado para de perseguir quem gerou Pix, justamente pra
+ * não mandar duas mensagens na mesma hora sobre o mesmo pedido. Aqui tem
+ * o valor, a referência e o copia-e-cola; lá não tem nenhum dos três.
+ *
+ * O estado de cada cobrança fica no Blobs. Sem isso cada varredura
+ * reenviaria tudo de novo até o Pix expirar.
  *
  * "Ainda não pagou" é a parte difícil, e foi o que deu errado na primeira
  * venda. Quem clica em pagar duas vezes gera DUAS cobranças, paga uma e
@@ -19,7 +31,10 @@
  */
 
 import { enviar, htmlLembretePix } from './_lib/email.mjs'
-import { enviarZap, textoLembretePix, textoPixCodigo, pausa } from './_lib/zap.mjs'
+import {
+  enviarZap, textoPixCincoMin, textoLembretePix, textoPixComCupom, textoPixUltimo,
+  textoPixCodigo, pausa,
+} from './_lib/zap.mjs'
 import { jaPagou } from './_lib/pagantes.mjs'
 
 const BASES = {
@@ -49,10 +64,63 @@ async function loja() {
   return getStore('lembretes-pix')
 }
 
-// Cedo demais incomoda quem acabou de gerar o Pix; tarde demais e o Pix
-// já expirou (vence em 1 dia, ver vencimento() no adaptador do Asaas).
-const JANELA_MIN_HORAS = 3
-const JANELA_MAX_HORAS = 20
+/*
+ * Os quatro toques, em minutos desde o código ser gerado.
+ *
+ * Param em 12h de propósito: o Pix vence em 1 dia (ver vencimento() no
+ * adaptador do Asaas), e mensagem sobre um código morto só irrita.
+ */
+const TOQUES = [
+  { minutos: 5,       zap: textoPixCincoMin, email: false, cupom: false },
+  { minutos: 3 * 60,  zap: textoLembretePix, email: true,  cupom: false },
+  { minutos: 6 * 60,  zap: textoPixComCupom, email: true,  cupom: true },
+  { minutos: 12 * 60, zap: textoPixUltimo,   email: false, cupom: false },
+]
+
+const ASSUNTOS_PIX = [
+  '',
+  'Seu Pix ainda não caiu',
+  'Seus 10% de desconto na primeira compra',
+  '',
+]
+
+// Depois disto o código já venceu e não adianta mais falar dele.
+const LIMITE_MINUTOS = 20 * 60
+
+/**
+ * Em que toque esta cobrança está.
+ *
+ * -1 quer dizer "já pagou, não mexe mais".
+ *
+ * Valor antigo é string solta, de quando existia um lembrete só. Conta
+ * como sequência TERMINADA: quem já recebeu aquele não pode levar quatro
+ * de uma vez só porque isto subiu.
+ */
+async function toqueDe(store, id) {
+  const bruto = await store.get(id)
+  if (!bruto) return 0
+  if (bruto === 'pago') return -1
+  try {
+    const d = JSON.parse(bruto)
+    return Number.isFinite(Number(d?.toque)) ? Number(d.toque) : TOQUES.length
+  } catch {
+    return TOQUES.length
+  }
+}
+
+/**
+ * Qual kit, lido da descrição ("Aquiete — 2 unidades").
+ *
+ * Serve pro link do cupom já vir com o kit escolhido. Três frascos é
+ * pedido com bump e não tem kit próprio, então nesse caso vai sem — o
+ * checkout cai no de 1 e ela escolhe de novo, que é melhor que um link
+ * pra um kit que ela não pediu.
+ */
+function kitDaDescricao(descricao) {
+  const m = /(\d+)\s*unidade/i.exec(String(descricao ?? ''))
+  const n = m ? Number(m[1]) : 0
+  return [1, 2, 4].includes(n) ? String(n) : ''
+}
 
 /** Os status do Asaas em que o dinheiro entrou de verdade. */
 const STATUS_PAGO = new Set(['RECEIVED', 'CONFIRMED', 'RECEIVED_IN_CASH'])
@@ -94,11 +162,15 @@ export default async () => {
 
     for (const p of pagina.data || []) {
       const criado = new Date(p.dateCreated).getTime()
-      const horas = (agora - criado) / 3_600_000
-      if (!(horas >= JANELA_MIN_HORAS && horas <= JANELA_MAX_HORAS)) continue
+      const minutos = (agora - criado) / 60_000
+      if (minutos > LIMITE_MINUTOS) continue
 
-      const jaLembrado = await store.get(p.id)
-      if (jaLembrado) continue
+      // A conta barata primeiro: sem isso cada varredura (agora são 288
+      // por dia) gastaria duas chamadas de API por cobrança pendente.
+      const toque = await toqueDe(store, p.id)
+      if (toque < 0 || toque >= TOQUES.length) continue
+      if (minutos < TOQUES[toque].minutos) continue
+      const agenda = TOQUES[toque]
 
       // Trava 3, antes de gastar a busca do cliente: o próprio Asaas diz
       // se esta pessoa já pagou outra cobrança depois desta ser gerada.
@@ -137,7 +209,7 @@ export default async () => {
       // depois do e-mail, e-mail que falhava deixava a cobrança sem marca
       // nenhuma e o zap saía de novo a cada hora, pra sempre — foi o que
       // aconteceu com a sequência do carrinho (ver carrinho-lembrete).
-      await store.set(p.id, String(Date.now()))
+      await store.setJSON(p.id, { toque: toque + 1, em: Date.now() })
       enviados++
 
       let payload = null
@@ -152,34 +224,50 @@ export default async () => {
         const paraZap = cliente.mobilePhone || cliente.phone
         await enviarZap({
           telefone: paraZap,
-          texto: textoLembretePix({ nome: cliente.name, total: p.value, payload }),
+          texto: agenda.zap({
+            nome: cliente.name, total: p.value, payload,
+            kit: kitDaDescricao(p.description),
+          }),
         }).catch(() => {})
-        // Igual ao primeiro toque: o copia-e-cola vai sozinho na mensagem
-        // seguinte, senao copiar a mensagem leva a conversa junto.
-        // Aqui dá pra esperar de verdade antes de mandar: isto roda de hora
-        // em hora, sem ninguem olhando a tela, e duas mensagens coladas sao
-        // o que faz o WhatsApp derrubar a sessao.
-        if (payload) {
+        // O copia-e-cola vai sozinho na mensagem seguinte, senao copiar a
+        // mensagem leva a conversa junto. Nao vai no toque do cupom: la a
+        // pessoa foi convidada a refazer o pedido, e mandar o codigo do
+        // pedido velho logo embaixo e convidar ela a pagar o valor cheio.
+        //
+        // Aqui dá pra esperar de verdade antes de mandar: isto roda sem
+        // ninguem olhando a tela, e duas mensagens coladas sao o que faz o
+        // WhatsApp derrubar a sessao.
+        if (payload && !agenda.cupom) {
           await pausa(2500)
           await enviarZap({ telefone: paraZap, texto: textoPixCodigo(payload) }).catch(() => {})
         }
       }
 
-      try {
-        await enviar({
-          para: cliente.email,
-          assunto: `Seu Pix do pedido ${p.externalReference || ''} ainda não caiu`,
-          html: htmlLembretePix({
-            nome: cliente.name,
-            referencia: p.externalReference || p.id,
-            descricao: p.description || 'Aquiete',
-            total: p.value,
-            payload,
-            link: p.invoiceUrl || null,
-          }),
-        })
-      } catch (e) {
-        console.error('[lembrete-pix] envio falhou para', p.id, e.message)
+      // E-mail só em dois dos quatro toques. Aos 5 minutos a pessoa
+      // acabou de sair do checkout e e-mail ali é ruído; às 12h o que ela
+      // lê é o zap. Os dois do meio são os que valem a caixa de entrada.
+      if (agenda.email) {
+        try {
+          const kit = kitDaDescricao(p.description)
+          await enviar({
+            para: cliente.email,
+            assunto: ASSUNTOS_PIX[toque] || `Seu Pix do pedido ${p.externalReference || ''} ainda não caiu`,
+            html: htmlLembretePix({
+              nome: cliente.name,
+              referencia: p.externalReference || p.id,
+              descricao: p.description || 'Aquiete',
+              total: p.value,
+              payload,
+              link: p.invoiceUrl || null,
+              cupomLink: agenda.cupom
+                ? `https://aquieteagora.com.br/checkout.html?${kit ? `kit=${kit}&` : ''}`
+                  + 'cupom=PRIMEIRA10&utm_source=email&utm_medium=pix6h'
+                : null,
+            }),
+          })
+        } catch (e) {
+          console.error('[lembrete-pix] envio falhou para', p.id, e.message)
+        }
       }
     }
   } catch (e) {
@@ -191,4 +279,4 @@ export default async () => {
   })
 }
 
-export const config = { schedule: '@hourly' }
+export const config = { schedule: '*/5 * * * *' }

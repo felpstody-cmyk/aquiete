@@ -459,8 +459,23 @@ export async function carrinhosPendentesDeEmail() {
       // o que aconteceu com "fulano@hotmail.com25", que mandou 17 zaps
       // pra mesma pessoa em 17 horas.
       if (!/^[^@\s]+@[^@\s]+\.[a-z]{2,24}$/.test(String(b.key))) return
-      // Pagou, ou ainda tá no prazo de pagar o Pix/boleto: não cobra por e-mail.
+      // Pagou, ou ainda tá no prazo de pagar: não cobra.
       if (d.pago || aguardandoPagamento(d, agora)) return
+      /*
+       * Gerou Pix: daqui pra frente quem fala com ela é o lembrete-pix,
+       * e só ele.
+       *
+       * Os dois perseguiam a mesma pessoa em paralelo e sem saber um do
+       * outro: o lembrete de Pix caía entre 3h e 20h, e o toque de 3h
+       * daqui caía junto — duas mensagens na mesma hora sobre o mesmo
+       * pedido. Quem fica é o lembrete-pix, porque ele tem o valor, a
+       * referência e o copia-e-cola, e aqui não tem nenhum dos três.
+       *
+       * Só Pix. Cartão e boleto continuam nesta sequência: o lembrete-pix
+       * não olha pra eles, e sem isto ninguém chamaria essas pessoas de
+       * volta.
+       */
+      if (d.pedido?.metodo === 'pix') return
       const etapa = d.etapa || 0
       if (etapa >= ETAPAS_CARRINHO.length) return
       const minutosDesde = (agora - d.em) / 60_000

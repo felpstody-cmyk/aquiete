@@ -176,7 +176,8 @@ export function htmlAguardando({ nome, referencia, descricao, total, metodo, pay
 }
 
 /** Pix gerado há um tempo e ainda não pago — lembrete automático. */
-export function htmlLembretePix({ nome, referencia, descricao, total, payload, link }) {
+/** `cupomLink` so vem no toque de 6h, o unico em que o desconto existe. */
+export function htmlLembretePix({ nome, referencia, descricao, total, payload, link, cupomLink = null }) {
   const primeiro = esc(String(nome || '').split(' ')[0] || 'Olá')
 
   const codigo = payload ? `
@@ -215,7 +216,18 @@ export function htmlLembretePix({ nome, referencia, descricao, total, payload, l
           <td style="padding:8px 0;text-align:right;color:#A8352F;font-size:18px"><strong>${brl(total)}</strong></td></tr>
     </table>
     ${codigo}
-    ${botao}
+    ${cupomLink ? `
+    <p style="margin:20px 0 0;line-height:1.6">
+      Se foi o valor que te segurou: separei <strong style="color:#2A1613">10% de desconto</strong>
+      pra primeira compra. É só refazer o pedido pelo botão abaixo, que o cupom já vai aplicado.
+      O código de antes vence sozinho, não precisa fazer nada com ele.
+    </p>
+    <table role="presentation" style="margin:18px auto 0"><tr><td style="border-radius:999px;background:#C8453E">
+      <a href="${esc(cupomLink)}" style="display:inline-block;padding:13px 28px;color:#fff;
+         text-decoration:none;font-weight:700;font-size:15px">
+        Refazer com 10% de desconto
+      </a>
+    </td></tr></table>` : botao}
     <p style="margin:22px 0 0;font-size:12px;color:#82655F;text-align:center">
       Já pagou? Pode ignorar este e-mail.
     </p>`)
