@@ -328,25 +328,32 @@ export function textoCarrinhoTresHoras({ nome, kit }) {
 }
 
 /**
- * Terceiro e último toque, no dia seguinte, com o cupom.
+ * Terceiro toque, no dia seguinte, com o cupom.
  *
  * O desconto vem só aqui. Nos dois primeiros a pessoa ainda estava
  * decidindo e dar 10% seria pagar por uma venda que ia acontecer de
  * qualquer jeito. No dia seguinte ela já foi embora, e aí os 10% não
  * disputam com a oferta — disputam com zero.
  *
- * E é o último: depois disto a sequência para sozinha.
+ * NÃO diz que é a última mensagem, e isso é regra, não estilo. A
+ * sequência do carrinho acaba aqui, mas a loja volta a falar com essa
+ * pessoa depois: remarketing, campanha, anúncio. Prometer silêncio é
+ * prometer uma coisa que a gente não vai cumprir, e quem recebe a
+ * próxima mensagem descobre isso.
+ *
+ * E não tem prazo que acaba nem última chance. Em cima de alguém que já
+ * desistiu, pressão não convence — avisa que existe um cupom e para por
+ * aí, que foi o que ele pediu.
  */
 export function textoCarrinhoCupom({ nome, kit }) {
-  const primeiro = primeiroNome(nome)
   return [
-    primeiro ? `${primeiro}, última vez que eu falo desse pedido.` : 'Última vez que eu falo desse pedido.',
+    oi(nome),
     '',
-    'Separei 10% de desconto pra sua primeira compra. O cupom é PRIMEIRA10 e já vai aplicado no link:',
+    'Separei um cupom de 10% pra sua primeira compra. É o PRIMEIRA10, e ele já vai aplicado neste link:',
     '',
     linkCheckout(kit, 'PRIMEIRA10', 'carrinho1d'),
     '',
-    'Depois de hoje eu não te escrevo mais sobre ele. Se já comprou, é só ignorar.',
+    'Qualquer dúvida sobre o produto, é só me chamar por aqui.',
   ].join('\n')
 }
 

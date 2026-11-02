@@ -253,9 +253,15 @@ export function htmlRecuperarCarrinho({ nome, kit, etapa, cupom = false }) {
       titulo: `${primeiro}, ainda dá tempo.`,
       corpo: 'Seu carrinho continua aberto. Se bateu alguma dúvida, é só responder este e-mail que a gente ajuda.',
     },
+    /*
+     * Este dizia "essa é a última vez que mandamos isso" e "depois de hoje
+     * não vamos mais te lembrar". As duas frases são promessas que a loja
+     * não cumpre: a sequência do carrinho para aqui, mas o remarketing e
+     * as campanhas continuam. Agora só avisa do cupom.
+     */
     {
-      titulo: `${primeiro}, essa é a última vez que mandamos isso.`,
-      corpo: 'Depois de hoje não vamos mais te lembrar desse carrinho.',
+      titulo: `${primeiro}, um cupom pra sua primeira compra.`,
+      corpo: 'Seu carrinho continua aberto, com os dados que você já preencheu.',
     },
   ]
   const t = textos[Math.min(etapa, textos.length - 1)]

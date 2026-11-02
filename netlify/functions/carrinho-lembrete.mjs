@@ -29,7 +29,7 @@ import { jaPagou } from './_lib/pagantes.mjs'
 const ASSUNTOS = [
   'Ainda dá tempo — seu pedido te espera',
   'Seu carrinho ainda está aberto',
-  'Seus 10% de desconto — e a última vez que avisamos',
+  'Seus 10% de desconto na primeira compra',
 ]
 
 /* Um texto por toque. O primeiro é ditado por ele e fica como está; os
