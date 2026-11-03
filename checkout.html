@@ -426,20 +426,16 @@ img,svg{display:block;max-width:100%}
           <h2>Seus dados</h2>
         </div>
 
-        <div class="row row--2">
+        <!-- O CPF ficava AQUI, segundo campo da pagina, antes ate do e-mail.
+             Em 02/11/2026, com 11 sessoes no checkout, 8 morreram nesta etapa e
+             as 3 que passaram preencheram nove campos PULANDO ele, pra serem
+             barradas pela validacao so no fim. Foi movido pro ultimo campo do
+             passo 2, depois do endereco inteiro. -->
+        <div class="row">
           <div class="field">
             <label for="nome">Nome</label>
             <input id="nome" name="nome" autocomplete="name" placeholder="Nome e sobrenome" required>
             <small></small>
-          </div>
-          <div class="field">
-            <label for="cpf">CPF</label>
-            <input id="cpf" name="cpf" inputmode="numeric" autocomplete="off" placeholder="000.000.000-00" maxlength="14" required>
-            <!-- CPF sem motivo declarado e onde mora a desconfianca de quem nao
-                 compra online sempre. A nota precisa dele de qualquer jeito;
-                 dizer isso custa uma linha. O texto some quando aparece erro,
-                 pra nao brigar com a mensagem de validacao. -->
-            <small class="dica">usado só pra emitir a nota do pedido</small>
           </div>
         </div>
 
@@ -506,6 +502,21 @@ img,svg{display:block;max-width:100%}
             <input id="cidade" name="cidade" placeholder="preenchido pelo CEP" required>
             <small></small>
           </div>
+        </div>
+
+        <!-- Ultimo campo do formulario, de proposito. Chega aqui quem ja
+             preencheu tudo, e ai o documento e um pedido pequeno em cima de
+             um trabalho ja feito, nao a primeira barreira da pagina.
+             O motivo declarado tambem mudou: dizia "pra emitir a nota", mas
+             ele e MEI e quem exige o documento e a transportadora, na DC-e da
+             etiqueta, obrigatoria desde 06/04/2026. -->
+        <div class="row row--2">
+          <div class="field">
+            <label for="cpf">CPF</label>
+            <input id="cpf" name="cpf" inputmode="numeric" autocomplete="off" placeholder="000.000.000-00" maxlength="14" required>
+            <small class="dica">a transportadora exige na etiqueta de envio</small>
+          </div>
+          <div></div>
         </div>
       
         <button class="btn btn--seguir" type="button" data-seguir hidden>
