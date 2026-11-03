@@ -241,6 +241,27 @@ img,svg{display:block;max-width:100%}
 .bump__txt b{font:600 14.5px/1.35 var(--font-body);color:var(--accent-ink)}
 .bump__txt small{font:13px/1.45 var(--font-body);color:var(--ink-2)}
 
+/* ---------- Etapa concluida, fechada ----------
+   So a etapa atual fica aberta. A concluida vira um resumo de uma ou duas
+   linhas com um lapis ao lado, do jeito que o checkout de referencia faz:
+   confirma o que ja foi dado sem ocupar meia tela. */
+.step{position:relative}
+.step[data-fechada] > *:not(.step__head):not(.step__gota):not(.step__resumo){display:none}
+.step__resumo{
+  display:none;margin:.2rem 0 0 calc(28px + var(--s3));
+  font:400 .875rem/1.65 var(--font-body);color:var(--ink-2);
+}
+.step[data-fechada] .step__resumo{display:block}
+.step[data-fechada]{padding-block:var(--s4)}
+.step[data-fechada] .step__head h2{color:var(--ok)}
+.step__editar{
+  position:absolute;top:var(--s4);right:var(--s4);
+  border:0;background:transparent;cursor:pointer;padding:.3rem;
+  color:var(--ink-3);line-height:0;display:none;
+}
+.step[data-fechada] .step__editar{display:block}
+.step__editar:hover{color:var(--brand-700)}
+
 /* ---------- Passo a passo numerado ----------
    Do checkout de referencia: a pessoa ve quantas etapas faltam antes de
    comecar. Tres bolinhas e tres rotulos, a atual em verde. */
@@ -308,6 +329,26 @@ img,svg{display:block;max-width:100%}
 .depo__q b{font-weight:700}
 .depo__q span{color:var(--accent);margin-left:.35rem;letter-spacing:1px}
 .depo__c p+p{font:400 .875rem/1.55 var(--font-body);color:var(--ink-2);margin:0}
+
+/* ---------- Resumo encolhido no celular ----------
+   Aberto, ele ocupava a tela inteira e empurrava o formulario pra fora.
+   Fechado, mostra so o total: quem chegou aqui veio da pagina de oferta
+   e ja sabe o que esta levando. Um toque abre. */
+.sum__puxe{display:none}
+@media (max-width:919px){
+  .sum__puxe{
+    display:flex;width:100%;align-items:center;justify-content:space-between;
+    gap:var(--s3);border:0;background:transparent;cursor:pointer;
+    padding:var(--s4);font:inherit;text-align:left;
+  }
+  .sum__puxe b{font:700 1.0625rem/1 var(--font-body);color:var(--ink)}
+  .sum__puxe span{font:600 .8125rem/1 var(--font-body);color:var(--ink-3)}
+  .sum__puxe svg{transition:transform .25s var(--ease);color:var(--ink-3)}
+  .sum[data-aberto] .sum__puxe svg{transform:rotate(180deg)}
+  .sum__top{display:none}
+  .sum__body{display:none;padding-top:0}
+  .sum[data-aberto] .sum__body{display:block}
+}
 
 /* ---------- Avaliacoes no resumo ----------
    Fica ACIMA da lista de garantias e ABAIXO do botao de comprar: quem
@@ -467,15 +508,8 @@ img,svg{display:block;max-width:100%}
   display:flex;align-items:center;justify-content:center;gap:var(--s2);text-align:center;
 }
 
-.bandeiras{
-  display:flex;flex-wrap:wrap;justify-content:center;gap:.4rem;
-  margin:var(--s6) 0 0;
-}
-.bandeiras span{
-  border:1px solid var(--line);border-radius:6px;background:var(--surface);
-  padding:.3rem .6rem;font:600 .72rem/1 var(--font-body);color:var(--ink-3);
-  letter-spacing:.2px;
-}
+.bandeiras{margin:var(--s6) 0 0;text-align:center}
+.bandeiras img{width:100%;max-width:430px;height:auto;opacity:.92}
 
 .foot{text-align:center;font-size:.8125rem;color:var(--ink-3);margin-top:var(--s4)}
 .foot a{margin-inline:.4rem}
@@ -562,6 +596,10 @@ img,svg{display:block;max-width:100%}
           <span class="step__n" aria-hidden="true">1</span>
           <h2>Seus dados</h2>
         </div>
+        <p class="step__resumo" data-resumo="1"></p>
+        <button class="step__editar" type="button" data-editar="1" aria-label="Editar seus dados">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+        </button>
 
         <!-- O CPF ficava AQUI, segundo campo da pagina, antes ate do e-mail.
              Em 02/11/2026, com 11 sessoes no checkout, 8 morreram nesta etapa e
@@ -611,6 +649,10 @@ img,svg{display:block;max-width:100%}
           <span class="step__n" aria-hidden="true">2</span>
           <h2>Endereço de entrega</h2>
         </div>
+        <p class="step__resumo" data-resumo="2"></p>
+        <button class="step__editar" type="button" data-editar="2" aria-label="Editar endereço">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+        </button>
 
         <!-- So o CEP de cara. Sete campos vazios na frente de quem acabou
              de chegar e o que o checkout de referencia evita. -->
@@ -815,7 +857,15 @@ img,svg{display:block;max-width:100%}
 
     <!-- ============ RESUMO ============ -->
     <aside class="aside">
-      <div class="sum">
+      <div class="sum" id="sum">
+        <!-- No celular isto e a unica coisa visivel do resumo ate alguem
+             tocar. Fechado de proposito: a pessoa veio da pagina de oferta
+             e ja sabe o que esta levando. -->
+        <button class="sum__puxe" type="button" id="sumPuxe" aria-expanded="false">
+          <b>Resumo do pedido</b>
+          <span id="sumTotal"></span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
         <p class="sum__top">RESUMO DO PEDIDO</p>
         <div class="sum__body">
 
@@ -897,12 +947,13 @@ img,svg{display:block;max-width:100%}
         </div>
       </div>
 
-      <!-- Formas de pagamento aceitas. Escritas, nao como logo: a marca
-           registrada de cada bandeira tem licenca propria, e o que
-           tranquiliza e saber que o cartao dela passa aqui. -->
+      <!-- Formas de pagamento aceitas, com as marcas. `loading=lazy`
+           porque isto fica no rodape: entra no fim da rolagem e nao
+           disputa banda com o formulario. -->
       <p class="bandeiras">
-        <span>Pix</span><span>Boleto</span><span>Visa</span>
-        <span>Mastercard</span><span>Elo</span><span>Amex</span>
+        <img src="img/bandeiras.png"
+             alt="Mastercard, Visa, Elo, American Express, boleto e Pix"
+             width="1041" height="173" loading="lazy" decoding="async">
       </p>
 
       <p class="foot">
@@ -1014,6 +1065,10 @@ img,svg{display:block;max-width:100%}
     el('linhaDesc').hidden   = !desconto;
     el('desc').textContent   = '— ' + brl(desconto);
     el('total').textContent  = brl(total);
+    // A barra encolhida do celular mostra o total, senao fechada ela nao
+    // diz nada de util.
+    var st = el('sumTotal');
+    if (st) st.textContent = brl(total);
     return total;
   }
   /* Aparece so onde existe. No kit de 4 nao existe: a caixa cabe 4. */
@@ -1089,7 +1144,12 @@ img,svg{display:block;max-width:100%}
        pessoas que abriram o checkout e nao digitaram nada.
        Trocar para false volta ao passo a passo, que e o padrao que
        costuma converter melhor em loja ja conhecida. */
-    var ETAPAS_ABERTAS = true;
+    /* Voltou pra false em 03/11/2026. O teste de 06/10 abriu tudo porque
+       a hipotese era que um quadrado so de Nome e CPF parecia pagina
+       quebrada. Com tudo aberto, 7 de 10 sessoes morreram na etapa 1 do
+       mesmo jeito — entao a hipotese nao se sustentou, e uma etapa por
+       vez e o formato do checkout que ele quer copiar. */
+    var ETAPAS_ABERTAS = false;
 
     if (ETAPAS_ABERTAS) {
       /* O contador de etapa vivia so no clique do "Continuar", que este
@@ -1246,6 +1306,9 @@ img,svg{display:block;max-width:100%}
         window.aqEtapa = Math.max(window.aqEtapa, i + 2);
         bt.disabled = true;
         bt.style.opacity = '.5';
+        // Fecha a que acabou e vira um resumo com lapis, em vez de
+        // deixar oito campos preenchidos empurrando a proxima pra baixo.
+        if (window.aqFecharEtapa) window.aqFecharEtapa(i + 1);
         abrir(i + 1);
       });
     });
@@ -1362,6 +1425,48 @@ img,svg{display:block;max-width:100%}
   }
 
   /* ---------- Busca de CEP (ViaCEP — gratuito, sem chave) ---------- */
+  /* ---------- Fecha a etapa concluida ----------
+     Escreve o resumo e esconde os campos. O lapis reabre. */
+  function textoResumo(n){
+    if (n === 1) {
+      return [el('nome').value, el('email').value,
+              el('cpf').value ? 'CPF ' + el('cpf').value : '',
+              el('tel').value].filter(Boolean).join('<br>');
+    }
+    var linha = [el('rua').value, el('numero').value].filter(Boolean).join(', ');
+    var compl = el('compl') && el('compl').value ? '<br>' + el('compl').value : '';
+    var baixo = [el('bairro').value, el('cidade').value].filter(Boolean).join(' · ');
+    return [linha + compl, baixo, el('cep').value && 'CEP ' + el('cep').value]
+      .filter(Boolean).join('<br>');
+  }
+  function fecharEtapa(n){
+    var sec = d.querySelectorAll('.step')[n - 1];
+    if (!sec) return;
+    var r = sec.querySelector('[data-resumo]');
+    if (r) r.innerHTML = textoResumo(n);
+    sec.setAttribute('data-fechada', '');
+  }
+  d.querySelectorAll('[data-editar]').forEach(function(bt){
+    bt.addEventListener('click', function(){
+      var sec = bt.closest('.step');
+      sec.removeAttribute('data-fechada');
+      var campo = sec.querySelector('input:not([type=radio])');
+      if (campo) campo.focus({ preventScroll: true });
+      sec.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    });
+  });
+  window.aqFecharEtapa = fecharEtapa;
+
+  /* ---------- Resumo encolhido no celular ---------- */
+  (function(){
+    var caixa = el('sum'), bt = el('sumPuxe');
+    if (!caixa || !bt) return;
+    bt.addEventListener('click', function(){
+      var aberto = caixa.toggleAttribute('data-aberto');
+      bt.setAttribute('aria-expanded', aberto ? 'true' : 'false');
+    });
+  })();
+
   var cep = el('cep'), cepMsg = el('cepMsg');
 
   /* ---------- Abre o resto do endereco ----------

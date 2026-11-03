@@ -424,15 +424,8 @@ img,svg{display:block;max-width:100%}
   display:flex;align-items:center;justify-content:center;gap:var(--s2);text-align:center;
 }
 
-.bandeiras{
-  display:flex;flex-wrap:wrap;justify-content:center;gap:.4rem;
-  margin:var(--s6) 0 0;
-}
-.bandeiras span{
-  border:1px solid var(--line);border-radius:6px;background:var(--surface);
-  padding:.3rem .6rem;font:600 .72rem/1 var(--font-body);color:var(--ink-3);
-  letter-spacing:.2px;
-}
+.bandeiras{margin:var(--s6) 0 0;text-align:center}
+.bandeiras img{width:100%;max-width:430px;height:auto;opacity:.92}
 
 .foot{text-align:center;font-size:.8125rem;color:var(--ink-3);margin-top:var(--s4)}
 .foot a{margin-inline:.4rem}
@@ -822,12 +815,13 @@ img,svg{display:block;max-width:100%}
         </div>
       </div>
 
-      <!-- Formas de pagamento aceitas. Escritas, nao como logo: a marca
-           registrada de cada bandeira tem licenca propria, e o que
-           tranquiliza e saber que o cartao dela passa aqui. -->
+      <!-- Formas de pagamento aceitas, com as marcas. `loading=lazy`
+           porque isto fica no rodape: entra no fim da rolagem e nao
+           disputa banda com o formulario. -->
       <p class="bandeiras">
-        <span>Pix</span><span>Boleto</span><span>Visa</span>
-        <span>Mastercard</span><span>Elo</span><span>Amex</span>
+        <img src="img/bandeiras.png"
+             alt="Mastercard, Visa, Elo, American Express, boleto e Pix"
+             width="1041" height="173" loading="lazy" decoding="async">
       </p>
 
       <p class="foot">
