@@ -70,10 +70,20 @@ img,svg{display:block;max-width:100%}
 }
 
 /* ---------- Layout ---------- */
-.wrap{max-width:1080px;margin-inline:auto;padding:var(--s6) var(--gutter) var(--s8)}
+.wrap{max-width:1240px;margin-inline:auto;padding:var(--s6) var(--gutter) var(--s8)}
 .grid{display:grid;gap:var(--s5)}
+/* Vazia ela nao existe: senao o grid abre uma linha com gap e sobra um
+   buraco acima da primeira etapa no celular. */
+.col--feitas:empty{display:none}
 @media (min-width:920px){
-  .grid{grid-template-columns:1fr 380px;gap:var(--s6);align-items:start}
+  /* Tres colunas, o desenho do checkout de referencia: o ja preenchido na
+     esquerda, a etapa aberta no meio, o resumo na direita. */
+  .grid{grid-template-columns:330px minmax(0,1fr) 340px;gap:var(--s6);align-items:start}
+  /* Enquanto nada foi concluido a coluna da esquerda nao existe, e a
+     etapa aberta ocupa as duas. O primeiro passo — onde 7 de 10 sessoes
+     morreram — abre com a tela inteira em vez de um terco dela. */
+  .grid:has(.col--feitas:empty) .col--ativa{grid-column:1 / 3}
+  .col--feitas{position:sticky;top:var(--s5)}
   .aside{position:sticky;top:var(--s5)}
 }
 /* No celular o resumo vem ANTES do formulario: a pessoa ve o que esta
@@ -252,7 +262,13 @@ img,svg{display:block;max-width:100%}
   font:400 .875rem/1.65 var(--font-body);color:var(--ink-2);
 }
 .step[data-fechada] .step__resumo{display:block}
-.step[data-fechada]{padding-block:var(--s4)}
+/* Concluida vira cartao verde, igual ao checkout de referencia: de
+   relance a pessoa ve o que ja esta resolvido sem precisar ler. */
+.step[data-fechada]{
+  padding-block:var(--s4);
+  background:var(--ok-100);border-color:#CFE8DB;box-shadow:none;
+}
+.step[data-fechada] .step__head{margin-bottom:0}
 .step[data-fechada] .step__head h2{color:var(--ok)}
 .step__editar{
   position:absolute;top:var(--s4);right:var(--s4);
@@ -608,9 +624,14 @@ img,svg{display:block;max-width:100%}
 
   <form class="grid" id="form" novalidate>
 
-    <div>
+    <!-- Coluna das etapas ja concluidas. Nasce vazia; o JS move pra ca o
+         <section> de cada etapa quando ela fecha. Fica DENTRO do <form>
+         de proposito: assim os campos nunca saem do formulario. -->
+    <div class="col col--feitas" id="colFeitas"></div>
+
+    <div class="col col--ativa" id="colAtiva">
       <!-- ============ 1. CONTATO ============ -->
-      <section class="step">
+      <section class="step" data-etapa="1">
         <div class="step__head">
           <span class="step__n" aria-hidden="true">1</span>
           <h2>Seus dados</h2>
@@ -662,7 +683,7 @@ img,svg{display:block;max-width:100%}
       </section>
 
       <!-- ============ 2. ENTREGA ============ -->
-      <section class="step">
+      <section class="step" data-etapa="2">
         <span class="step__gota" aria-hidden="true"></span>
         <div class="step__head">
           <span class="step__n" aria-hidden="true">2</span>
@@ -754,7 +775,7 @@ img,svg{display:block;max-width:100%}
       </section>
 
       <!-- ============ 3. PAGAMENTO ============ -->
-      <section class="step">
+      <section class="step" data-etapa="3">
         <span class="step__gota" aria-hidden="true"></span>
         <div class="step__head">
           <span class="step__n" aria-hidden="true">3</span>
@@ -1496,17 +1517,42 @@ img,svg{display:block;max-width:100%}
     return [linha + compl, baixo, el('cep').value && 'CEP ' + el('cep').value]
       .filter(Boolean).join('<br>');
   }
+  /* Por atributo, nao por indice: as etapas trocam de coluna, entao a
+     ordem no documento deixa de ser a ordem dos numeros. */
+  function etapaDe(n){ return d.querySelector('.step[data-etapa="' + n + '"]'); }
+
   function fecharEtapa(n){
-    var sec = d.querySelectorAll('.step')[n - 1];
+    var sec = etapaDe(n);
     if (!sec) return;
     var r = sec.querySelector('[data-resumo]');
     if (r) r.innerHTML = textoResumo(n);
     sec.setAttribute('data-fechada', '');
+    // A bolinha do numero vira o certo verde, que ja existia pro modo de
+    // formulario aberto e nunca era ligado no passo a passo.
+    sec.setAttribute('data-feita', '');
+    var feitas = el('colFeitas');
+    if (feitas) feitas.appendChild(sec);
   }
+
+  /* O lapis traz a etapa de volta pro meio, na posicao do numero dela:
+     reabrir a 1 com a 3 aberta tem que devolver a 1 pra cima, nao pro fim
+     da coluna. */
+  function devolverEtapa(sec){
+    var ativa = el('colAtiva');
+    if (!ativa) return;
+    var n = Number(sec.getAttribute('data-etapa'));
+    var alvo = null;
+    Array.prototype.forEach.call(ativa.querySelectorAll('.step'), function(o){
+      if (!alvo && Number(o.getAttribute('data-etapa')) > n) alvo = o;
+    });
+    ativa.insertBefore(sec, alvo || ativa.querySelector('.depo'));
+  }
+
   d.querySelectorAll('[data-editar]').forEach(function(bt){
     bt.addEventListener('click', function(){
       var sec = bt.closest('.step');
       sec.removeAttribute('data-fechada');
+      devolverEtapa(sec);
       var campo = sec.querySelector('input:not([type=radio])');
       if (campo) campo.focus({ preventScroll: true });
       sec.scrollIntoView({ block: 'start', behavior: 'smooth' });
