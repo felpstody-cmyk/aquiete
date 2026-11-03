@@ -508,6 +508,10 @@ img,svg{display:block;max-width:100%}
   display:flex;align-items:center;justify-content:center;gap:var(--s2);text-align:center;
 }
 
+.pay__bandeiras{
+  display:block;width:100%;max-width:290px;height:auto;
+  margin-top:.45rem;opacity:.9;
+}
 .bandeiras{margin:var(--s6) 0 0;text-align:center}
 .bandeiras img{width:100%;max-width:430px;height:auto;opacity:.92}
 
@@ -752,6 +756,11 @@ img,svg{display:block;max-width:100%}
             <span class="pay__txt">
               <strong class="pay__name">Cartão de crédito</strong>
               <span class="pay__desc">Parcelado, com juros a partir da 2ª parcela</span>
+              <!-- As bandeiras aqui dentro, nao so no rodape: quem esta
+                   escolhendo como pagar ve na hora se o cartao dela passa. -->
+              <img class="pay__bandeiras" src="img/cartoes.png"
+                   alt="Amex, Visa, Diners, Mastercard, Discover, Aura e Elo"
+                   width="1187" height="127" loading="lazy" decoding="async">
             </span>
           </label>
 
