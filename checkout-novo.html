@@ -585,6 +585,14 @@ img,svg{display:block;max-width:100%}
             <small class="dica">pra te mandar o código de rastreio</small>
           </div>
           <div class="field">
+            <label for="cpf">CPF</label>
+            <input id="cpf" name="cpf" inputmode="numeric" autocomplete="off" placeholder="000.000.000-00" maxlength="14" required>
+            <small class="dica">a transportadora exige na etiqueta</small>
+          </div>
+        </div>
+
+        <div class="row row--2">
+          <div class="field">
             <label for="tel">Celular</label>
             <input id="tel" name="tel" inputmode="numeric" autocomplete="tel" placeholder="(00) 00000-0000" maxlength="15" required>
             <small></small>
@@ -664,20 +672,6 @@ img,svg{display:block;max-width:100%}
         </div>
         </div>
 
-        <!-- Ultimo campo do formulario, de proposito. Chega aqui quem ja
-             preencheu tudo, e ai o documento e um pedido pequeno em cima de
-             um trabalho ja feito, nao a primeira barreira da pagina.
-             O motivo declarado tambem mudou: dizia "pra emitir a nota", mas
-             ele e MEI e quem exige o documento e a transportadora, na DC-e da
-             etiqueta, obrigatoria desde 06/04/2026. -->
-        <div class="row row--2">
-          <div class="field">
-            <label for="cpf">CPF</label>
-            <input id="cpf" name="cpf" inputmode="numeric" autocomplete="off" placeholder="000.000.000-00" maxlength="14" required>
-            <small class="dica">a transportadora exige na etiqueta de envio</small>
-          </div>
-          <div></div>
-        </div>
       
         <button class="btn btn--seguir" type="button" data-seguir hidden>
           Continuar
