@@ -514,6 +514,10 @@ img,svg{display:block;max-width:100%}
 }
 .bandeiras{margin:var(--s6) 0 0;text-align:center}
 .bandeiras img{width:100%;max-width:430px;height:auto;opacity:.92}
+.bandeiras__mais{
+  display:block;margin-top:.3rem;
+  font:400 .6875rem/1 var(--font-body);color:var(--ink-3);opacity:.8;
+}
 
 .foot{text-align:center;font-size:.8125rem;color:var(--ink-3);margin-top:var(--s4)}
 .foot a{margin-inline:.4rem}
@@ -963,6 +967,9 @@ img,svg{display:block;max-width:100%}
         <img src="img/bandeiras.png"
              alt="Mastercard, Visa, Elo, American Express, boleto e Pix"
              width="1041" height="173" loading="lazy" decoding="async">
+        <!-- A imagem mostra algumas bandeiras, nao todas. "entre outros"
+             evita que quem tem um cartao fora da foto ache que nao passa. -->
+        <small class="bandeiras__mais">entre outros</small>
       </p>
 
       <!-- Saiu o rodape de links. "Voltar para a loja" e uma porta de
