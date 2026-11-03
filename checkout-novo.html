@@ -1338,29 +1338,13 @@ img,svg{display:block;max-width:100%}
       if (i === 2 && botaoCompra) botaoCompra.removeAttribute('data-esperando');
     }
 
-    // Cada etapa valida so os campos dela.
+    /* Cada etapa valida so os campos dela, pelas regras de MSG_CAMPO — as
+       mesmas que o campo usa sozinho quando a pessoa sai dele. Duas
+       listas da mesma coisa era o que deixava um erro antigo preso na
+       tela depois do campo ja estar preenchido. */
     var checagens = [
-      function(){
-        var ok = true;
-        /* As mensagens falam do que fazer, não do que está errado. "CPF
-           inválido" soa como acusação e faz a pessoa desistir em vez de
-           reler; faltar dígito e trocar dígito são problemas diferentes e
-           merecem instruções diferentes. */
-        ok = erro(el('nome'),  el('nome').value.trim().split(/\s+/).length < 2 ? 'Falta o sobrenome' : '') && ok;
-        ok = erro(el('cpf'),   msgCpf(el('cpf').value)) && ok;
-        ok = erro(el('email'), /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(el('email').value) ? '' : 'Confira o e-mail — falta o @ ou o ponto') && ok;
-        ok = erro(el('tel'),   msgTel(el('tel').value)) && ok;
-        return ok;
-      },
-      function(){
-        var ok = true;
-        ok = erro(el('cep'),    el('cep').value.replace(/\D/g,'').length === 8 ? '' : 'Falta número — o CEP tem 8') && ok;
-        ok = erro(el('rua'),    el('rua').value.trim() ? '' : 'Falta a rua') && ok;
-        ok = erro(el('numero'), el('numero').value.trim() ? '' : 'Falta o número') && ok;
-        ok = erro(el('bairro'), el('bairro').value.trim() ? '' : 'Falta o bairro') && ok;
-        ok = erro(el('cidade'), el('cidade').value.trim() ? '' : 'Falta a cidade') && ok;
-        return ok;
-      }
+      function(){ return conferirEtapa(['nome','cpf','email','tel']); },
+      function(){ return conferirEtapa(['cep','rua','numero','bairro','cidade']); }
     ];
 
     /* Até onde a pessoa chegou, pro painel poder responder "parou aonde?".
@@ -1579,7 +1563,7 @@ img,svg{display:block;max-width:100%}
      nao zera. Os lotes do painel sao controle interno — nenhuma pagina do
      site consulta aquilo, entao nada aqui trava uma venda.
      Pra trocar a frase, muda SO a linha abaixo. Vazio esconde a faixa. */
-  var AVISO_ESTOQUE = 'Últimos 31 kits restantes';
+  var AVISO_ESTOQUE = 'Últimas 31 unidades restantes';
   (function(){
     var faixa = el('avisoEstoque');
     if (!faixa || !AVISO_ESTOQUE) return;
@@ -1607,22 +1591,21 @@ img,svg{display:block;max-width:100%}
     if (r && !r.hasAttribute('data-abre')) r.setAttribute('data-abre', '');
   }
 
-  /* ---------- Visto verde ----------
-     Marca o campo como pronto. Mesmo criterio da validacao que ja existe:
-     se tem valor e nao tem erro visivel, esta ok. */
-  function vistoVerde(input){
-    var f = input.closest('.field');
-    if (!f) return;
-    var cheio = String(input.value || '').trim().length > 0;
-    var temErro = f.querySelector('small[data-err]');
-    f.toggleAttribute('data-ok', cheio && !temErro);
-  }
-  ['nome','email','tel','cep','rua','numero','bairro','cidade','cpf','destinatario']
+  /* ---------- Visto verde e limpeza do vermelho ----------
+     Digitando so limpa; saindo do campo mostra. Sem isto um erro marcado
+     no Continuar ficava preso na tela mesmo depois do campo preenchido —
+     e, como o verde exigia "sem erro", o campo nunca ficava verde. */
+  function vistoVerde(input){ if (input) conferirCampo(input.id, false); }
+  ['nome','email','tel','cep','rua','numero','bairro','cidade','cpf','compl','destinatario']
     .forEach(function(id){
       var i = el(id);
       if (!i) return;
-      i.addEventListener('blur', function(){ vistoVerde(i); });
-      i.addEventListener('input', function(){ if (i.value) vistoVerde(i); });
+      i.addEventListener('input', function(){ conferirCampo(id, false); });
+      i.addEventListener('blur',  function(){
+        // Campo nunca tocado e ainda vazio nao vira erro so por passar o
+        // foco por ele: isso acusaria a pessoa antes dela chegar la.
+        conferirCampo(id, String(i.value || '').trim().length > 0);
+      });
     });
 
   /* ---------- Destinatario segue o nome ----------
@@ -1719,6 +1702,49 @@ img,svg{display:block;max-width:100%}
   escolher(d.querySelector('.pay input:checked'));
 
   /* ---------- Validação ---------- */
+  /* ---------- Uma regra por campo ----------
+     Fonte unica da verdade. Antes a mensagem so existia dentro de
+     `checagens`, que roda no clique do Continuar, e o verde so olhava se
+     havia erro na tela — entao um erro antigo nunca era reavaliado e o
+     campo ficava preenchido e vermelho ao mesmo tempo.
+
+     As mensagens falam do que fazer, nao do que esta errado. "CPF
+     invalido" soa como acusacao e faz a pessoa desistir em vez de reler;
+     faltar digito e trocar digito sao problemas diferentes e merecem
+     instrucoes diferentes. */
+  var MSG_CAMPO = {
+    nome:   function(v){ return v.trim().split(/\s+/).length < 2 ? 'Falta o sobrenome' : ''; },
+    cpf:    function(v){ return msgCpf(v); },
+    email:  function(v){ return /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(v) ? '' : 'Confira o e-mail — falta o @ ou o ponto'; },
+    tel:    function(v){ return msgTel(v); },
+    cep:    function(v){ return v.replace(/\D/g,'').length === 8 ? '' : 'Falta número — o CEP tem 8'; },
+    rua:    function(v){ return v.trim() ? '' : 'Falta a rua'; },
+    numero: function(v){ return v.trim() ? '' : 'Falta o número'; },
+    bairro: function(v){ return v.trim() ? '' : 'Falta o bairro'; },
+    cidade: function(v){ return v.trim() ? '' : 'Falta a cidade'; }
+  };
+
+  /* Reavalia UM campo. `mostrar` separa os dois momentos: digitando ela
+     so limpa, porque acusar a cada tecla briga com quem esta no meio do
+     CPF; saindo do campo ela mostra, que e quando a pessoa terminou.
+     Devolve se o campo passou, pro Continuar somar. */
+  function conferirCampo(id, mostrar){
+    var i = el(id);
+    if (!i) return true;
+    var regra = MSG_CAMPO[id];
+    var msg = regra ? regra(String(i.value || '')) : '';
+    if (mostrar || !msg) erro(i, msg);
+    var f = i.closest('.field');
+    if (f) f.toggleAttribute('data-ok', String(i.value || '').trim().length > 0 && !msg);
+    return !msg;
+  }
+
+  function conferirEtapa(ids){
+    var ok = true;
+    ids.forEach(function(id){ if (!conferirCampo(id, true)) ok = false; });
+    return ok;
+  }
+
   function erro(campo, msg){
     var s = campo.parentElement.querySelector('small');
     // Campos com dica fixa (o CPF explica pra que serve) guardam o texto
