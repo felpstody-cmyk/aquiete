@@ -73,6 +73,17 @@ img,svg{display:block;max-width:100%}
   .grid{grid-template-columns:1fr 380px;gap:var(--s6);align-items:start}
   .aside{position:sticky;top:var(--s5)}
 }
+/* No celular o resumo vem ANTES do formulario: a pessoa ve o que esta
+   levando e quanto custa antes de comecar a digitar. */
+@media (max-width:919px){
+  .aside{order:-1}
+  /* O botao de comprar mora dentro do resumo e apareceria antes dos
+     campos. No celular quem fecha e o .btn--fecha, no fim das etapas. */
+  .aside .sum .btn{display:none}
+  /* As avaliacoes ja estao na faixa do topo e no bloco de depoimentos.
+     Tres vezes a mesma coisa so empurra o formulario pra baixo. */
+  .aside .aval{display:none}
+}
 
 /* ---------- Blocos do formulário ---------- */
 .step{
@@ -226,6 +237,34 @@ img,svg{display:block;max-width:100%}
 .bump__txt{display:flex;flex-direction:column;gap:3px}
 .bump__txt b{font:600 14.5px/1.35 var(--font-body);color:var(--accent-ink)}
 .bump__txt small{font:13px/1.45 var(--font-body);color:var(--ink-2)}
+
+/* ---------- Prova social antes do formulario ---------- */
+.prova{
+  text-align:center;padding:var(--s4) var(--gutter) 0;
+}
+.prova__est{color:var(--accent);font-size:1.35rem;letter-spacing:3px;display:block}
+.prova__n{margin:.3rem 0 0;font:400 .9375rem/1.3 var(--font-body);color:var(--ink-2)}
+.prova__n b{font-weight:700;color:var(--ink)}
+.prova__seg{
+  margin:.55rem 0 0;display:inline-flex;align-items:center;gap:.4rem;
+  font:400 .8125rem/1.3 var(--font-body);color:var(--ok);
+}
+
+/* ---------- Depoimentos depois do botao ---------- */
+.depo{margin-top:var(--s6)}
+.depo h2{
+  font:600 1.0625rem/1.3 var(--font-body);color:var(--ink);
+  text-align:center;margin:0 0 var(--s4);
+}
+.depo__c{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);
+  padding:var(--s4);margin-bottom:var(--s3);
+}
+.depo__c:last-child{margin-bottom:0}
+.depo__q{margin:0 0 .4rem;font:400 .875rem/1.3 var(--font-body);color:var(--ink)}
+.depo__q b{font-weight:700}
+.depo__q span{color:var(--accent);margin-left:.35rem;letter-spacing:1px}
+.depo__c p+p{font:400 .875rem/1.55 var(--font-body);color:var(--ink-2);margin:0}
 
 /* ---------- Avaliacoes no resumo ----------
    Fica ACIMA da lista de garantias e ABAIXO do botao de comprar: quem
@@ -385,7 +424,17 @@ img,svg{display:block;max-width:100%}
   display:flex;align-items:center;justify-content:center;gap:var(--s2);text-align:center;
 }
 
-.foot{text-align:center;font-size:.8125rem;color:var(--ink-3);margin-top:var(--s6)}
+.bandeiras{
+  display:flex;flex-wrap:wrap;justify-content:center;gap:.4rem;
+  margin:var(--s6) 0 0;
+}
+.bandeiras span{
+  border:1px solid var(--line);border-radius:6px;background:var(--surface);
+  padding:.3rem .6rem;font:600 .72rem/1 var(--font-body);color:var(--ink-3);
+  letter-spacing:.2px;
+}
+
+.foot{text-align:center;font-size:.8125rem;color:var(--ink-3);margin-top:var(--s4)}
 .foot a{margin-inline:.4rem}
 
 @media (prefers-reduced-motion:reduce){
@@ -432,6 +481,18 @@ img,svg{display:block;max-width:100%}
 <main class="wrap">
   <h1 class="sr">Finalizar compra</h1>
 
+  <!-- Prova social ANTES do formulario. O checkout de referencia poe em
+       dois lugares, e e isso que cerca a duvida: aqui pra pessoa comecar
+       confiando, e embaixo do botao pra quem travou no meio. -->
+  <div class="prova">
+    <span class="prova__est" aria-hidden="true">★★★★★</span>
+    <p class="prova__n"><b>5,0</b> · 1.485 avaliações</p>
+    <p class="prova__seg">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+      Seu pagamento e seus dados estão protegidos
+    </p>
+  </div>
+
   <form class="grid" id="form" novalidate>
 
     <div>
@@ -459,7 +520,9 @@ img,svg{display:block;max-width:100%}
           <div class="field">
             <label for="email">E-mail</label>
             <input id="email" name="email" type="email" autocomplete="email" placeholder="para receber o rastreio" required>
-            <small></small>
+            <!-- Campo sem motivo declarado trava quem desconfia. Foi o que
+                 aconteceu com o CPF, que era o segundo campo da pagina. -->
+            <small class="dica">pra te mandar o código de rastreio</small>
           </div>
           <div class="field">
             <label for="tel">Celular</label>
@@ -640,6 +703,39 @@ img,svg{display:block;max-width:100%}
           <small data-btn-sub>Pagamento via Pix</small>
         </button>
       </section>
+
+      <!-- Os mesmos comentarios que estao publicados na /psiquiatra. Quem
+           desconfiar e for conferir la encontra os mesmos, com o texto
+           inteiro. Sem cidade e sem idade: isso o checkout de referencia
+           tem porque os depoimentos dele trazem, os daqui nao trazem, e
+           inventar seria o oposto de construir confianca. -->
+      <section class="depo">
+        <h2>Quem comprou, aprova</h2>
+
+        <div class="depo__c">
+          <p class="depo__q"><b>Márcia Nascimento</b> <span aria-hidden="true">★★★★★</span></p>
+          <p>“Tô usando faz umas 6 semanas e minhas crises ficaram muito mais leves.
+             Não tenho mais aquele aperto horrível no peito.”</p>
+        </div>
+
+        <div class="depo__c">
+          <p class="depo__q"><b>Lourdes Carvalho</b> <span aria-hidden="true">★★★★★</span></p>
+          <p>“Tô usando há 3 meses e é o que eu pego na hora que o coração dispara.
+             É super fácil de usar.”</p>
+        </div>
+
+        <div class="depo__c">
+          <p class="depo__q"><b>Elaine Borges</b> <span aria-hidden="true">★★★★★</span></p>
+          <p>“Tenho 52 anos e não queria tomar mais remédio, então resolvi testar.
+             E não é que tá funcionando? Pingo as gotas e sigo o dia.”</p>
+        </div>
+
+        <div class="depo__c">
+          <p class="depo__q"><b>Débora Paiva</b> <span aria-hidden="true">★★★★★</span></p>
+          <p>“Dei pra minha irmã porque ela vivia tendo crise no trabalho e agora
+             ela não para de falar disso.”</p>
+        </div>
+      </section>
     </div>
 
     <!-- ============ RESUMO ============ -->
@@ -725,6 +821,14 @@ img,svg{display:block;max-width:100%}
 
         </div>
       </div>
+
+      <!-- Formas de pagamento aceitas. Escritas, nao como logo: a marca
+           registrada de cada bandeira tem licenca propria, e o que
+           tranquiliza e saber que o cartao dela passa aqui. -->
+      <p class="bandeiras">
+        <span>Pix</span><span>Boleto</span><span>Visa</span>
+        <span>Mastercard</span><span>Elo</span><span>Amex</span>
+      </p>
 
       <p class="foot">
         <a href="index.html">Voltar para a loja</a> ·
