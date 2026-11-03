@@ -432,6 +432,16 @@ img,svg{display:block;max-width:100%}
 .slot p{font-size:.8125rem;color:var(--ink-2);max-width:44ch;margin-inline:auto}
 .slot code{background:var(--surface);padding:.1rem .35rem;border-radius:4px;font-size:.75rem}
 
+/* ---------- Faixa acima das formas de pagamento ----------
+   Mesmo lugar do checkout de referencia, cor da loja: o verde que ja
+   existe aqui, nao o verde-limao dele. */
+.aviso-estoque{
+  margin:0 0 var(--s4);padding:.85rem var(--s4);
+  background:var(--ok);color:#fff;border-radius:var(--r-sm);
+  font:650 .9375rem/1.3 var(--font-body);text-align:center;
+}
+.aviso-estoque[hidden]{display:none}
+
 /* ---------- Resumo ---------- */
 .sum{
   background:var(--surface);border:1px solid var(--line);
@@ -781,6 +791,10 @@ img,svg{display:block;max-width:100%}
           <span class="step__n" aria-hidden="true">3</span>
           <h2>Forma de pagamento</h2>
         </div>
+
+        <!-- Faixa de aviso, preenchida pelo JS a partir de AVISO_ESTOQUE.
+             Nasce vazia e escondida: sem script, nenhuma frase aparece. -->
+        <p class="aviso-estoque" id="avisoEstoque" hidden></p>
 
         <div class="pays" role="radiogroup" aria-label="Forma de pagamento">
 
@@ -1559,6 +1573,19 @@ img,svg{display:block;max-width:100%}
     });
   });
   window.aqFecharEtapa = fecharEtapa;
+
+  /* ---------- Faixa acima das formas de pagamento ----------
+     TEXTO FIXO, por decisao dele: nao desce com a venda, nao le estoque e
+     nao zera. Os lotes do painel sao controle interno — nenhuma pagina do
+     site consulta aquilo, entao nada aqui trava uma venda.
+     Pra trocar a frase, muda SO a linha abaixo. Vazio esconde a faixa. */
+  var AVISO_ESTOQUE = 'Últimos 31 kits restantes';
+  (function(){
+    var faixa = el('avisoEstoque');
+    if (!faixa || !AVISO_ESTOQUE) return;
+    faixa.textContent = AVISO_ESTOQUE;
+    faixa.hidden = false;
+  })();
 
   /* ---------- Resumo encolhido no celular ---------- */
   (function(){
