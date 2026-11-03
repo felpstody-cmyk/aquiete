@@ -346,8 +346,13 @@ img,svg{display:block;max-width:100%}
   .sum__puxe svg{transition:transform .25s var(--ease);color:var(--ink-3)}
   .sum[data-aberto] .sum__puxe svg{transform:rotate(180deg)}
   .sum__top{display:none}
-  .sum__body{display:none;padding-top:0}
-  .sum[data-aberto] .sum__body{display:block}
+  /* O corpo fica, mas fechado so o PRODUTO aparece. Mostrar so o
+     total deixava a pessoa sem saber o que estava levando, e obrigava
+     a abrir pra conferir. O resto (cupom, frete, botao, garantias) so
+     entra quando ela abre. */
+  .sum__body{display:block;padding-top:0}
+  .sum:not([data-aberto]) .sum__body > *:not(.item){display:none}
+  .sum:not([data-aberto]) .item{margin-bottom:0;padding-bottom:var(--s4)}
 }
 
 /* ---------- Avaliacoes no resumo ----------
