@@ -67,10 +67,20 @@ img,svg{display:block;max-width:100%}
 }
 
 /* ---------- Layout ---------- */
-.wrap{max-width:1080px;margin-inline:auto;padding:var(--s6) var(--gutter) var(--s8)}
+.wrap{max-width:1240px;margin-inline:auto;padding:var(--s6) var(--gutter) var(--s8)}
 .grid{display:grid;gap:var(--s5)}
+/* Vazia ela nao existe: senao o grid abre uma linha com gap e sobra um
+   buraco acima da primeira etapa no celular. */
+.col--feitas:empty{display:none}
 @media (min-width:920px){
-  .grid{grid-template-columns:1fr 380px;gap:var(--s6);align-items:start}
+  /* Tres colunas, o desenho do checkout de referencia: o ja preenchido na
+     esquerda, a etapa aberta no meio, o resumo na direita. */
+  .grid{grid-template-columns:330px minmax(0,1fr) 340px;gap:var(--s6);align-items:start}
+  /* Enquanto nada foi concluido a coluna da esquerda nao existe, e a
+     etapa aberta ocupa as duas. O primeiro passo — onde 7 de 10 sessoes
+     morreram — abre com a tela inteira em vez de um terco dela. */
+  .grid:has(.col--feitas:empty) .col--ativa{grid-column:1 / 3}
+  .col--feitas{position:sticky;top:var(--s5)}
   .aside{position:sticky;top:var(--s5)}
 }
 /* No celular o resumo vem ANTES do formulario: a pessoa ve o que esta
@@ -238,6 +248,73 @@ img,svg{display:block;max-width:100%}
 .bump__txt b{font:600 14.5px/1.35 var(--font-body);color:var(--accent-ink)}
 .bump__txt small{font:13px/1.45 var(--font-body);color:var(--ink-2)}
 
+/* ---------- Etapa concluida, fechada ----------
+   So a etapa atual fica aberta. A concluida vira um resumo de uma ou duas
+   linhas com um lapis ao lado, do jeito que o checkout de referencia faz:
+   confirma o que ja foi dado sem ocupar meia tela. */
+.step{position:relative}
+.step[data-fechada] > *:not(.step__head):not(.step__gota):not(.step__resumo){display:none}
+.step__resumo{
+  display:none;margin:.2rem 0 0 calc(28px + var(--s3));
+  font:400 .875rem/1.65 var(--font-body);color:var(--ink-2);
+}
+.step[data-fechada] .step__resumo{display:block}
+/* Concluida vira cartao verde, igual ao checkout de referencia: de
+   relance a pessoa ve o que ja esta resolvido sem precisar ler. */
+.step[data-fechada]{
+  padding-block:var(--s4);
+  background:var(--ok-100);border-color:#CFE8DB;box-shadow:none;
+}
+.step[data-fechada] .step__head{margin-bottom:0}
+.step[data-fechada] .step__head h2{color:var(--ok)}
+.step__editar{
+  position:absolute;top:var(--s4);right:var(--s4);
+  border:0;background:transparent;cursor:pointer;padding:.3rem;
+  color:var(--ink-3);line-height:0;display:none;
+}
+.step[data-fechada] .step__editar{display:block}
+.step__editar:hover{color:var(--brand-700)}
+
+/* ---------- Passo a passo numerado ----------
+   Do checkout de referencia: a pessoa ve quantas etapas faltam antes de
+   comecar. Tres bolinhas e tres rotulos, a atual em verde. */
+.passos{
+  display:flex;justify-content:center;gap:var(--s5);
+  padding:var(--s5) var(--gutter) 0;
+}
+.passo{text-align:center;width:88px}
+.passo__n{
+  width:42px;height:42px;margin:0 auto .4rem;border-radius:50%;
+  display:grid;place-items:center;
+  font:700 1.0625rem/1 var(--font-body);
+  background:var(--sand);color:var(--ink-3);
+  transition:background-color .3s var(--ease), color .3s;
+}
+.passo__r{font:400 .75rem/1.3 var(--font-body);color:var(--ink-3)}
+.passo[data-ativo] .passo__n{background:var(--ok);color:#fff}
+.passo[data-ativo] .passo__r{color:var(--ink);font-weight:600}
+.passo[data-feito] .passo__n{background:var(--ok-100);color:var(--ok)}
+
+/* ---------- Visto verde no campo valido ---------- */
+.field{position:relative}
+.field[data-ok] input{border-color:#B9DCCB;background:#F4FAF7}
+.field[data-ok]::after{
+  content:"";position:absolute;right:13px;top:38px;width:13px;height:7px;
+  border-left:2.5px solid var(--ok);border-bottom:2.5px solid var(--ok);
+  transform:rotate(-45deg);pointer-events:none;
+}
+
+/* ---------- Endereco em duas partes ----------
+   So o CEP aparece primeiro. O resto entra depois, ja preenchido: e o
+   que o checkout de referencia faz, e tira sete campos vazios da frente
+   de quem acabou de chegar. */
+.resto-end{display:none}
+.resto-end[data-abre]{display:block;animation:entra .35s var(--ease) both}
+.cidade-lado{
+  font:400 .875rem/1 var(--font-body);color:var(--ink-3);
+  align-self:end;padding-bottom:.85rem;
+}
+
 /* ---------- Prova social antes do formulario ---------- */
 .prova{
   text-align:center;padding:var(--s4) var(--gutter) 0;
@@ -265,6 +342,31 @@ img,svg{display:block;max-width:100%}
 .depo__q b{font-weight:700}
 .depo__q span{color:var(--accent);margin-left:.35rem;letter-spacing:1px}
 .depo__c p+p{font:400 .875rem/1.55 var(--font-body);color:var(--ink-2);margin:0}
+
+/* ---------- Resumo encolhido no celular ----------
+   Aberto, ele ocupava a tela inteira e empurrava o formulario pra fora.
+   Fechado, mostra so o total: quem chegou aqui veio da pagina de oferta
+   e ja sabe o que esta levando. Um toque abre. */
+.sum__puxe{display:none}
+@media (max-width:919px){
+  .sum__puxe{
+    display:flex;width:100%;align-items:center;justify-content:space-between;
+    gap:var(--s3);border:0;background:transparent;cursor:pointer;
+    padding:var(--s4);font:inherit;text-align:left;
+  }
+  .sum__puxe b{font:700 1.0625rem/1 var(--font-body);color:var(--ink)}
+  .sum__puxe span{font:600 .8125rem/1 var(--font-body);color:var(--ink-3)}
+  .sum__puxe svg{transition:transform .25s var(--ease);color:var(--ink-3)}
+  .sum[data-aberto] .sum__puxe svg{transform:rotate(180deg)}
+  .sum__top{display:none}
+  /* O corpo fica, mas fechado so o PRODUTO aparece. Mostrar so o
+     total deixava a pessoa sem saber o que estava levando, e obrigava
+     a abrir pra conferir. O resto (cupom, frete, botao, garantias) so
+     entra quando ela abre. */
+  .sum__body{display:block;padding-top:0}
+  .sum:not([data-aberto]) .sum__body > *:not(.item){display:none}
+  .sum:not([data-aberto]) .item{margin-bottom:0;padding-bottom:var(--s4)}
+}
 
 /* ---------- Avaliacoes no resumo ----------
    Fica ACIMA da lista de garantias e ABAIXO do botao de comprar: quem
@@ -326,6 +428,16 @@ img,svg{display:block;max-width:100%}
 .slot h3{font-size:.9375rem;font-family:var(--font-body);font-weight:700;color:var(--brand-700);margin-bottom:var(--s2)}
 .slot p{font-size:.8125rem;color:var(--ink-2);max-width:44ch;margin-inline:auto}
 .slot code{background:var(--surface);padding:.1rem .35rem;border-radius:4px;font-size:.75rem}
+
+/* ---------- Faixa acima das formas de pagamento ----------
+   Mesmo lugar do checkout de referencia, cor da loja: o verde que ja
+   existe aqui, nao o verde-limao dele. */
+.aviso-estoque{
+  margin:0 0 var(--s4);padding:.85rem var(--s4);
+  background:var(--ok);color:#fff;border-radius:var(--r-sm);
+  font:650 .9375rem/1.3 var(--font-body);text-align:center;
+}
+.aviso-estoque[hidden]{display:none}
 
 /* ---------- Resumo ---------- */
 .sum{
@@ -491,6 +603,23 @@ img,svg{display:block;max-width:100%}
   <!-- Prova social ANTES do formulario. O checkout de referencia poe em
        dois lugares, e e isso que cerca a duvida: aqui pra pessoa comecar
        confiando, e embaixo do botao pra quem travou no meio. -->
+  <!-- Passo a passo. O numero de cada etapa ja existia dentro dela; aqui
+       ele sobe pro topo, que e onde diz "falta pouco". -->
+  <div class="passos" id="passos">
+    <div class="passo" data-passo="1" data-ativo>
+      <div class="passo__n">1</div>
+      <div class="passo__r">Seus dados</div>
+    </div>
+    <div class="passo" data-passo="2">
+      <div class="passo__n">2</div>
+      <div class="passo__r">Entrega</div>
+    </div>
+    <div class="passo" data-passo="3">
+      <div class="passo__n">3</div>
+      <div class="passo__r">Pagamento</div>
+    </div>
+  </div>
+
   <div class="prova">
     <span class="prova__est" aria-hidden="true">★★★★★</span>
     <p class="prova__n"><b>5,0</b> · 1.485 avaliações</p>
@@ -502,13 +631,22 @@ img,svg{display:block;max-width:100%}
 
   <form class="grid" id="form" novalidate>
 
-    <div>
+    <!-- Coluna das etapas ja concluidas. Nasce vazia; o JS move pra ca o
+         <section> de cada etapa quando ela fecha. Fica DENTRO do <form>
+         de proposito: assim os campos nunca saem do formulario. -->
+    <div class="col col--feitas" id="colFeitas"></div>
+
+    <div class="col col--ativa" id="colAtiva">
       <!-- ============ 1. CONTATO ============ -->
-      <section class="step">
+      <section class="step" data-etapa="1">
         <div class="step__head">
           <span class="step__n" aria-hidden="true">1</span>
           <h2>Seus dados</h2>
         </div>
+        <p class="step__resumo" data-resumo="1"></p>
+        <button class="step__editar" type="button" data-editar="1" aria-label="Editar seus dados">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+        </button>
 
         <!-- O CPF ficava AQUI, segundo campo da pagina, antes ate do e-mail.
              Em 02/11/2026, com 11 sessoes no checkout, 8 morreram nesta etapa e
@@ -532,6 +670,14 @@ img,svg{display:block;max-width:100%}
             <small class="dica">pra te mandar o código de rastreio</small>
           </div>
           <div class="field">
+            <label for="cpf">CPF</label>
+            <input id="cpf" name="cpf" inputmode="numeric" autocomplete="off" placeholder="000.000.000-00" maxlength="14" required>
+            <small class="dica">a transportadora exige na etiqueta</small>
+          </div>
+        </div>
+
+        <div class="row row--2">
+          <div class="field">
             <label for="tel">Celular</label>
             <input id="tel" name="tel" inputmode="numeric" autocomplete="tel" placeholder="(00) 00000-0000" maxlength="15" required>
             <small></small>
@@ -544,19 +690,32 @@ img,svg{display:block;max-width:100%}
       </section>
 
       <!-- ============ 2. ENTREGA ============ -->
-      <section class="step">
+      <section class="step" data-etapa="2">
         <span class="step__gota" aria-hidden="true"></span>
         <div class="step__head">
           <span class="step__n" aria-hidden="true">2</span>
           <h2>Endereço de entrega</h2>
         </div>
+        <p class="step__resumo" data-resumo="2"></p>
+        <button class="step__editar" type="button" data-editar="2" aria-label="Editar endereço">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+        </button>
 
+        <!-- So o CEP de cara. Sete campos vazios na frente de quem acabou
+             de chegar e o que o checkout de referencia evita. -->
         <div class="row row--cep">
           <div class="field">
             <label for="cep">CEP</label>
             <input id="cep" name="cep" inputmode="numeric" autocomplete="postal-code" placeholder="00000-000" maxlength="9" required>
             <small id="cepMsg">Preenchemos o resto pra você</small>
           </div>
+          <span class="cidade-lado" id="cidadeLado"></span>
+        </div>
+
+        <div class="resto-end" id="restoEnd">
+        <!-- A rua ocupa a linha inteira: o row--cep daria 180px a ela,
+             que era a largura do campo de CEP que saiu daqui. -->
+        <div class="row">
           <div class="field">
             <label for="rua">Rua</label>
             <input id="rua" name="rua" autocomplete="address-line1" placeholder="preenchido pelo CEP" required>
@@ -589,20 +748,6 @@ img,svg{display:block;max-width:100%}
             <small></small>
           </div>
         </div>
-
-        <!-- Ultimo campo do formulario, de proposito. Chega aqui quem ja
-             preencheu tudo, e ai o documento e um pedido pequeno em cima de
-             um trabalho ja feito, nao a primeira barreira da pagina.
-             O motivo declarado tambem mudou: dizia "pra emitir a nota", mas
-             ele e MEI e quem exige o documento e a transportadora, na DC-e da
-             etiqueta, obrigatoria desde 06/04/2026. -->
-        <div class="row row--2">
-          <div class="field">
-            <label for="cpf">CPF</label>
-            <input id="cpf" name="cpf" inputmode="numeric" autocomplete="off" placeholder="000.000.000-00" maxlength="14" required>
-            <small class="dica">a transportadora exige na etiqueta de envio</small>
-          </div>
-          <div></div>
         </div>
         <!-- A escolha da entrega fica aqui, no fim do endereco: a pessoa
              acabou de dizer pra onde vai, e agora diz como. Antes isto
@@ -618,6 +763,7 @@ img,svg{display:block;max-width:100%}
           <div class="fretes__tit">Como quer receber</div>
           <div id="fretesLista"></div>
         </div>
+
       
         <button class="btn btn--seguir" type="button" data-seguir hidden>
           Continuar
@@ -625,12 +771,16 @@ img,svg{display:block;max-width:100%}
       </section>
 
       <!-- ============ 3. PAGAMENTO ============ -->
-      <section class="step">
+      <section class="step" data-etapa="3">
         <span class="step__gota" aria-hidden="true"></span>
         <div class="step__head">
           <span class="step__n" aria-hidden="true">3</span>
           <h2>Forma de pagamento</h2>
         </div>
+
+        <!-- Faixa de aviso, preenchida pelo JS a partir de AVISO_ESTOQUE.
+             Nasce vazia e escondida: sem script, nenhuma frase aparece. -->
+        <p class="aviso-estoque" id="avisoEstoque" hidden></p>
 
         <div class="pays" role="radiogroup" aria-label="Forma de pagamento">
 
@@ -735,6 +885,20 @@ img,svg{display:block;max-width:100%}
            inteiro. Sem cidade e sem idade: isso o checkout de referencia
            tem porque os depoimentos dele trazem, os daqui nao trazem, e
            inventar seria o oposto de construir confianca. -->
+      <!-- Formas de pagamento aceitas, logo acima dos depoimentos.
+           Estava dentro da coluna do resumo, e como no celular ela sobe
+           pro topo elas apareciam no MEIO, entre o resumo e o
+           formulario. Aqui fecham o bloco de pagamento e entregam a
+           pessoa nos depoimentos. -->
+      <p class="bandeiras">
+        <img src="img/bandeiras.png"
+             alt="Mastercard, Visa, Elo, American Express, boleto e Pix"
+             width="1041" height="173" loading="lazy" decoding="async">
+        <!-- A imagem mostra algumas bandeiras, nao todas. "entre outros"
+             evita que quem tem um cartao fora da foto ache que nao passa. -->
+        <small class="bandeiras__mais">entre outros</small>
+      </p>
+
       <section class="depo">
         <h2>Quem comprou, aprova</h2>
 
@@ -766,7 +930,15 @@ img,svg{display:block;max-width:100%}
 
     <!-- ============ RESUMO ============ -->
     <aside class="aside">
-      <div class="sum">
+      <div class="sum" id="sum">
+        <!-- No celular isto e a unica coisa visivel do resumo ate alguem
+             tocar. Fechado de proposito: a pessoa veio da pagina de oferta
+             e ja sabe o que esta levando. -->
+        <button class="sum__puxe" type="button" id="sumPuxe" aria-expanded="false">
+          <b>Resumo do pedido</b>
+          <span id="sumTotal"></span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
         <p class="sum__top">RESUMO DO PEDIDO</p>
         <div class="sum__body">
 
@@ -843,17 +1015,6 @@ img,svg{display:block;max-width:100%}
         </div>
       </div>
 
-      <!-- Formas de pagamento aceitas, com as marcas. `loading=lazy`
-           porque isto fica no rodape: entra no fim da rolagem e nao
-           disputa banda com o formulario. -->
-      <p class="bandeiras">
-        <img src="img/bandeiras.png"
-             alt="Mastercard, Visa, Elo, American Express, boleto e Pix"
-             width="1041" height="173" loading="lazy" decoding="async">
-        <!-- A imagem mostra algumas bandeiras, nao todas. "entre outros"
-             evita que quem tem um cartao fora da foto ache que nao passa. -->
-        <small class="bandeiras__mais">entre outros</small>
-      </p>
 
       <!-- Saiu o rodape de links. "Voltar para a loja" e uma porta de
            saida no meio do pagamento, e checkout nao oferece saida.
@@ -974,6 +1135,10 @@ img,svg{display:block;max-width:100%}
     el('total').innerHTML = fretePend
       ? brl(subtotal - desconto) + '<span class="mais-frete">+ frete</span>'
       : brl(total);
+    // A barra encolhida do celular mostra o total, senao fechada ela nao
+    // diz nada de util.
+    var st = el('sumTotal');
+    if (st) st.textContent = fretePend ? brl(subtotal - desconto) + ' + frete' : brl(total);
     return total;
   }
   /* Aparece so onde existe. No kit de 4 nao existe: a caixa cabe 4. */
@@ -1049,7 +1214,12 @@ img,svg{display:block;max-width:100%}
        pessoas que abriram o checkout e nao digitaram nada.
        Trocar para false volta ao passo a passo, que e o padrao que
        costuma converter melhor em loja ja conhecida. */
-    var ETAPAS_ABERTAS = true;
+    /* Voltou pra false em 03/11/2026. O teste de 06/10 abriu tudo porque
+       a hipotese era que um quadrado so de Nome e CPF parecia pagina
+       quebrada. Com tudo aberto, 7 de 10 sessoes morreram na etapa 1 do
+       mesmo jeito — entao a hipotese nao se sustentou, e uma etapa por
+       vez e o formato do checkout que ele quer copiar. */
+    var ETAPAS_ABERTAS = false;
 
     if (ETAPAS_ABERTAS) {
       /* O contador de etapa vivia so no clique do "Continuar", que este
@@ -1154,29 +1324,13 @@ img,svg{display:block;max-width:100%}
       if (i === 2 && botaoCompra) botaoCompra.removeAttribute('data-esperando');
     }
 
-    // Cada etapa valida so os campos dela.
+    /* Cada etapa valida so os campos dela, pelas regras de MSG_CAMPO — as
+       mesmas que o campo usa sozinho quando a pessoa sai dele. Duas
+       listas da mesma coisa era o que deixava um erro antigo preso na
+       tela depois do campo ja estar preenchido. */
     var checagens = [
-      function(){
-        var ok = true;
-        /* As mensagens falam do que fazer, não do que está errado. "CPF
-           inválido" soa como acusação e faz a pessoa desistir em vez de
-           reler; faltar dígito e trocar dígito são problemas diferentes e
-           merecem instruções diferentes. */
-        ok = erro(el('nome'),  el('nome').value.trim().split(/\s+/).length < 2 ? 'Falta o sobrenome' : '') && ok;
-        ok = erro(el('cpf'),   msgCpf(el('cpf').value)) && ok;
-        ok = erro(el('email'), /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(el('email').value) ? '' : 'Confira o e-mail — falta o @ ou o ponto') && ok;
-        ok = erro(el('tel'),   msgTel(el('tel').value)) && ok;
-        return ok;
-      },
-      function(){
-        var ok = true;
-        ok = erro(el('cep'),    el('cep').value.replace(/\D/g,'').length === 8 ? '' : 'Falta número — o CEP tem 8') && ok;
-        ok = erro(el('rua'),    el('rua').value.trim() ? '' : 'Falta a rua') && ok;
-        ok = erro(el('numero'), el('numero').value.trim() ? '' : 'Falta o número') && ok;
-        ok = erro(el('bairro'), el('bairro').value.trim() ? '' : 'Falta o bairro') && ok;
-        ok = erro(el('cidade'), el('cidade').value.trim() ? '' : 'Falta a cidade') && ok;
-        return ok;
-      }
+      function(){ return conferirEtapa(['nome','cpf','email','tel']); },
+      function(){ return conferirEtapa(['cep','rua','numero','bairro','cidade']); }
     ];
 
     /* Até onde a pessoa chegou, pro painel poder responder "parou aonde?".
@@ -1206,6 +1360,9 @@ img,svg{display:block;max-width:100%}
         window.aqEtapa = Math.max(window.aqEtapa, i + 2);
         bt.disabled = true;
         bt.style.opacity = '.5';
+        // Fecha a que acabou e vira um resumo com lapis, em vez de
+        // deixar oito campos preenchidos empurrando a proxima pra baixo.
+        if (window.aqFecharEtapa) window.aqFecharEtapa(i + 1);
         abrir(i + 1);
       });
     });
@@ -1330,7 +1487,130 @@ img,svg{display:block;max-width:100%}
   }
 
   /* ---------- Busca de CEP (ViaCEP — gratuito, sem chave) ---------- */
+  /* ---------- Fecha a etapa concluida ----------
+     Escreve o resumo e esconde os campos. O lapis reabre. */
+  function textoResumo(n){
+    if (n === 1) {
+      return [el('nome').value, el('email').value,
+              el('cpf').value ? 'CPF ' + el('cpf').value : '',
+              el('tel').value].filter(Boolean).join('<br>');
+    }
+    var linha = [el('rua').value, el('numero').value].filter(Boolean).join(', ');
+    var compl = el('compl') && el('compl').value ? '<br>' + el('compl').value : '';
+    var baixo = [el('bairro').value, el('cidade').value].filter(Boolean).join(' · ');
+    return [linha + compl, baixo, el('cep').value && 'CEP ' + el('cep').value]
+      .filter(Boolean).join('<br>');
+  }
+  /* Por atributo, nao por indice: as etapas trocam de coluna, entao a
+     ordem no documento deixa de ser a ordem dos numeros. */
+  function etapaDe(n){ return d.querySelector('.step[data-etapa="' + n + '"]'); }
+
+  function fecharEtapa(n){
+    var sec = etapaDe(n);
+    if (!sec) return;
+    var r = sec.querySelector('[data-resumo]');
+    if (r) r.innerHTML = textoResumo(n);
+    sec.setAttribute('data-fechada', '');
+    // A bolinha do numero vira o certo verde, que ja existia pro modo de
+    // formulario aberto e nunca era ligado no passo a passo.
+    sec.setAttribute('data-feita', '');
+    var feitas = el('colFeitas');
+    if (feitas) feitas.appendChild(sec);
+  }
+
+  /* O lapis traz a etapa de volta pro meio, na posicao do numero dela:
+     reabrir a 1 com a 3 aberta tem que devolver a 1 pra cima, nao pro fim
+     da coluna. */
+  function devolverEtapa(sec){
+    var ativa = el('colAtiva');
+    if (!ativa) return;
+    var n = Number(sec.getAttribute('data-etapa'));
+    var alvo = null;
+    Array.prototype.forEach.call(ativa.querySelectorAll('.step'), function(o){
+      if (!alvo && Number(o.getAttribute('data-etapa')) > n) alvo = o;
+    });
+    ativa.insertBefore(sec, alvo || ativa.querySelector('.depo'));
+  }
+
+  d.querySelectorAll('[data-editar]').forEach(function(bt){
+    bt.addEventListener('click', function(){
+      var sec = bt.closest('.step');
+      sec.removeAttribute('data-fechada');
+      devolverEtapa(sec);
+      var campo = sec.querySelector('input:not([type=radio])');
+      if (campo) campo.focus({ preventScroll: true });
+      sec.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    });
+  });
+  window.aqFecharEtapa = fecharEtapa;
+
+  /* ---------- Faixa acima das formas de pagamento ----------
+     TEXTO FIXO, por decisao dele: nao desce com a venda, nao le estoque e
+     nao zera. Os lotes do painel sao controle interno — nenhuma pagina do
+     site consulta aquilo, entao nada aqui trava uma venda.
+     Pra trocar a frase, muda SO a linha abaixo. Vazio esconde a faixa. */
+  var AVISO_ESTOQUE = 'Últimas 31 unidades restantes';
+  (function(){
+    var faixa = el('avisoEstoque');
+    if (!faixa || !AVISO_ESTOQUE) return;
+    faixa.textContent = AVISO_ESTOQUE;
+    faixa.hidden = false;
+  })();
+
+  /* ---------- Resumo encolhido no celular ---------- */
+  (function(){
+    var caixa = el('sum'), bt = el('sumPuxe');
+    if (!caixa || !bt) return;
+    bt.addEventListener('click', function(){
+      var aberto = caixa.toggleAttribute('data-aberto');
+      bt.setAttribute('aria-expanded', aberto ? 'true' : 'false');
+    });
+  })();
+
   var cep = el('cep'), cepMsg = el('cepMsg');
+
+  /* ---------- Abre o resto do endereco ----------
+     O bloco so aparece depois que o CEP resolve (ou falha): e a diferenca
+     entre uma tela com um campo e uma tela com oito. */
+  function abrirResto(){
+    var r = el('restoEnd');
+    if (r && !r.hasAttribute('data-abre')) r.setAttribute('data-abre', '');
+  }
+
+  /* ---------- Visto verde e limpeza do vermelho ----------
+     Digitando so limpa; saindo do campo mostra. Sem isto um erro marcado
+     no Continuar ficava preso na tela mesmo depois do campo preenchido —
+     e, como o verde exigia "sem erro", o campo nunca ficava verde. */
+  function vistoVerde(input){ if (input) conferirCampo(input.id, false); }
+  ['nome','email','tel','cep','rua','numero','bairro','cidade','cpf','compl']
+    .forEach(function(id){
+      var i = el(id);
+      if (!i) return;
+      i.addEventListener('input', function(){ conferirCampo(id, false); });
+      i.addEventListener('blur',  function(){
+        // Campo nunca tocado e ainda vazio nao vira erro so por passar o
+        // foco por ele: isso acusaria a pessoa antes dela chegar la.
+        conferirCampo(id, String(i.value || '').trim().length > 0);
+      });
+    });
+
+  /* ---------- Passo a passo do topo ----------
+     Acompanha as etapas que ja existem: a etapa aberta fica verde, as
+     anteriores ficam marcadas como feitas. */
+  function pintarPassos(n){
+    d.querySelectorAll('#passos .passo').forEach(function(p){
+      var i = Number(p.dataset.passo);
+      p.toggleAttribute('data-ativo', i === n);
+      p.toggleAttribute('data-feito', i < n);
+    });
+  }
+  d.querySelectorAll('.step').forEach(function(sec, i){
+    sec.addEventListener('transitionend', function(){});
+    var obs = new MutationObserver(function(){
+      if (!sec.hasAttribute('data-travada')) pintarPassos(i + 1);
+    });
+    obs.observe(sec, { attributes: true, attributeFilter: ['data-travada'] });
+  });
 
   cep.addEventListener('blur', function(){
     var n = cep.value.replace(/\D/g, '');
@@ -1354,11 +1634,20 @@ img,svg{display:block;max-width:100%}
         el('bairro').value = j.bairro || '';
         el('cidade').value = (j.localidade || '') + (j.uf ? ' / ' + j.uf : '');
         cepMsg.textContent = 'Endereço preenchido';
+        // A cidade aparece do lado do CEP, como confirmacao visual rapida,
+        // e o campo dela desce junto com o resto.
+        var cl = el('cidadeLado');
+        if (cl) cl.textContent = (j.localidade || '') + (j.uf ? ' / ' + j.uf : '');
+        abrirResto();
+        ['rua','bairro','cidade'].forEach(function(id){ vistoVerde(el(id)); });
         el('numero').focus();
       })
       .catch(function(){
         cepMsg.textContent = 'CEP não encontrado. Preencha à mão.';
         cepMsg.setAttribute('data-err', '');
+        // Falhou a consulta, mas a pessoa precisa poder digitar mesmo
+        // assim: o bloco abre do mesmo jeito, so que vazio.
+        abrirResto();
       });
   });
 
@@ -1383,6 +1672,49 @@ img,svg{display:block;max-width:100%}
   escolher(d.querySelector('.pay input:checked'));
 
   /* ---------- Validação ---------- */
+  /* ---------- Uma regra por campo ----------
+     Fonte unica da verdade. Antes a mensagem so existia dentro de
+     `checagens`, que roda no clique do Continuar, e o verde so olhava se
+     havia erro na tela — entao um erro antigo nunca era reavaliado e o
+     campo ficava preenchido e vermelho ao mesmo tempo.
+
+     As mensagens falam do que fazer, nao do que esta errado. "CPF
+     invalido" soa como acusacao e faz a pessoa desistir em vez de reler;
+     faltar digito e trocar digito sao problemas diferentes e merecem
+     instrucoes diferentes. */
+  var MSG_CAMPO = {
+    nome:   function(v){ return v.trim().split(/\s+/).length < 2 ? 'Falta o sobrenome' : ''; },
+    cpf:    function(v){ return msgCpf(v); },
+    email:  function(v){ return /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(v) ? '' : 'Confira o e-mail — falta o @ ou o ponto'; },
+    tel:    function(v){ return msgTel(v); },
+    cep:    function(v){ return v.replace(/\D/g,'').length === 8 ? '' : 'Falta número — o CEP tem 8'; },
+    rua:    function(v){ return v.trim() ? '' : 'Falta a rua'; },
+    numero: function(v){ return v.trim() ? '' : 'Falta o número'; },
+    bairro: function(v){ return v.trim() ? '' : 'Falta o bairro'; },
+    cidade: function(v){ return v.trim() ? '' : 'Falta a cidade'; }
+  };
+
+  /* Reavalia UM campo. `mostrar` separa os dois momentos: digitando ela
+     so limpa, porque acusar a cada tecla briga com quem esta no meio do
+     CPF; saindo do campo ela mostra, que e quando a pessoa terminou.
+     Devolve se o campo passou, pro Continuar somar. */
+  function conferirCampo(id, mostrar){
+    var i = el(id);
+    if (!i) return true;
+    var regra = MSG_CAMPO[id];
+    var msg = regra ? regra(String(i.value || '')) : '';
+    if (mostrar || !msg) erro(i, msg);
+    var f = i.closest('.field');
+    if (f) f.toggleAttribute('data-ok', String(i.value || '').trim().length > 0 && !msg);
+    return !msg;
+  }
+
+  function conferirEtapa(ids){
+    var ok = true;
+    ids.forEach(function(id){ if (!conferirCampo(id, true)) ok = false; });
+    return ok;
+  }
+
   function erro(campo, msg){
     var s = campo.parentElement.querySelector('small');
     // Campos com dica fixa (o CPF explica pra que serve) guardam o texto
