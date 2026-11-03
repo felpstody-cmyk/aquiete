@@ -227,6 +227,22 @@ img,svg{display:block;max-width:100%}
 .bump__txt b{font:600 14.5px/1.35 var(--font-body);color:var(--accent-ink)}
 .bump__txt small{font:13px/1.45 var(--font-body);color:var(--ink-2)}
 
+/* ---------- Avaliacoes no resumo ----------
+   Fica ACIMA da lista de garantias e ABAIXO do botao de comprar: quem
+   rolou ate aqui ja viu o preco e o botao, e o que falta e coragem. */
+.aval{
+  margin-top:var(--s4);padding-top:var(--s4);
+  border-top:1px solid var(--line);
+}
+.aval__topo{display:flex;align-items:center;gap:.5rem;margin-bottom:.6rem}
+.aval__est{color:var(--accent);font-size:1rem;letter-spacing:1px}
+.aval__n{font:600 .8125rem/1 var(--font-body);color:var(--ink-2)}
+.aval__c{
+  margin:0 0 .55rem;font:400 .8125rem/1.5 var(--font-body);color:var(--ink-3);
+}
+.aval__c:last-child{margin-bottom:0}
+.aval__c b{color:var(--ink-2);font-weight:600}
+
 .pay{
   position:relative;display:flex;align-items:center;gap:var(--s4);
   padding:var(--s4);cursor:pointer;
@@ -675,6 +691,22 @@ img,svg{display:block;max-width:100%}
             Finalizar compra
             <small data-btn-sub>Pagamento via Pix</small>
           </button>
+
+          <!-- Avaliacoes. Os comentarios sao os que ja estao publicados na
+               /psiquiatra, nao texto novo: quem desconfiar e for ate la
+               encontra os mesmos. -->
+          <div class="aval">
+            <div class="aval__topo">
+              <span class="aval__est" aria-hidden="true">★★★★★</span>
+              <span class="aval__n">5,0 · 1.485 avaliações</span>
+            </div>
+            <p class="aval__c"><b>Márcia N.</b> Tô usando faz umas 6 semanas e minhas crises
+              ficaram muito mais leves.</p>
+            <p class="aval__c"><b>Lourdes C.</b> É o que eu pego na hora que o coração dispara.
+              É super fácil de usar.</p>
+            <p class="aval__c"><b>Elaine B.</b> Tenho 52 anos e não queria tomar mais remédio,
+              então resolvi testar. E não é que tá funcionando?</p>
+          </div>
 
           <ul class="trust">
             <li>
