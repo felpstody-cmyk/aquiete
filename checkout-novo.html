@@ -457,21 +457,21 @@ img,svg{display:block;max-width:100%}
 .total__note{font-size:.75rem;color:var(--ink-3);text-align:right;margin-top:.2rem}
 .frete-nota{font-size:.75rem;line-height:1.45;color:var(--brand-700);background:var(--brand-100);border-radius:var(--r-sm);padding:.5rem .6rem;margin-top:.4rem}
 .frete-nota[hidden]{display:none}
-/* .lines div e flex por padrao, entao estes precisam voltar a empilhar:
-   sem isto o titulo e a lista ficam lado a lado e as opcoes vazam. */
-.lines .fretes{display:block;margin-top:.7rem}
-.lines .fretes > div{display:block}
-.lines .fretes[hidden]{display:none}
-.fretes__tit{font-size:.75rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;
-  color:var(--ink-3);margin-bottom:.4rem}
-.frete-op{display:flex;align-items:center;gap:.55rem;padding:.55rem .6rem;border:1px solid var(--line);
-  border-radius:var(--r-sm);margin-bottom:.35rem;cursor:pointer;background:#fff}
+/* Agora a escolha vive na coluna do formulario, nao no resumo apertado:
+   as opcoes ganham o tamanho de texto dos campos ao lado, senao parecem
+   nota de rodape em vez de decisao. */
+.fretes{margin:var(--s4) 0 0}
+.fretes[hidden]{display:none}
+.fretes__tit{font-size:.8125rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;
+  color:var(--ink-3);margin-bottom:.5rem}
+.frete-op{display:flex;align-items:center;gap:.7rem;padding:.8rem .85rem;border:1px solid var(--line);
+  border-radius:var(--r-sm);margin-bottom:.45rem;cursor:pointer;background:#fff}
 .frete-op:has(input:checked){border-color:var(--brand);background:var(--brand-100)}
-.frete-op input{flex:none;margin:0}
-.frete-op__txt{flex:1;min-width:0;line-height:1.25}
-.frete-op__txt b{display:block;font-size:.8125rem;font-weight:600}
-.frete-op__txt small{font-size:.6875rem;color:var(--ink-3)}
-.frete-op__preco{font-size:.8125rem;font-weight:700;white-space:nowrap}
+.frete-op input{flex:none;margin:0;width:18px;height:18px;accent-color:var(--brand)}
+.frete-op__txt{flex:1;min-width:0;line-height:1.3}
+.frete-op__txt b{display:block;font-size:.9375rem;font-weight:600}
+.frete-op__txt small{font-size:.8125rem;color:var(--ink-3)}
+.frete-op__preco{font-size:.9375rem;font-weight:700;white-space:nowrap}
 .fretes__aviso{font-size:.75rem;color:var(--ink-3)}
 /* Dica cinza abaixo do campo. Vira mensagem de erro quando precisa. */
 .field small.dica{color:var(--ink-3);font-size:.8125rem}
@@ -517,6 +517,12 @@ img,svg{display:block;max-width:100%}
   display:block;width:100%;max-width:290px;height:auto;
   margin-top:.45rem;opacity:.9;
 }
+.frete-pend{font-size:.8125rem;color:var(--ink-3)}
+.mais-frete{
+  display:block;font:400 .75rem/1 var(--font-body);
+  color:var(--ink-3);margin-top:.25rem;
+}
+
 .bandeiras{margin:var(--s6) 0 0;text-align:center}
 .bandeiras img{width:100%;max-width:430px;height:auto;opacity:.92}
 .bandeiras__mais{
@@ -726,6 +732,20 @@ img,svg{display:block;max-width:100%}
           </div>
         </div>
         </div>
+        <!-- A escolha da entrega fica aqui, no fim do endereco: a pessoa
+             acabou de dizer pra onde vai, e agora diz como. Antes isto
+             vivia dentro do resumo, que no celular aparece ACIMA do
+             formulario — a lista de transportadoras era a primeira coisa
+             da tela, antes de qualquer CEP. -->
+        <!-- Irmao do bloco de opcoes, nao filho: `#fretes` fica escondido
+             quando a cotacao nao devolve nada, e e justo nesse caso que o
+             aviso mais importa — e quando o Norte paga a tabela num kit
+             anunciado com frete gratis. -->
+        <p class="frete-nota" id="freteNota" hidden>Frete grátis não vale para a sua região: o envio para o Norte é feito por transportadora.</p>
+        <div class="fretes" id="fretes" hidden>
+          <div class="fretes__tit">Como quer receber</div>
+          <div id="fretesLista"></div>
+        </div>
 
       
         <button class="btn btn--seguir" type="button" data-seguir hidden>
@@ -925,11 +945,6 @@ img,svg{display:block;max-width:100%}
             <div><span>Subtotal</span> <span id="sub">R$ 129,90</span></div>
             <div id="linhaDesc" hidden><span>Desconto</span> <span id="desc">— R$ 0,00</span></div>
             <div><span>Frete</span> <span id="frete">Grátis</span></div>
-            <p class="frete-nota" id="freteNota" hidden>Frete grátis não vale para a sua região: o envio para o Norte é feito por transportadora e sai por R$ 19,99.</p>
-            <div class="fretes" id="fretes" hidden>
-              <div class="fretes__tit">Como quer receber</div>
-              <div id="fretesLista"></div>
-            </div>
           </div>
 
           <div class="total">
@@ -1046,6 +1061,10 @@ img,svg{display:block;max-width:100%}
      nao, vale a tabela fixa de sempre. */
   var envioEscolhido = null;
   var fretePedido = 0;
+  /* Verdadeiro entre o CEP entrar e a cotacao responder. Sem isto a tela
+     mostrava a tabela fixa nesse meio, e a tabela nao e o preco: no Norte
+     ela chutava R$ 19,99 pra qualquer cidade. */
+  var freteBuscando = false;
   function ehNorte(n){
     var p = Number(String(n || '').replace(/\D/g, '').slice(0, 5));
     if (!p) return false;
@@ -1070,28 +1089,35 @@ img,svg{display:block;max-width:100%}
     el('itemT').textContent  = unid + (unid === 1 ? ' unidade' : ' unidades');
     el('itemP').textContent  = brl(subtotal);
     el('sub').textContent    = brl(subtotal);
-    el('frete').innerHTML    = frete === 0
-      ? '<span class="free">Grátis</span>'
-      : brl(frete);
-    /* No Norte o envio e por transportadora e custa mais. Para 2 e 4
-       frascos isso cancela o frete gratis; para 1 frasco so encarece —
-       e dizer "frete gratis nao vale" ali seria falar de um beneficio
-       que aquele kit nunca teve. Duas situacoes, duas frases. */
-    if (norte) {
-      el('freteNota').textContent = kit.frete === 0
-        ? 'Frete grátis não vale para a sua região: o envio para o Norte é feito por transportadora e sai por ' + brl(FRETE_NORTE) + '.'
-        : 'O envio para o Norte é feito por transportadora, por isso o frete é ' + brl(FRETE_NORTE) + '.';
-    }
-    // Com opcao escolhida o aviso do Norte mentiria: o preco ali ja e o
-    // da transportadora que a pessoa marcou, nao os R$ 19,99 da tabela.
-    el('freteNota').hidden   = !norte || !!envioEscolhido;
+    /* Tres estados, nao dois. Sem CEP nao existe frete pra mostrar, nem
+       "Grátis" — no Norte o frete gratis nao vale, entao ate o gratuito e
+       condicional ao endereco. E com o CEP dado, enquanto a cotacao nao
+       responde, o que existe e a tabela fixa, que e chute: no Norte ela
+       diz R$ 19,99 pra qualquer cidade. Um valor que muda depois e pior
+       que nenhum valor agora. */
+    var temCep = String(cepDigitado || '').replace(/\D/g, '').length === 8;
+    var fretePend = !temCep || freteBuscando;
+    el('frete').innerHTML    = fretePend
+      ? '<span class="frete-pend">' + (temCep ? 'calculando…' : 'informe seu CEP') + '</span>'
+      : (frete === 0 ? '<span class="free">Grátis</span>' : brl(frete));
+    /* O aviso do Norte explica a excecao e nao crava valor: o preco sai da
+       cotacao logo abaixo, com o CEP dela. No kit de 1 frasco ele nao
+       aparece — aquele kit nunca teve frete gratis, nao ha excecao pra
+       explicar, e dizer que "nao vale" fala de um beneficio que nunca
+       existiu ali. */
+    el('freteNota').hidden   = !norte || kit.frete > 0;
     el('linhaDesc').hidden   = !desconto;
     el('desc').textContent   = '— ' + brl(desconto);
-    el('total').textContent  = brl(total);
+    /* Pendente, o total sai SEM frete e com "+ frete" do lado. Somar a
+       tabela aqui seria escrever "+ frete" em cima de um numero que ja
+       tem frete dentro — e um frete que nao e o dela. */
+    el('total').innerHTML = fretePend
+      ? brl(subtotal - desconto) + '<span class="mais-frete">+ frete</span>'
+      : brl(total);
     // A barra encolhida do celular mostra o total, senao fechada ela nao
     // diz nada de util.
     var st = el('sumTotal');
-    if (st) st.textContent = brl(total);
+    if (st) st.textContent = fretePend ? brl(subtotal - desconto) + ' + frete' : brl(total);
     return total;
   }
   /* Aparece so onde existe. No kit de 4 nao existe: a caixa cabe 4. */
@@ -1427,7 +1453,10 @@ img,svg{display:block;max-width:100%}
 
   function buscarFretes(){
     var n = String(cepDigitado || '').replace(/\D/g, '');
-    if (n.length !== 8 || !pagaFrete()) { limparFretes(); totalAtual = pintarResumo(); return; }
+    // Nada a cotar: ou o CEP nao esta pronto, ou o kit tem frete gratis
+    // fora do Norte. Nos dois casos a tabela JA e o valor final.
+    if (n.length !== 8 || !pagaFrete()) { freteBuscando = false; limparFretes(); totalAtual = pintarResumo(); return; }
+    freteBuscando = true;
 
     // Cada busca ganha um numero. Resposta de busca antiga que chega
     // atrasada e descartada, senao o CEP anterior sobrescreve o atual.
@@ -1436,12 +1465,17 @@ img,svg{display:block;max-width:100%}
       .then(function(r){ return r.json(); })
       .then(function(j){
         if (meu !== fretePedido) return;
+        freteBuscando = false;
         var opcoes = (j && j.opcoes) || [];
+        // Sem opcao nenhuma a tabela volta a valer, porque e ela que o
+        // servidor vai cobrar. Ai o valor aparece, mesmo sendo o do chute:
+        // esconder um valor que vai ser cobrado e pior que mostra-lo.
         if (!opcoes.length) { limparFretes(); totalAtual = pintarResumo(); return; }
         desenharFretes(opcoes.slice(0, 6));
       })
       .catch(function(){
         if (meu !== fretePedido) return;
+        freteBuscando = false;
         limparFretes();
         totalAtual = pintarResumo();
       });
@@ -1557,6 +1591,10 @@ img,svg{display:block;max-width:100%}
     if (n.length !== 8) return;
     cepDigitado = n;
     envioEscolhido = null;
+    // Liga a bandeira ANTES de pintar: senao a tela mostra a tabela fixa
+    // no quadro entre o CEP entrar e a cotacao sair. `buscarFretes`
+    // desliga na hora se nao houver nada pra cotar.
+    freteBuscando = true;
     totalAtual = pintarResumo();
     buscarFretes();
     cepMsg.textContent = 'Buscando…';
