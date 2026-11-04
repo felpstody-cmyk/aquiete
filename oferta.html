@@ -301,6 +301,20 @@ p.centro{margin:0}
 .depo{border:1px solid var(--line);transition:transform .25s,box-shadow .25s}
 .depo:hover{transform:translateY(-3px);box-shadow:0 18px 36px -18px rgba(90,40,34,.35)}
 
+/* Depoimento em video */
+.vdepo{position:relative;margin:0 auto 2rem;max-width:300px;width:100%}
+.vdepo__v{display:block;width:100%;height:auto;aspect-ratio:9/16;object-fit:cover;
+  border-radius:18px;background:var(--dark);
+  box-shadow:0 18px 40px -22px rgba(90,40,34,.5)}
+/* Acima da legenda queimada, pra nao cobrir a frase dela. */
+.vdepo__som{position:absolute;left:50%;bottom:3.4rem;transform:translateX(-50%);
+  display:inline-flex;align-items:center;gap:.45rem;padding:.6rem 1rem;border:0;
+  border-radius:999px;background:rgba(42,21,18,.8);color:#fff;
+  font:600 .875rem/1 var(--font-body);cursor:pointer;white-space:nowrap}
+.vdepo__som[hidden]{display:none}
+.vdepo__quem{margin:.7rem 0 0;text-align:center;font-size:.8rem;color:var(--ink-3)}
+.vdepo__quem b{color:var(--ink);font-weight:600}
+
 /* Produto */
 .sub-h{display:flex;align-items:center;gap:.7rem}
 .sub-h::after{content:"";flex:1;height:1px;background:var(--brand-200)}
@@ -528,6 +542,23 @@ p.centro{margin:0}
   <div class="col col--larga">
     <p class="centro"><span class="olho">Quem já usa</span></p>
     <h2 class="sec-h centro">Quem já carrega no bolso</h2>
+
+    <!-- Depoimento em video de cliente real. O `src` mora no data-src e o
+         preload e "none": sem o JS abaixo, nenhum byte de video sai do
+         servidor. A capa e um quadro do proprio video, entao quem nunca
+         rola ate aqui paga 38 KB de imagem em vez de 3,3 MB. -->
+    <figure class="vdepo" id="vdepo">
+      <video id="vdepoV" class="vdepo__v" data-src="video/depoimento-real.mp4"
+             poster="img/depoimento-capa.webp" width="720" height="1280"
+             muted loop playsinline preload="none"
+             aria-label="Depoimento em vídeo de uma cliente usando o Aquiete"></video>
+      <button type="button" class="vdepo__som" id="vdepoSom" hidden>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 9v6h4l5 4V5L7 9H3Zm13.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4Zm-2.5-9v2.1a7 7 0 0 1 0 13.8V21a9 9 0 0 0 0-18Z"/></svg>
+        <span class="vdepo__txt">Tocar com som</span>
+      </button>
+      <figcaption class="vdepo__quem">Depoimento gravado por uma cliente</figcaption>
+    </figure>
+
     <div class="depos">
       <article class="depo">
         <img src="img/ugc/mesa-480.webp" width="480" height="600" loading="lazy" decoding="async" alt="Frasco de Aquiete sobre a mesa, ao lado das chaves do carro e de óculos escuros.">
@@ -807,6 +838,62 @@ p.centro{margin:0}
     });
     ['btnFaixa','btnOferta','btnFinal'].forEach(function(id){ io.observe(d.getElementById(id)); });
   }
+
+  /* Depoimento em video.
+     O arquivo so comeca a baixar quando a secao chega perto da tela. Esta
+     e a pagina que recebe o clique do anuncio: 3,3 MB na abertura atrasam
+     a primeira tela, e isso se paga em clique perdido. */
+  (function(){
+    var fig = d.getElementById('vdepo');
+    var v = d.getElementById('vdepoV');
+    var bt = d.getElementById('vdepoSom');
+    if (!fig || !v || !bt) return;
+    var txt = bt.querySelector('.vdepo__txt');
+
+    var quieto = window.matchMedia
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    function carregar(){
+      if (v.src) return;
+      v.src = v.getAttribute('data-src');
+      bt.hidden = false;
+      // Quem pediu menos animacao no sistema nao recebe autoplay.
+      if (quieto) { txt.textContent = 'Assistir'; return; }
+      var p = v.play();
+      // Navegador que recusa autoplay (modo de economia de bateria, por
+      // exemplo) cai no mesmo lugar, em vez de deixar uma tela parada sem
+      // explicacao nenhuma.
+      if (p && p['catch']) p['catch'](function(){ txt.textContent = 'Assistir'; });
+    }
+
+    bt.addEventListener('click', function(){
+      v.muted = false;
+      v.loop = false;
+      v.controls = true;
+      // Do zero: ela entrou no meio da frase quando tocava mudo.
+      try { v.currentTime = 0; } catch(e){}
+      v.play();
+      bt.hidden = true;
+    });
+
+    if ('IntersectionObserver' in window) {
+      var vo = new IntersectionObserver(function(es){
+        es.forEach(function(e){
+          if (e.isIntersecting) {
+            carregar();
+            if (v.src && v.paused && v.muted && !quieto) v.play();
+          } else if (!v.paused) {
+            // Sai da tela, para — inclusive com som: audio tocando de uma
+            // secao que ninguem esta vendo e motivo pra fechar a aba.
+            v.pause();
+          }
+        });
+      }, { rootMargin: '200px' });
+      vo.observe(fig);
+    } else {
+      carregar();
+    }
+  })();
 
   /* Consentimento + Pixel do Meta + tag do Google Ads */
   var META_PIXEL_CASA = '1991105264740384';
