@@ -26,7 +26,7 @@ import {
 import { marcarPagante } from './_lib/pagantes.mjs'
 import { registrarZap } from './_lib/zaplog.mjs'
 import { referenciaDoQr, marcarPixPago } from './_lib/pixqr.mjs'
-import { despachar } from './_lib/envio.mjs'
+import { despachar, lerDespacho } from './_lib/envio.mjs'
 import { marcarPagoUtmify } from './_lib/utmify.mjs'
 import { enviarZap, textoPago } from './_lib/zap.mjs'
 
@@ -171,6 +171,38 @@ export default async (req) => {
       console.error('[webhook] não consegui buscar o cliente:', e.message)
     }
 
+    /*
+     * Pix de QR estático: o Asaas só cria o cliente quando o dinheiro
+     * cai, e monta ele com os dados de quem pagou no banco — que não
+     * trazem telefone nem e-mail. Sem isso a confirmação não saía.
+     * Aconteceu em 03 e 04/11/2026: dois clientes pagaram e não
+     * receberam nada.
+     *
+     * O checkout já guardou os dados de verdade pra montar a etiqueta, e
+     * são eles que valem aqui de qualquer jeito: o titular da conta que
+     * pagou o Pix pode não ser quem comprou. No pedido do Marco o Asaas
+     * diz "Elcio Sebastiao Guerreiro".
+     *
+     * Vem ANTES do marcarPagante de propósito: a trava de cobrança passa
+     * a ser pela pessoa que comprou, não pela que pagou.
+     */
+    try {
+      const g = (await lerDespacho(referencia))?.cliente
+      if (g) {
+        cliente = {
+          nome: g.nome || cliente?.nome || '',
+          email: g.email || cliente?.email || '',
+          telefone: g.telefone || cliente?.telefone || '',
+          cidade: g.cidade || cliente?.cidade || '',
+          cep: g.cep || cliente?.cep || '',
+          endereco: [g.rua, g.numero, g.complemento, g.bairro, g.cep]
+            .filter(Boolean).join(', ') || cliente?.endereco || '',
+        }
+      }
+    } catch (e) {
+      console.error('[webhook] não consegui ler o despacho:', e.message)
+    }
+
     // A trava das cobranças, pela PESSOA: e-mail e telefone. Ver
     // _lib/pagantes.mjs.
     await marcarPagante({
@@ -207,28 +239,32 @@ export default async (req) => {
 
   // Zap de "pagamento confirmado". Vai junto do e-mail, nao no lugar
   // dele: quem paga quer ver a confirmacao onde estiver olhando.
-  if (cliente?.telefone) {
-    resultados.zapCliente = await enviarZap({
-      telefone: cliente.telefone,
-      texto: textoPago({ nome: cliente.nome, referencia }),
-    }).catch(() => ({ enviado: false }))
-    /*
-     * No log, igual a todo envio da loja.
-     *
-     * Esta era a mensagem MAIS importante que a loja manda e a unica
-     * que nao aparecia em lugar nenhum. Em 02/11/2026 ela nao foi
-     * entregue num pedido pago (o telefone digitado tinha dois digitos
-     * a menos) e nao havia onde olhar pra saber: o painel mostrava o
-     * pedido como Pago e mais nada.
-     */
-    await registrarZap({
-      referencia,
-      nome: cliente.nome,
-      telefone: cliente.telefone,
-      etapa: 'pagamento confirmado',
-      resultado: resultados.zapCliente,
-    }).catch(() => {})
-  }
+  resultados.zapCliente = cliente?.telefone
+    ? await enviarZap({
+        telefone: cliente.telefone,
+        texto: textoPago({ nome: cliente.nome, referencia }),
+      }).catch(() => ({ enviado: false }))
+    : { enviado: false, erro: 'sem telefone' }
+
+  /*
+   * No log, igual a todo envio da loja, e FORA do `if` do telefone.
+   *
+   * Esta e a mensagem mais importante que a loja manda. Em 02/11/2026
+   * ela nao foi entregue num pedido pago (o telefone digitado tinha dois
+   * digitos a menos). Em 03 e 04/11 nao foi nem tentada, por falta de
+   * telefone no QR estatico — e como o registro morava dentro do `if`,
+   * as duas falhas nao deixaram nenhum rastro. O painel mostrava "Pago"
+   * e mais nada.
+   *
+   * Agora toda confirmacao vira linha no log, inclusive a que nao saiu.
+   */
+  await registrarZap({
+    referencia,
+    nome: cliente?.nome || '',
+    telefone: cliente?.telefone || '',
+    etapa: 'pagamento confirmado',
+    resultado: resultados.zapCliente,
+  }).catch(() => {})
 
   if (cliente?.email) {
     try {
