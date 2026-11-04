@@ -56,7 +56,7 @@ export default async (req) => {
 
   // O total sai do que foi guardado na hora da compra, não de parâmetro:
   // assim o e-mail nunca mostra um valor diferente do que a pessoa pagou.
-  const total = Number(guardado.subtotal || 0) + Number(guardado.frete || 0)
+  const total = Number((Number(guardado.subtotal || 0) + Number(guardado.frete || 0)).toFixed(2))
   const descricao = guardado.descricao || 'Aquiete'
 
   const zap = c.telefone
