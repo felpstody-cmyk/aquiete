@@ -306,6 +306,11 @@ td.sel,th.sel{width:34px;padding-right:0}
   </div>
 
   <div class="card">
+    <h3>Vídeo do depoimento <span class="tag">na página de oferta — quem chegou, quem ligou o som e quem viu até o fim</span></h3>
+    <div class="body" id="videoDepo"></div>
+  </div>
+
+  <div class="card">
     <h3>Comportamento no site <span class="tag">até onde rolou, quanto tempo ficou e o que clicou — pessoa por pessoa</span></h3>
     <div class="filtros pagfiltro" id="comportamentoFiltro"></div>
     <div class="body" style="display:flex;gap:20px;flex-wrap:wrap" id="comportamentoResumo"></div>
@@ -1324,10 +1329,64 @@ var PAGINA_NOME = {
   termos: '/termos'
 };
 var CTA_NOME = { header:'Cabeçalho', hero:'Topo (hero)', dock:'Flutuante (mobile)', fab:'Flutuante (desktop)', oferta:'Botão comprar', promo:'Cupom',
-  'venda-topo':'Venda: topo', 'venda-kits':'Venda: escolha do kit', 'venda-meio':'Venda: meio', 'venda-final':'Venda: final', 'venda-dock':'Venda: barra fixa', 'voltar-loja':'Venda: voltou pra loja' };
+  'venda-topo':'Venda: topo', 'venda-kits':'Venda: escolha do kit', 'venda-meio':'Venda: meio', 'venda-final':'Venda: final', 'venda-dock':'Venda: barra fixa', 'voltar-loja':'Venda: voltou pra loja',
+  'video:viu':'Vídeo: chegou', 'video:som':'Vídeo: ligou o som',
+  'video:meio':'Vídeo: passou da metade', 'video:fim':'Vídeo: viu até o fim' };
 var comportamentoLimite = 10;
 var comportamentoPagina = (function(){ try { return localStorage.getItem('aquiete.comportamentoPagina') || 'todas'; } catch(e){ return 'todas'; } })();
 el('comportamentoMais').onclick = function(){ comportamentoLimite += 10; renderComportamento(); };
+/* ============ o video do depoimento, na pagina de oferta ============
+ *
+ * Os quatro marcos chegam na mesma lista de cliques da sessao, com
+ * prefixo "video:" (ver o bloco do #vdepo em oferta.html).
+ *
+ * Por que "chegou" nao e a mesma coisa que "quis assistir": o video
+ * comeca sozinho e mudo quando entra na tela, entao chegar ate ele e so
+ * ter rolado a pagina. Quem LIGA O SOM e que esta escolhendo assistir, e
+ * e essa linha que diz se o depoimento esta puxando alguem.
+ *
+ * As porcentagens sao todas sobre quem chegou, nao sobre o total de
+ * visitas: a pergunta aqui e o que o video faz com quem o alcanca.
+ */
+function renderVideoDepo(base){
+  var alvo = el('videoDepo');
+  if (!alvo) return;
+
+  var conta = { viu:0, som:0, meio:0, fim:0 };
+  (base || []).forEach(function(s){
+    // Uma sessao conta uma vez, mesmo que tenha passado pela oferta duas.
+    var marcas = {};
+    Object.keys(s.paginas || {}).forEach(function(pg){
+      (s.paginas[pg].cliques || []).forEach(function(c){ marcas[c] = 1; });
+    });
+    if (marcas['video:viu'])  conta.viu++;
+    if (marcas['video:som'])  conta.som++;
+    if (marcas['video:meio']) conta.meio++;
+    if (marcas['video:fim'])  conta.fim++;
+  });
+
+  if (!conta.viu) {
+    alvo.innerHTML = '<span style="color:var(--ink-3)">Ninguém chegou no vídeo neste período.</span>';
+    return;
+  }
+
+  var pct = function(n){ return Math.round(n * 100 / conta.viu) + '%'; };
+  var linha = function(rotulo, n, obs){
+    return '<div style="display:flex;align-items:baseline;gap:10px;margin:0 0 8px">' +
+      '<b style="min-width:3rem;text-align:right;font-variant-numeric:tabular-nums">' + n + '</b>' +
+      '<span style="min-width:3.2rem;color:var(--ink-3);font-variant-numeric:tabular-nums">' + pct(n) + '</span>' +
+      '<span>' + esc(rotulo) + '</span>' +
+      (obs ? ' <span style="color:var(--ink-3);font-size:12.5px">' + esc(obs) + '</span>' : '') +
+      '</div>';
+  };
+
+  alvo.innerHTML =
+    linha('chegaram no vídeo', conta.viu, '— começa sozinho e mudo, então isto é só quem rolou até lá') +
+    linha('ligaram o som', conta.som, '— aqui é escolha da pessoa') +
+    linha('passaram da metade', conta.meio) +
+    linha('viram até o fim', conta.fim);
+}
+
 function segParaTexto(segundos){
   var min = Math.floor(segundos/60), seg = segundos%60;
   return (min>0 ? min+'min ' : '') + seg + 's';
@@ -1598,6 +1657,7 @@ function renderComportamento(){
     : '';
 
   renderEtapasCheckout(base);
+  renderVideoDepo(base);
 
   el('tbComportamento').innerHTML = sessoes.length
     ? '<thead><tr><th>Quando</th><th>Cidade</th><th>Veio de</th><th>Páginas</th><th>Parou em</th><th class="num">Rolagem máx.</th>' +

@@ -850,6 +850,41 @@ p.centro{margin:0}
     if (!fig || !v || !bt) return;
     var txt = bt.querySelector('.vdepo__txt');
 
+    /* Quantos chegam aqui, ligam o som e veem ate o fim.
+     *
+     * Entra na MESMA lista que ja viaja pro /api/evento com rolagem e
+     * tempo: nao e rastreio novo nem chamada nova. O rastreio mora no
+     * outro <script>, entao a ponte e uma lista no window — assim nao
+     * importa qual dos dois blocos rodou primeiro.
+     *
+     * O prefixo "video:" existe porque essa lista e dividida com os
+     * cliques de botao, e os dois precisam continuar distinguiveis. */
+    function marcar(nome){
+      try {
+        var m = (window.aqMarcas = window.aqMarcas || []);
+        if (m.indexOf(nome) === -1) m.push(nome);
+      } catch (e) {}
+    }
+
+    /* "Ate o fim" tem que sair do timeupdate, nao do evento `ended`.
+     *
+     * No passe mudo o video roda em loop, e loop nao dispara `ended`:
+     * volta pro zero e segue. Sem olhar o relogio, ninguem jamais
+     * apareceria como tendo terminado. Os 97% sao folga pro ultimo
+     * quadro, que quase nunca e alcancado por arredondamento.
+     *
+     * O `ended` fica escutando do mesmo jeito: o botao de som desliga o
+     * loop, e a partir dali ele dispara normal. */
+    v.addEventListener('playing', function(){ marcar('video:viu'); });
+    v.addEventListener('ended',   function(){ marcar('video:fim'); });
+    v.addEventListener('timeupdate', function(){
+      var dur = v.duration;
+      if (!dur || !isFinite(dur)) return;
+      var parte = v.currentTime / dur;
+      if (parte >= 0.5)  marcar('video:meio');
+      if (parte >= 0.97) marcar('video:fim');
+    });
+
     var quieto = window.matchMedia
       && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -867,6 +902,8 @@ p.centro{margin:0}
     }
 
     bt.addEventListener('click', function(){
+      // O unico clique de verdade que este bloco tem.
+      marcar('video:som');
       v.muted = false;
       v.loop = false;
       v.controls = true;
@@ -1166,7 +1203,9 @@ try { if (!aqEmTeste()) {
          colado na mao ou robo, e e isso que separa uma coisa da outra. */
       ref: (function(){ try { return document.referrer ? new URL(document.referrer).hostname : ''; } catch(e){ return ''; } })(),
       camp: (new URLSearchParams(location.search).get('utm_campaign') || ''),
-      cliques: aqCliques
+      /* Os marcos do video viajam junto com os cliques de botao: mesma
+         lista, mesma chamada. Ver o bloco do #vdepo mais acima. */
+      cliques: aqCliques.concat(window.aqMarcas || [])
     });
     if (navigator.sendBeacon) navigator.sendBeacon('/api/evento', payload);
     else fetch('/api/evento', { method:'POST', body:payload, keepalive:true }).catch(function(){});
