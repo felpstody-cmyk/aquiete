@@ -27,6 +27,27 @@ const BASES = {
 /** O Melhor Envio recusa chamada sem User-Agent com contato. */
 const AGENTE = 'Aquiete (contato@aquieteagora.com.br)'
 
+/*
+ * Serviços que não entram na cotação.
+ *
+ * Não é preço nem prazo: é a operação de quem posta. A Jadlog e a Loggi
+ * PONTO deixam o pacote no mesmo ponto de coleta em Chapecó, então tudo
+ * sai numa viagem só. A Loggi EXPRESS não: ela obriga uma segunda
+ * viagem, do outro lado da cidade, e uma venda não paga isso. Pedido
+ * dele em 04/11/2026.
+ *
+ * O corte é pelo ID do serviço, e não pela empresa, de propósito: a
+ * Loggi continua na cotação pela Loggi Ponto (id 34), que costuma ser a
+ * opção MAIS BARATA do site. Cortar "Loggi" inteira encareceria o frete
+ * de todo mundo pra resolver o problema de uma viagem.
+ *
+ * Cuidado ao mexer: cada serviço tirado daqui pode deixar algum CEP sem
+ * NENHUMA opção, e aí o checkout não fecha naquele endereço.
+ */
+const SERVICOS_FORA = new Map([
+  ['31', 'Loggi Express'],
+])
+
 export const soDigitos = (v) => String(v ?? '').replace(/\D/g, '')
 
 export function configurado() {
@@ -117,6 +138,8 @@ export async function cotar(kitId, cepDestino) {
     // Serviço indisponível para o CEP vem com `error` preenchido.
     .filter((s) => !s.error && Number(s.price) > 0)
     .filter((s) => !fora.has(`${s.id}:${uf}`))
+    // Quem não dá pra postar no mesmo ponto de coleta. Ver SERVICOS_FORA.
+    .filter((s) => !SERVICOS_FORA.has(String(s.id)))
     .map((s) => ({
       id: String(s.id),
       nome: s.name,
