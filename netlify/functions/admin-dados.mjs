@@ -75,13 +75,44 @@ const SITUACAO = {
 
 const PAGAMENTO = { PIX: 'Pix', CREDIT_CARD: 'Cartão', BOLETO: 'Boleto', UNDEFINED: 'A escolher' }
 
-/** "Aquiete — 2 unidades" vira 2. Sem descrição, deduz pelo valor. */
-function unidades(descricao, valor) {
+/*
+ * Quantos frascos o pedido tem.
+ *
+ * A ordem das três fontes importa, e foi aprendida errando.
+ *
+ * 1. O DESPACHO primeiro. É a única fonte que sabe do bump: kit de 2 com
+ *    o frasco extra são TRÊS frascos, e nem a descrição nem o valor
+ *    contam isso. É o mesmo número que escolhe a caixa da etiqueta, em
+ *    `montarPayload` do _lib/envio.mjs — painel e etiqueta passam a
+ *    responder a mesma coisa, que antes podiam divergir.
+ *
+ * 2. A DESCRIÇÃO depois, pros pedidos antigos, de antes do despacho.
+ *
+ * 3. O VALOR por último, e só porque alguma resposta é melhor que
+ *    nenhuma. Os cortes antigos eram 290 e 165, de uma tabela de preço
+ *    que não existe mais: o kit de 2 custa 129,90 e caía em "1 frasco",
+ *    o de 4 custa 199,90 e caía em "2". Quem paga pelo QR estático cai
+ *    numa cobrança que o Asaas monta sozinho, com a descrição
+ *    "Cobrança gerada automaticamente a partir de Pix recebido" — sem
+ *    quantidade nenhuma — e era por aí que o erro entrava. Em
+ *    09/11/2026 o pedido do Marco, kit de 2, apareceu no painel como 1.
+ *
+ *    Kit de 1 COM bump não dá pra separar por valor (105,98 mais frete
+ *    encosta no kit de 2), então esse caso depende do despacho mesmo.
+ */
+function unidades(despacho, descricao, valor) {
+  const doDespacho = Number(despacho?.unidades)
+    || KITS[String(despacho?.kitId)]?.unidades
+    || 0
+  if (doDespacho) return doDespacho
+
   const m = /(\d+)\s*unidade/i.exec(descricao || '')
   if (m) return Number(m[1])
+
   const v = Number(valor) || 0
-  if (v >= 290) return 4
-  if (v >= 165) return 2
+  if (v >= 199.9) return 4
+  if (v >= 169.9) return 3   // kit de 2 mais o bump
+  if (v >= 129.9) return 2
   return 1
 }
 
@@ -128,7 +159,10 @@ export default async (req) => {
 
     const pedidos = cobrancas.map((p) => {
       const c = porId.get(p.customer) || {}
-      const un = unidades(p.description, p.value)
+      // O mesmo despacho que o bloco `envio` lê mais abaixo: aqui ele
+      // serve pra quantidade, que é onde ele é a fonte mais confiável.
+      const despacho = porRef.get(p.externalReference || '')
+      const un = unidades(despacho, p.description, p.value)
       return {
         id: p.id,
         referencia: p.externalReference || '',
