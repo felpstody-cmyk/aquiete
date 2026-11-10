@@ -873,6 +873,30 @@ function aplicarPeriodo(modo){
   render();
 }
 
+/* O periodo e calculado UMA VEZ, quando a pagina carrega. A aba deixada
+   aberta atravessa a meia-noite e continua filtrando o dia anterior — e
+   nao da pra desconfiar olhando, porque o modo nao envelhece junto com a
+   data: o botao "Hoje" segue aceso e a tarja segue escrita "Hoje".
+   Em 09/11/2026 o painel passou o dia mostrando o movimento do dia 8,
+   com visita, carrinho e checkout do dia inteiro escondidos, enquanto
+   sincronizava os dados novos normalmente e jogava todos fora no filtro.
+
+   "mes" e "tudo" ficam de fora de proposito: nesses a data foi escolhida
+   na mao e nao envelhece sozinha.
+
+   Devolve true so quando a data mudou de verdade, pra render() sair no
+   maximo uma vez por dia e nao a cada tique. */
+function revalidarPeriodo(){
+  var alvo;
+  if (periodoModo === 'hoje')       alvo = { inicio: hoje(), fim: hoje() };
+  else if (periodoModo === 'ontem') { var o = somarDias(hoje(), -1); alvo = { inicio:o, fim:o }; }
+  else if (periodoModo === '7dias') alvo = { inicio: somarDias(hoje(), -6), fim: hoje() };
+  else return false;
+  if (periodo && periodo.inicio === alvo.inicio && periodo.fim === alvo.fim) return false;
+  periodo = alvo;
+  return true;
+}
+
 var PAGOS = { 'Pago':1, 'Enviado':1, 'Entregue':1 };
 function pago(p){ return !!PAGOS[p.status]; }
 function totalDe(p){ return (Number(p.valor)||0) + (Number(p.frete)||0) - (Number(p.desc)||0); }
@@ -3394,6 +3418,10 @@ var ultimoUso = Date.now();
 });
 setInterval(function(){
   if (document.visibilityState !== 'visible') return;
+  // A virada do dia vale mesmo sem sincronizar, e por isso vem ANTES da
+  // trava de ocioso: painel esquecido aberto e justamente o que atravessa
+  // a meia-noite.
+  if (revalidarPeriodo()) render();
   if (Date.now() - ultimoUso > OCIOSO_MS) return;   // painel esquecido aberto
   if (!cfg.url || !cfg.token) return;
   if (el('btnSinc').disabled) return;               // já tem uma rodando
@@ -3404,6 +3432,8 @@ setInterval(function(){
 // mostrar número velho até o próximo tique.
 document.addEventListener('visibilitychange', function(){
   if (document.visibilityState !== 'visible') return;
+  // Voltou no dia seguinte: refaz a data antes de qualquer coisa.
+  if (revalidarPeriodo()) render();
   if (!cfg.url || !cfg.token) return;
   ultimoUso = Date.now();   // voltar pro painel conta como uso
   var idade = sincEm ? (Date.now() - new Date(sincEm).getTime()) : Infinity;
