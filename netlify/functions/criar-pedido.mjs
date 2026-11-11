@@ -132,7 +132,13 @@ export default async (req) => {
       ip: ipCliente,
       ua: req.headers.get('user-agent'),
       fbp: typeof corpo.fbp === 'string' ? corpo.fbp.slice(0, 120) : null,
-      fbc: typeof corpo.fbc === 'string' ? corpo.fbc.slice(0, 200) : null,
+      // O _fbc vai INTEIRO. Em 10/11/2026 o Gerenciador acusou "valor
+      // fbclid modificado": o limite era 200 e o fbclid do Instagram,
+      // com o sufixo _aem_, passa disso. Seis dos quinze pedidos
+      // guardados pararam exatos em 200, cortados no meio do _aem_.
+      // Fbc cortado nao casa com clique nenhum, e o Meta pede
+      // explicitamente para nao modificar o valor. Nao abaixe daqui.
+      fbc: typeof corpo.fbc === 'string' ? corpo.fbc.slice(0, 1000) : null,
       // Visita do parceiro vai pro pixel dele. Vale pros dois eventos: o
       // Pix gerado, que sai daqui, e a compra, que sai do webhook.
       //

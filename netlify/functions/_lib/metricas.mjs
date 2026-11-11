@@ -197,7 +197,13 @@ export async function guardarIdentidadeDoPedido(referencia, dados = {}) {
     }
     const registro = {
       fbp: corta(dados.fbp, 120),
-      fbc: corta(dados.fbc, 200),
+      // O _fbc vai INTEIRO. Em 10/11/2026 o Gerenciador acusou "valor
+      // fbclid modificado": o limite era 200 e o fbclid do Instagram,
+      // com o sufixo _aem_, passa disso. Seis dos quinze pedidos
+      // guardados pararam exatos em 200, cortados no meio do _aem_.
+      // Fbc cortado nao casa com clique nenhum, e o Meta pede
+      // explicitamente para nao modificar o valor. Nao abaixe daqui.
+      fbc: corta(dados.fbc, 1000),
       ip: corta(dados.ip, 60),
       ua: corta(dados.ua, 400),
       // De qual pixel e este pedido. Fica aqui porque o webhook manda a
