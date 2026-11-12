@@ -7,8 +7,11 @@
  * O navegador NUNCA manda preço. O total sai do catálogo daqui.
  */
 
-import { montarPedido, validarCliente, ErroDeEntrada } from './_lib/catalogo.mjs'
-import { conferir } from './_lib/melhorenvio.mjs'
+import {
+  montarPedido, validarCliente, ErroDeEntrada,
+  KITS, freteTemTeto, TETO_FRETE_GRATIS,
+} from './_lib/catalogo.mjs'
+import { conferir, cotar } from './_lib/melhorenvio.mjs'
 import { obterGateway, ErroDeGateway } from './_lib/gateways/index.mjs'
 import { enviar, htmlAguardando } from './_lib/email.mjs'
 import { marcarCarrinhoComPedido, guardarCliqueDoPedido, guardarIdentidadeDoPedido } from './_lib/metricas.mjs'
@@ -50,6 +53,32 @@ export default async (req) => {
     const envio = corpo.envio
       ? await conferir(corpo.kit, corpo.cliente?.cep, corpo.envio).catch(() => null)
       : null
+
+    /*
+     * Rede de seguranca do teto de frete (ver TETO_FRETE_GRATIS).
+     *
+     * Quando a cotacao passa do teto quem escolhe o servico e a tela, e
+     * o pedido chega aqui com `envio`. Se ele vier VAZIO num kit de
+     * frete gratis, ou a pagina e de antes desta regra, ou a chamada
+     * nao veio da loja. Nos dois casos seguir em frente seria cobrar um
+     * frete que a pessoa nao viu na tela — e isso vira contestacao de
+     * cartao, nao venda. Manda recarregar.
+     *
+     * Cotacao fora do ar nao derruba pedido nenhum: sem preco, `barato`
+     * e undefined e a venda segue com frete gratis, que e exatamente o
+     * que acontecia antes desta regra existir. Frete degrada, nao quebra.
+     */
+    const kitPedido = KITS[String(corpo.kit)]
+    if (kitPedido && !envio && freteTemTeto(kitPedido, corpo.cliente?.cep)) {
+      const barato = (await cotar(corpo.kit, corpo.cliente?.cep).catch(() => []))[0]
+      if (barato && Number(barato.preco) > TETO_FRETE_GRATIS) {
+        return json({
+          erro: 'O frete para este CEP passou do limite do frete grátis. '
+            + 'Atualize a página para ver o valor do envio antes de finalizar.',
+        }, 409)
+      }
+    }
+
     const pedido = montarPedido(
       corpo.kit, corpo.metodo, corpo.cupom, corpo.cliente?.cep, envio, corpo.bump === true,
     )

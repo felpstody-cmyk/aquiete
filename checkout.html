@@ -1108,6 +1108,22 @@ img,svg{display:block;max-width:100%}
     return CEPS_NORTE.some(function(f){ return p >= f[0] && p <= f[1]; });
   }
 
+  /* ---------- Teto do frete grátis ----------
+     Espelho de freteCobrado() do catalogo.mjs, e tem que continuar sendo:
+     quem cobra é o servidor, aqui é só pra tela bater com a cobrança.
+     Nos kits de frete grátis a loja banca até o teto; passou dele, o
+     cliente paga o frete INTEIRO, não a diferença. Fora do teto ficam o
+     kit de 1 (que sempre cobrou) e o Norte (que tem preço próprio). */
+  var TETO_FRETE_GRATIS = 25;
+  function freteTemTeto(){ return kit.frete === 0 && !ehNorte(cepDigitado); }
+  function freteDaTela(envio){
+    var cotado = envio && Number(envio.preco) > 0 ? Number(envio.preco) : null;
+    if (!freteTemTeto()) {
+      return cotado === null ? (ehNorte(cepDigitado) ? FRETE_NORTE : kit.frete) : cotado;
+    }
+    return (cotado !== null && cotado > TETO_FRETE_GRATIS) ? cotado : 0;
+  }
+
   /* ---------- Resumo ---------- */
   var el = function(id){ return d.getElementById(id); };
   function pintarResumo(){
@@ -1117,7 +1133,7 @@ img,svg{display:block;max-width:100%}
     // ja e o desconto, e descontar em cima dele seria duas vezes.
     var desconto = cupomAtivo ? +(kit.preco * cupomAtivo.percentual).toFixed(2) : 0;
     var norte = ehNorte(cepDigitado);
-    var frete = envioEscolhido ? envioEscolhido.preco : (norte ? FRETE_NORTE : kit.frete);
+    var frete = freteDaTela(envioEscolhido);
     var total = subtotal - desconto + frete;
 
     // Pela quantidade, igual a descricao que o servidor monta: com bump o
@@ -1142,7 +1158,23 @@ img,svg{display:block;max-width:100%}
        aparece — aquele kit nunca teve frete gratis, nao ha excecao pra
        explicar, e dizer que "nao vale" fala de um beneficio que nunca
        existiu ali. */
-    el('freteNota').hidden   = !norte || kit.frete > 0;
+    /* Dois motivos diferentes pra um kit de frete grátis cobrar frete, e
+       cada um merece a sua frase. O do Norte é por região; o do teto é
+       por preço, e aí o número tem que aparecer, senão a pessoa só vê o
+       total subir e não entende por quê. */
+    var nota = el('freteNota');
+    if (kit.frete > 0) {
+      nota.hidden = true;
+    } else if (norte) {
+      nota.textContent = 'Frete grátis não vale para a sua região: o envio para o Norte é feito por transportadora.';
+      nota.hidden = false;
+    } else if (!fretePend && frete > 0) {
+      nota.textContent = 'O envio para o seu CEP custa mais de ' + brl(TETO_FRETE_GRATIS)
+        + '. Acima desse valor o frete é cobrado à parte.';
+      nota.hidden = false;
+    } else {
+      nota.hidden = true;
+    }
     el('linhaDesc').hidden   = !desconto;
     el('desc').textContent   = '— ' + brl(desconto);
     /* Pendente, o total sai SEM frete e com "+ frete" do lado. Somar a
@@ -1418,7 +1450,11 @@ img,svg{display:block;max-width:100%}
   /* ---------- Opcoes de entrega ----------
      So para quem paga: kit de 1 frasco, ou qualquer kit indo pro Norte.
      Nos kits com frete gratis nao ha escolha a fazer. */
-  function pagaFrete(){ return kit.frete > 0 || ehNorte(cepDigitado); }
+  /* Cota SEMPRE, em todo kit. Antes só cotava quando o kit já pagava
+     frete, e era por isso que o pedido de 2 frascos pro interior do
+     Maranhão passou: o site nunca perguntou o preço, assumiu grátis e a
+     etiqueta chegou R$ 62,87. Agora ele pergunta sempre e decide depois
+     se cobra — ver TETO_FRETE_GRATIS. */
 
   function limparFretes(){
     envioEscolhido = null;
@@ -1474,9 +1510,10 @@ img,svg{display:block;max-width:100%}
 
   function buscarFretes(){
     var n = String(cepDigitado || '').replace(/\D/g, '');
-    // Nada a cotar: ou o CEP nao esta pronto, ou o kit tem frete gratis
-    // fora do Norte. Nos dois casos a tabela JA e o valor final.
-    if (n.length !== 8 || !pagaFrete()) { freteBuscando = false; limparFretes(); totalAtual = pintarResumo(); return; }
+    // Sem CEP completo nao ha o que cotar. Com ele, cota sempre: mesmo
+    // no kit de frete gratis o preco precisa ser conhecido, porque e ele
+    // que diz se passou do teto.
+    if (n.length !== 8) { freteBuscando = false; limparFretes(); totalAtual = pintarResumo(); return; }
     freteBuscando = true;
 
     // Cada busca ganha um numero. Resposta de busca antiga que chega
@@ -1492,6 +1529,18 @@ img,svg{display:block;max-width:100%}
         // servidor vai cobrar. Ai o valor aparece, mesmo sendo o do chute:
         // esconder um valor que vai ser cobrado e pior que mostra-lo.
         if (!opcoes.length) { limparFretes(); totalAtual = pintarResumo(); return; }
+        /* Coube no teto: a loja banca e a lista nao aparece. Escolher
+           transportadora num envio que e gratis so da trabalho pra quem
+           esta comprando, e a mais barata ja e a que a etiqueta vai usar.
+           Guarda ela mesmo assim — o despacho aproveita o servico, e
+           `freteDaTela` sabe que abaixo do teto ela nao vira cobranca. */
+        if (freteTemTeto() && Number(opcoes[0].preco) <= TETO_FRETE_GRATIS) {
+          el('fretes').hidden = true;
+          el('fretesLista').replaceChildren();
+          envioEscolhido = opcoes[0];
+          totalAtual = pintarResumo();
+          return;
+        }
         desenharFretes(opcoes.slice(0, 6));
       })
       .catch(function(){

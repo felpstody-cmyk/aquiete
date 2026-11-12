@@ -199,6 +199,50 @@ export function freteDoKit(kit, cep) {
   return ehNorte(cep) ? FRETE_NORTE : kit.frete
 }
 
+/**
+ * Teto do frete que a loja banca nos kits anunciados com frete grátis.
+ *
+ * O frete grátis do kit de 2 e do de 4 foi desenhado pra um frete de uns
+ * R$ 15, que é o que custa a esmagadora maioria dos destinos. Em
+ * 10/11/2026 saiu uma etiqueta de R$ 62,87 pra Vitorino Freire, interior
+ * do Maranhão: num pedido de R$ 126,83 líquido, com R$ 38 de frasco,
+ * sobraram R$ 25,96 — menos que o custo de trazer o cliente. A venda deu
+ * prejuízo.
+ *
+ * E não era erro de cotação. Cotadas as onze transportadoras no mesmo
+ * dia pro mesmo pacote, a MAIS BARATA pedia R$ 59,84. É o preço do
+ * lugar. Dos oito destinos reais que a loja já atendeu, seis ficam
+ * abaixo de R$ 19 e só esse estoura.
+ *
+ * Por isso o frete grátis passou a ter teto. Até aqui a loja banca;
+ * passou daqui, o cliente paga o frete INTEIRO, não a diferença — num
+ * frete de R$ 60, bancar os primeiros R$ 25 ainda seria perder os R$ 25.
+ *
+ * Fora do teto ficam, como sempre estiveram, o kit de 1 (que já cobra
+ * frete) e os CEPs do Norte (que têm preço próprio, FRETE_NORTE).
+ */
+export const TETO_FRETE_GRATIS = 25
+
+/** O kit depende do teto? Só os de frete grátis, e fora do Norte. */
+export function freteTemTeto(kit, cep) {
+  return kit.frete === 0 && !ehNorte(cep)
+}
+
+/**
+ * Quanto o cliente paga de frete neste pedido.
+ *
+ * `envio` é a cotação JÁ CONFERIDA aqui no servidor, nunca o preço que o
+ * navegador mandou. Sem ela cai na tabela fixa, que é o que mantém a
+ * loja vendendo com o Melhor Envio fora do ar.
+ */
+export function freteCobrado(kit, cep, envio = null) {
+  const cotado = envio && Number(envio.preco) > 0
+    ? Number(Number(envio.preco).toFixed(2))
+    : null
+  if (!freteTemTeto(kit, cep)) return cotado ?? freteDoKit(kit, cep)
+  return cotado !== null && cotado > TETO_FRETE_GRATIS ? cotado : 0
+}
+
 /** Monta o pedido a partir do id do kit. Lança se o kit não existir. */
 /**
  * `envio` e a opcao ja CONFERIDA no Melhor Envio por quem chamou — nunca
@@ -220,7 +264,11 @@ export function montarPedido(kitId, metodo, codigoCupom, cep, envio = null, comB
   // O desconto incide só no kit, nunca no bump: o bump JÁ é o desconto.
   // Dar cupom em cima dele seria descontar duas vezes a mesma coisa.
   const desconto = cupom ? centavos(kit.preco * cupom.percentual) : 0
-  const frete = envio ? centavos(envio.preco) : freteDoKit(kit, cep)
+  // Passa pelo teto: no kit de frete grátis a cotação só vira cobrança
+  // quando estoura TETO_FRETE_GRATIS. Abaixo disso o `envio` continua
+  // sendo guardado logo abaixo — a etiqueta precisa dele — mas não
+  // entra no total.
+  const frete = freteCobrado(kit, cep, envio)
 
   return {
     kitId: String(kitId),
