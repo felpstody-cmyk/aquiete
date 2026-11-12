@@ -2750,7 +2750,10 @@ function renderPedidos(){
             '<button class="lnk" data-det="'+p.id+'">detalhes</button>' + (p.origem==='manual'
             ? '<button class="lnk" data-ed="'+p.id+'">editar</button><button class="lnk" data-rm="'+p.id+'">excluir</button>'
             : ((p.link?'<a class="lnk" href="'+esc(p.link)+'" target="_blank">cobrança</a> ':'') +
-               '<button class="lnk" data-tr="'+p.id+'">'+(p.rastreio?'trocar rastreio':'rastreio')+'</button>' +
+               // Dois botoes, nao um com pergunta. O que a pessoa clica JA E a
+               // acao: nao existe clique que manda mensagem sem querer.
+               '<button class="lnk" data-tr="'+p.id+'">'+(p.rastreio?'reenviar':'mandar rastreio')+'</button>' +
+               '<button class="lnk" data-an="'+p.id+'" title="grava o codigo e NAO avisa ninguem">anotar</button>' +
                // Só em pedido pago que ainda não tem envio: é o único caso
                // em que apertar isso faz alguma coisa.
                (pago(p) && !(p.envio && !p.envio.erro) ? '<button class="lnk" data-dp="'+p.id+'">despachar</button>' : ''))) + '</td></tr>';
@@ -2763,7 +2766,9 @@ function renderPedidos(){
     b.onclick = function(){ if(confirm('Excluir este pedido manual?')){
       manuais = manuais.filter(function(x){ return x.id!==b.dataset.rm; }); gravar(K.ped,manuais); render(); } }; });
   Array.prototype.forEach.call(el('tbPedidos').querySelectorAll('[data-tr]'), function(b){
-    b.onclick = function(){ enviarRastreio(b.dataset.tr); }; });
+    b.onclick = function(){ rastreioDoPedido(b.dataset.tr, false); }; });
+  Array.prototype.forEach.call(el('tbPedidos').querySelectorAll('[data-an]'), function(b){
+    b.onclick = function(){ rastreioDoPedido(b.dataset.an, true); }; });
   Array.prototype.forEach.call(el('tbPedidos').querySelectorAll('[data-det]'), function(b){
     b.onclick = function(){ abrirDetalhes(b.dataset.det); }; });
   Array.prototype.forEach.call(el('tbPedidos').querySelectorAll('[data-dp]'), function(b){
@@ -2867,14 +2872,16 @@ el('modalFechar').onclick = function(){ el('modalBg').hidden = true; };
 el('modalBg').onclick = function(e){ if (e.target===el('modalBg')) el('modalBg').hidden = true; };
 document.addEventListener('keydown', function(e){ if (e.key==='Escape') el('modalBg').hidden = true; });
 /**
- * Cola o codigo da transportadora, avisa o cliente e ANOTA no sistema.
+ * Rastreio de um pedido. `soAnotar` decide TUDO.
  *
- * Dois caminhos, e a diferenca importa: "avisar e anotar" e o normal, e
- * "so anotar" existe pro pedido que ja foi postado antes deste registro
- * existir. Sem o segundo, acertar o sistema significaria disparar zap e
- * e-mail de novo pra quem recebeu o codigo dias atras.
+ * Por que sao dois botoes e nao uma pergunta: a versao anterior perguntava
+ * "avisar agora?" num confirm, e confirm responde OK no Enter e no clique
+ * reflexo. Numa tarde dando baixa em 20 pedidos que JA estavam em
+ * transito, um Enter distraido mandaria mensagem repetida pra alguem que
+ * recebeu o codigo dias atras. Agora o botao clicado E a acao: "anotar"
+ * nao tem caminho nenhum que mande mensagem.
  */
-function enviarRastreio(id){
+function rastreioDoPedido(id, soAnotar){
   var p = todos().find(function(x){ return x.id===id; });
   if (!p) return;
   if (!cfg.url || !cfg.token) { alert('Configure a conexão com o site em Ajustes primeiro.'); return; }
@@ -2882,31 +2889,34 @@ function enviarRastreio(id){
   // A transportadora vem do despacho: o aviso diz "ja esta com a Jadlog"
   // em vez de "com os Correios", que era mentira em 2 dos 3 primeiros envios.
   var transp = (p.envio && p.envio.servico) || '';
+  var via = p.rastreioVia || {};
 
   var jaTem = p.rastreio
-    ? '
-
-Já anotado: ' + p.rastreio + (p.rastreioEm ? ' em ' + dataHoraBR(p.rastreioEm) : '')
+    ? '\n\nJá anotado: ' + p.rastreio + (p.rastreioEm ? ' em ' + dataHoraBR(p.rastreioEm) : '')
     : '';
-  var codigo = (prompt('Código de rastreio' + (transp ? ' (' + transp + ')' : '')
-    + ' para ' + p.nome + ':' + jaTem, p.rastreio || '') || '').trim();
+  var titulo = (soAnotar ? 'ANOTAR (sem avisar) — ' : 'MANDAR para ')
+    + p.nome + '\nCódigo' + (transp ? ' (' + transp + ')' : '') + ':' + jaTem;
+
+  var codigo = (prompt(titulo, p.rastreio || '') || '').trim();
   if (!codigo) return;
 
-  var so = !confirm('Avisar ' + p.nome + ' agora, por WhatsApp e e-mail?
+  /* A trava que ele pediu: se o cliente JA recebeu aviso, mandar de novo
+     tem que ser decisao consciente, com o nome e o telefone na frente. */
+  if (!soAnotar && p.rastreio && (via.zap || via.email)) {
+    var canais = [via.zap ? 'WhatsApp' : null, via.email ? 'e-mail' : null].filter(Boolean).join(' e ');
+    if (!confirm('ATENÇÃO: ' + p.nome + ' JÁ foi avisado por ' + canais
+      + (p.rastreioEm ? ' em ' + dataHoraBR(p.rastreioEm) : '')
+      + '.\nCódigo que ela recebeu: ' + p.rastreio
+      + '\n\nMandar mensagem DE NOVO para ' + (p.telefone || p.contato || 'esse cliente') + '?')) return;
+  }
 
-'
-    + 'OK = avisa o cliente e anota no sistema.
-'
-    + 'Cancelar = SÓ ANOTA, sem mandar nada (use quando a pessoa já recebeu o código).');
-
-  // Sem e-mail nao da pra avisar, mas da pra anotar — e anotar e o que
-  // tira o pedido da lista de "falta rastreio".
-  if (!so && (!p.contato || p.contato.indexOf('@') < 0)) {
-    if (!confirm('Esse pedido não tem e-mail salvo.
-
-Anotar o código de qualquer jeito? '
-      + 'Aí você avisa o cliente por outro canal.')) return;
-    so = true;
+  if (!soAnotar) {
+    if (!p.contato || p.contato.indexOf('@') < 0) {
+      alert('Esse pedido não tem e-mail salvo. Use o botão "anotar" e avise o cliente por outro canal.');
+      return;
+    }
+    if (!confirm('Mandar o código ' + codigo + ' para ' + p.nome
+      + '\n' + (p.telefone ? 'WhatsApp ' + p.telefone + ' e ' : '') + p.contato + '?')) return;
   }
 
   var url = cfg.url.replace(/\/?admin-dados\/?$/, '/enviar-rastreio');
@@ -2914,7 +2924,8 @@ Anotar o código de qualquer jeito? '
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-admin-token': cfg.token },
     body: JSON.stringify({ nome: p.nome, email: p.contato, telefone: p.telefone || '',
-      referencia: p.referencia, rastreio: codigo, transportadora: transp, so: so })
+      referencia: p.referencia, rastreio: codigo, transportadora: transp,
+      so: soAnotar === true })
   })
     .then(function(r){ return r.json().then(function(j){ return { ok: r.ok, j: j }; }); })
     .then(function(res){
@@ -2922,19 +2933,17 @@ Anotar o código de qualquer jeito? '
         alert('Não consegui: ' + (res.j.erro || 'erro desconhecido'));
         return;
       }
-      alert(so
-        ? 'Código anotado para ' + p.nome + '. Ninguém foi avisado.'
+      alert(soAnotar
+        ? 'Anotado para ' + p.nome + '. Ninguém foi avisado.'
         : 'Rastreio enviado para ' + p.nome + '.'
-          + (res.j.zap && res.j.zap.enviado ? '' : '
-
-Atenção: o WhatsApp NÃO saiu.')
-          + (res.j.enviado ? '' : '
-Atenção: o e-mail NÃO saiu.'));
+          + (res.j.zap && res.j.zap.enviado ? '' : '\n\nAtenção: o WhatsApp NÃO saiu.')
+          + (res.j.enviado ? '' : '\nAtenção: o e-mail NÃO saiu.'));
       // Recarrega pro pedido sair da lista de "falta rastreio" na hora.
       sincronizar();
     })
     .catch(function(e){ alert('Falha de conexão: ' + e.message); });
 }
+
 /** Tira uma sessão da lista de comportamento — teste do próprio dono, por exemplo. */
 function apagarSessaoComportamento(sid){
   if (!cfg.url || !cfg.token) { alert('Configure a conexão com o site em Ajustes primeiro.'); return; }
