@@ -384,6 +384,11 @@ td.sel,th.sel{width:34px;padding-right:0}
       <input type="search" id="busca" placeholder="Buscar por nome, cidade, referência ou rastreio">
       <select id="fStatus"><option value="">Todas as situações</option></select>
       <select id="fOrigem"><option value="">Site e manuais</option><option value="site">Só do site</option><option value="manual">Só manuais</option></select>
+      <!-- A pergunta de toda vez que um lote e postado: quem ainda falta?
+           Pedido pago, do site, sem codigo de entrega anotado. -->
+      <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;white-space:nowrap">
+        <input type="checkbox" id="fSemRastreio"> Falta rastreio <span id="contaSemRastreio"></span>
+      </label>
       <button class="btn sec mini" id="expPedidos">Exportar CSV</button>
     </div>
     <div class="bulkbar" id="bulkBar" hidden>
@@ -2675,6 +2680,33 @@ function envioTxt(p){
   return fora;
 }
 
+/* Pedido que DEVE ter rastreio: pago, do site, e nao cancelado.
+   Manual nao entra porque o envio dele nao passa por aqui. */
+function precisaRastreio(p){
+  return p.origem === 'site' && pago(p);
+}
+
+/* O estado do rastreio, do lado do envio. E este pedaco que responde
+   "quem falta?" de bater o olho, sem abrir pedido por pedido. */
+function rastreioTxt(p){
+  if (!precisaRastreio(p)) return '';
+  if (!p.rastreio) {
+    return '<br><span class="pill p-pendente">falta rastreio</span>';
+  }
+  var via = p.rastreioVia || {};
+  var quando = p.rastreioEm ? dataHoraBR(p.rastreioEm) : '';
+  // Avisado de verdade x so anotado. A diferenca importa: "so anotado" e
+  // pedido que saiu antes deste registro existir, e o cliente recebeu o
+  // codigo por fora.
+  var rotulo = via.soRegistro ? 'rastreio anotado' : 'rastreio enviado';
+  var dica = p.rastreio + (quando ? ' em ' + quando : '')
+    + (via.soRegistro ? ' (so anotado, sem avisar)' : '')
+    + (via.zap ? ' | zap ok' : ' | zap nao saiu')
+    + (via.email ? ' | e-mail ok' : ' | e-mail nao saiu');
+  return '<br><span class="pill p-entregue" title="' + esc(dica) + '">' + rotulo + '</span>'
+       + '<br><span style="font-size:11.5px;color:var(--ink-3)">' + esc(p.rastreio) + '</span>';
+}
+
 function renderPedidos(){
   var sts = {}; todos().forEach(function(p){ if(p.status) sts[p.status]=1; });
   var atual = el('fStatus').value;
@@ -2682,9 +2714,19 @@ function renderPedidos(){
     Object.keys(sts).sort().map(function(s){ return '<option'+(s===atual?' selected':'')+'>'+esc(s)+'</option>'; }).join('');
 
   var q = chave(el('busca').value), st = el('fStatus').value, og = el('fOrigem').value;
+  var semRastreio = el('fSemRastreio').checked;
+
+  /* A conta sai do periodo inteiro, nao da lista filtrada: senao marcar o
+     filtro mudaria o proprio numero que ele esta olhando. */
+  var faltam = doPeriodo().filter(function(p){ return precisaRastreio(p) && !p.rastreio; }).length;
+  el('contaSemRastreio').textContent = faltam ? '(' + faltam + ')' : '';
+  el('contaSemRastreio').style.color = faltam ? 'var(--brand)' : 'var(--ink-3)';
+  el('contaSemRastreio').style.fontWeight = faltam ? '700' : '400';
+
   var lista = doPeriodo().filter(function(p){
     if (st && p.status !== st) return false;
     if (og && p.origem !== og) return false;
+    if (semRastreio && !(precisaRastreio(p) && !p.rastreio)) return false;
     if (!q) return true;
     return chave([p.nome,p.cidade,p.uf,p.referencia,p.rastreio,p.contato].join(' ')).indexOf(q) >= 0;
   }).sort(function(a,b){ return String(b.data).localeCompare(String(a.data)); });
@@ -2701,14 +2743,14 @@ function renderPedidos(){
           '<td>'+esc([p.cidade,p.uf].filter(Boolean).join(' / ')||'—')+'</td>' +
           '<td class="num">'+(p.un||1)+'</td><td>'+esc(p.pag||'—')+'</td>' +
           '<td><span class="pill p-'+chave(p.status)+'">'+esc(p.status)+'</span></td>' +
-          '<td>'+envioTxt(p)+'</td>' +
+          '<td>'+envioTxt(p)+rastreioTxt(p)+'</td>' +
           '<td>'+(p.origem==='site'?'<span class="pill p-enviado">site</span>':'<span class="pill p-manual">manual</span>')+'</td>' +
           '<td class="num">'+brl(totalDe(p))+'</td>' +
           '<td style="white-space:nowrap">' +
             '<button class="lnk" data-det="'+p.id+'">detalhes</button>' + (p.origem==='manual'
             ? '<button class="lnk" data-ed="'+p.id+'">editar</button><button class="lnk" data-rm="'+p.id+'">excluir</button>'
             : ((p.link?'<a class="lnk" href="'+esc(p.link)+'" target="_blank">cobrança</a> ':'') +
-               '<button class="lnk" data-tr="'+p.id+'">rastreio</button>' +
+               '<button class="lnk" data-tr="'+p.id+'">'+(p.rastreio?'trocar rastreio':'rastreio')+'</button>' +
                // Só em pedido pago que ainda não tem envio: é o único caso
                // em que apertar isso faz alguma coisa.
                (pago(p) && !(p.envio && !p.envio.erro) ? '<button class="lnk" data-dp="'+p.id+'">despachar</button>' : ''))) + '</td></tr>';
@@ -2824,26 +2866,72 @@ function abrirDetalhes(id){
 el('modalFechar').onclick = function(){ el('modalBg').hidden = true; };
 el('modalBg').onclick = function(e){ if (e.target===el('modalBg')) el('modalBg').hidden = true; };
 document.addEventListener('keydown', function(e){ if (e.key==='Escape') el('modalBg').hidden = true; });
-/** Cola o codigo da transportadora e dispara o aviso de rastreio pro cliente. */
+/**
+ * Cola o codigo da transportadora, avisa o cliente e ANOTA no sistema.
+ *
+ * Dois caminhos, e a diferenca importa: "avisar e anotar" e o normal, e
+ * "so anotar" existe pro pedido que ja foi postado antes deste registro
+ * existir. Sem o segundo, acertar o sistema significaria disparar zap e
+ * e-mail de novo pra quem recebeu o codigo dias atras.
+ */
 function enviarRastreio(id){
   var p = todos().find(function(x){ return x.id===id; });
   if (!p) return;
   if (!cfg.url || !cfg.token) { alert('Configure a conexão com o site em Ajustes primeiro.'); return; }
-  if (!p.contato || p.contato.indexOf('@') < 0) { alert('Esse pedido não tem e-mail salvo — avise o cliente por outro canal.'); return; }
+
   // A transportadora vem do despacho: o aviso diz "ja esta com a Jadlog"
   // em vez de "com os Correios", que era mentira em 2 dos 3 primeiros envios.
   var transp = (p.envio && p.envio.servico) || '';
-  var codigo = (prompt('Codigo de rastreio' + (transp ? ' (' + transp + ')' : '') + ' para ' + p.nome + ':', '') || '').trim();
+
+  var jaTem = p.rastreio
+    ? '
+
+Já anotado: ' + p.rastreio + (p.rastreioEm ? ' em ' + dataHoraBR(p.rastreioEm) : '')
+    : '';
+  var codigo = (prompt('Código de rastreio' + (transp ? ' (' + transp + ')' : '')
+    + ' para ' + p.nome + ':' + jaTem, p.rastreio || '') || '').trim();
   if (!codigo) return;
+
+  var so = !confirm('Avisar ' + p.nome + ' agora, por WhatsApp e e-mail?
+
+'
+    + 'OK = avisa o cliente e anota no sistema.
+'
+    + 'Cancelar = SÓ ANOTA, sem mandar nada (use quando a pessoa já recebeu o código).');
+
+  // Sem e-mail nao da pra avisar, mas da pra anotar — e anotar e o que
+  // tira o pedido da lista de "falta rastreio".
+  if (!so && (!p.contato || p.contato.indexOf('@') < 0)) {
+    if (!confirm('Esse pedido não tem e-mail salvo.
+
+Anotar o código de qualquer jeito? '
+      + 'Aí você avisa o cliente por outro canal.')) return;
+    so = true;
+  }
+
   var url = cfg.url.replace(/\/?admin-dados\/?$/, '/enviar-rastreio');
   fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-admin-token': cfg.token },
-    body: JSON.stringify({ nome: p.nome, email: p.contato, telefone: p.telefone || '', referencia: p.referencia, rastreio: codigo, transportadora: transp })
+    body: JSON.stringify({ nome: p.nome, email: p.contato, telefone: p.telefone || '',
+      referencia: p.referencia, rastreio: codigo, transportadora: transp, so: so })
   })
     .then(function(r){ return r.json().then(function(j){ return { ok: r.ok, j: j }; }); })
     .then(function(res){
-      alert(res.ok && res.j.ok ? 'Rastreio enviado para ' + p.nome + '.' : 'Não consegui enviar: ' + (res.j.erro || 'erro desconhecido'));
+      if (!(res.ok && res.j.ok)) {
+        alert('Não consegui: ' + (res.j.erro || 'erro desconhecido'));
+        return;
+      }
+      alert(so
+        ? 'Código anotado para ' + p.nome + '. Ninguém foi avisado.'
+        : 'Rastreio enviado para ' + p.nome + '.'
+          + (res.j.zap && res.j.zap.enviado ? '' : '
+
+Atenção: o WhatsApp NÃO saiu.')
+          + (res.j.enviado ? '' : '
+Atenção: o e-mail NÃO saiu.'));
+      // Recarrega pro pedido sair da lista de "falta rastreio" na hora.
+      sincronizar();
     })
     .catch(function(e){ alert('Falha de conexão: ' + e.message); });
 }
@@ -2928,6 +3016,7 @@ el('pCancelar').onclick = limparPedido;
 el('busca').oninput = renderPedidos;
 el('fStatus').onchange = renderPedidos;
 el('fOrigem').onchange = renderPedidos;
+el('fSemRastreio').onchange = renderPedidos;
 el('bulkCancelar').onclick = function(){ selecionados = {}; renderPedidos(); };
 el('bulkAplicar').onclick = function(){
   var novo = el('bulkStatus').value;

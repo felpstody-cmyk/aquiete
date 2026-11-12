@@ -16,6 +16,9 @@ import { lerEstadoZap } from './_lib/zapvigia.mjs'
 import { lerZapLog } from './_lib/zaplog.mjs'
 import { lerDespachos, despachoConfigurado, faltaNoRemetente } from './_lib/envio.mjs'
 import { lerRastreios } from './_lib/utmify.mjs'
+// Apelido obrigatorio: `lerRastreios` da utmify e UTM de campanha; este e
+// codigo de entrega. Dois assuntos diferentes com o mesmo nome.
+import { lerRastreios as lerRastreiosEnviados } from './_lib/rastreio.mjs'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -124,7 +127,7 @@ export default async (req) => {
   if (req.headers.get('x-admin-token') !== esperado) return json({ erro: 'Token inválido' }, 401)
 
   try {
-    const [cobrancas, clientes, metricas, ativos, carrinhos, comportamento, conversoesGoogle, resumos, zap, zapLog, despachos, metaPedido, rastreios] = await Promise.all([
+    const [cobrancas, clientes, metricas, ativos, carrinhos, comportamento, conversoesGoogle, resumos, zap, zapLog, despachos, metaPedido, rastreios, rastreiosEnviados] = await Promise.all([
       tudo('/payments'),
       tudo('/customers'),
       lerContadores(),
@@ -149,6 +152,8 @@ export default async (req) => {
       // Meta nem com a Utmify.
       lerCompraMeta(),
       lerRastreios(),
+      // Quem ja recebeu codigo de entrega. Leitura de blob, um documento so.
+      lerRastreiosEnviados(),
     ])
 
     // Uma leitura só do Blobs: a lista de abandonados sai da lista completa.
@@ -221,6 +226,36 @@ export default async (req) => {
         })(),
         // Se a compra chegou no Meta, e se foi com o _fbc.
         meta: metaPedido[p.externalReference || ''] || null,
+        /*
+         * Codigo de entrega: TEXTO, nao objeto.
+         *
+         * O painel ja tratava `p.rastreio` como texto em tres lugares — a
+         * busca (que faz join de campos), a ficha do pedido e o CSV. Mandar
+         * um objeto aqui faria a busca procurar dentro de
+         * "[object Object]" e a ficha mostrar isso na tela. Entao o codigo
+         * vem como texto, e o resto em campos ao lado.
+         *
+         * Vazio responde "quem ainda falta mandar o rastreio?", que antes
+         * nao tinha resposta em lugar nenhum: o codigo era digitado num
+         * prompt, mandado e esquecido.
+         */
+        ...(() => {
+          const t = rastreiosEnviados[p.externalReference || ''] || null
+          if (!t) return { rastreio: '', rastreioEm: 0, rastreioVia: null }
+          return {
+            rastreio: t.codigo || '',
+            rastreioEm: Number(t.em) || 0,
+            // Como o cliente foi avisado, pra dar pra reenviar so o que
+            // falhou em vez de incomodar quem ja recebeu.
+            rastreioVia: {
+              zap: Boolean(t.zap),
+              email: Boolean(t.email),
+              soRegistro: Boolean(t.soRegistro),
+              transportadora: t.transportadora || '',
+              ...(t.antes ? { antes: t.antes } : {}),
+            },
+          }
+        })(),
       }
     })
 
