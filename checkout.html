@@ -844,10 +844,27 @@ img,svg{display:block;max-width:100%}
 
         </div>
 
-        <!-- Painel do cartão: o cliente digita o cartão na página segura do Asaas -->
+        <!-- ============ PAINEL DO CARTAO ============
+             Dois estados, e quem escolhe NAO e esta pagina: o /api/parcelas
+             devolve `transparente`, que espelha a variavel
+             CARTAO_TRANSPARENTE do Netlify.
+
+             Desligado  -> o aviso de sempre, o cliente digita o cartao na
+                           pagina do Asaas.
+             Ligado     -> os campos aqui, e a pessoa nunca sai do site.
+
+             O padrao do HTML e o estado DESLIGADO de proposito: se a
+             consulta falhar, a loja continua vendendo como vendia ontem.
+
+             Nenhum campo daqui tem `required`. O painel fica escondido
+             quando o pagamento e Pix ou boleto, e campo obrigatorio
+             escondido travaria o submit com um erro que ninguem consegue
+             nem ver. A conferencia e no JS, no submit, so quando o cartao
+             e o metodo escolhido. -->
         <div class="panel" id="panelCard">
           <div><div class="panel__in">
-            <div class="slot" id="card-fields">
+
+            <div class="slot" id="cardHospedado">
               <h3>Os dados do cartão você digita na próxima tela</h3>
               <p>
                 Ao finalizar, abre a tela segura do nosso processador de
@@ -855,6 +872,53 @@ img,svg{display:block;max-width:100%}
                 do seu cartão não passam por este site.
               </p>
             </div>
+
+            <div id="cardProprio" hidden>
+              <div class="row">
+                <div class="field">
+                  <label for="ccNum">Número do cartão</label>
+                  <!-- autocomplete nos nomes que o navegador conhece: e o que
+                       faz o preenchimento automatico do celular funcionar, e
+                       cartao digitado na mao no celular e onde mais se perde
+                       venda. -->
+                  <input id="ccNum" inputmode="numeric" autocomplete="cc-number"
+                         placeholder="0000 0000 0000 0000" maxlength="23" spellcheck="false">
+                  <small></small>
+                </div>
+              </div>
+              <div class="row">
+                <div class="field">
+                  <label for="ccNome">Nome impresso no cartão</label>
+                  <input id="ccNome" autocomplete="cc-name"
+                         placeholder="igual está no cartão" spellcheck="false">
+                  <small></small>
+                </div>
+              </div>
+              <div class="row row--2">
+                <div class="field">
+                  <label for="ccVal">Validade</label>
+                  <input id="ccVal" inputmode="numeric" autocomplete="cc-exp"
+                         placeholder="MM/AA" maxlength="5">
+                  <small></small>
+                </div>
+                <div class="field">
+                  <label for="ccCvv">CVV</label>
+                  <input id="ccCvv" inputmode="numeric" autocomplete="cc-csc"
+                         placeholder="000" maxlength="4">
+                  <small class="dica">os 3 dígitos do verso</small>
+                </div>
+              </div>
+              <div class="row">
+                <div class="field">
+                  <label for="ccPar">Parcelas</label>
+                  <select id="ccPar"></select>
+                  <!-- Os valores daqui vem do simulador do Asaas, nunca de
+                       conta feita nesta pagina. -->
+                  <small class="dica" id="ccParDica"></small>
+                </div>
+              </div>
+            </div>
+
           </div></div>
         </div>
 
@@ -1187,6 +1251,27 @@ img,svg{display:block;max-width:100%}
     // diz nada de util.
     var st = el('sumTotal');
     if (st) st.textContent = fretePend ? brl(subtotal - desconto) + ' + frete' : brl(total);
+
+    /* Mudou o total, muda a parcela.
+     *
+     * Este e o unico lugar por onde TODA mudanca de total passa: kit,
+     * bump, cupom e frete. Pendurar a atualizacao aqui, em vez de em cada
+     * um deles, e o que garante que a tabela nunca fica mostrando a
+     * parcela de um total que ja nao existe — alguem marcar o bump e
+     * continuar vendo "3x de R$ 43,30" seria cobrar um valor que ela nao
+     * viu.
+     *
+     * O `buscarParcelas` compara a query antes de chamar, entao redesenho
+     * que nao mudou nada nao gera requisicao. O typeof cobre as primeiras
+     * pintadas, que acontecem antes do bloco do cartao existir.
+     */
+    try {
+      if (typeof CARTAO !== 'undefined' && CARTAO && CARTAO.ligado
+          && d.querySelector('.pay input:checked').value === 'card') {
+        buscarParcelas();
+      }
+    } catch (e) {}
+
     return total;
   }
   /* Aparece so onde existe. No kit de 4 nao existe: a caixa cabe 4. */
@@ -1732,9 +1817,199 @@ img,svg{display:block;max-width:100%}
     });
     d.querySelectorAll('[data-btn-sub]').forEach(function(x){ x.textContent = subs[input.value][0]; });
     el('parc').textContent   = subs[input.value][1];
+    /* A tabela de parcelas so e buscada quando o cartao entra na tela: nao
+       faz sentido gastar 12 chamadas na API do Asaas pra quem vai pagar no
+       Pix, que e a maioria.
+
+       O `typeof` nao e paranoia: este `escolher` tambem roda uma vez na
+       carga, e nesse instante o bloco do cartao (mais abaixo no arquivo)
+       ainda nao executou — `CARTAO` existe por hoisting mas vale
+       undefined. */
+    if (input.value === 'card' && typeof CARTAO !== 'undefined' && CARTAO) buscarParcelas();
   }
   pagos.forEach(function(i){ i.addEventListener('change', function(){ escolher(i); }); });
   escolher(d.querySelector('.pay input:checked'));
+
+  /* ---------- Cartão na própria página ----------
+     Só existe quando o servidor diz que existe. O /api/parcelas devolve
+     `transparente`, espelho da variável CARTAO_TRANSPARENTE do Netlify, e
+     é ele que decide entre os campos daqui e o aviso de "próxima tela".
+
+     Falha de rede não pode custar venda: enquanto a resposta não chega, e
+     se ela nunca chegar, a página fica no modo antigo. */
+  var CARTAO = { ligado: false, opcoes: [], ultimaQuery: '' };
+
+  function soDigito(v){ return String(v || '').replace(/\D/g, ''); }
+
+  /* Luhn: o dígito verificador que toda bandeira usa.
+     Conferir aqui não é frescura — número digitado errado vira recusa no
+     Asaas, e recusa demais na conta é o que faz adquirente olhar a loja
+     com desconfiança. Melhor pegar o dedo trocado antes de cobrar. */
+  function luhnOk(n){
+    var s = soDigito(n);
+    if (s.length < 13 || s.length > 19) return false;
+    var soma = 0, dobra = false;
+    for (var i = s.length - 1; i >= 0; i--) {
+      var dig = s.charCodeAt(i) - 48;
+      if (dobra) { dig *= 2; if (dig > 9) dig -= 9; }
+      soma += dig;
+      dobra = !dobra;
+    }
+    return soma % 10 === 0;
+  }
+
+  /* As mensagens dizem o que fazer, não acusam. Mesma régua do resto do
+     formulário: faltar dígito e trocar dígito são problemas diferentes. */
+  var REGRA_CC = {
+    ccNum: function(v){
+      var s = soDigito(v);
+      if (s.length < 13) return 'Faltam dígitos do cartão';
+      if (!luhnOk(s))    return 'Confira o número: algum dígito saiu trocado';
+      return '';
+    },
+    ccNome: function(v){
+      return String(v || '').trim().length >= 3 ? '' : 'O nome igual está no cartão';
+    },
+    ccVal: function(v){
+      var s = soDigito(v);
+      if (s.length < 4) return 'Use MM/AA, tipo 08/30';
+      var mes = Number(s.slice(0, 2));
+      if (mes < 1 || mes > 12) return 'O mês vai de 01 a 12';
+      /* Vence no FIM do mês: cartão 11/26 é válido todo novembro de 2026.
+         Comparar com o dia 1º reprovaria cartão bom durante o mês inteiro
+         da validade. */
+      var fimDoMes = new Date(2000 + Number(s.slice(2, 4)), mes, 1).getTime();
+      if (fimDoMes <= Date.now()) return 'Esse cartão já venceu';
+      return '';
+    },
+    ccCvv: function(v){
+      var s = soDigito(v);
+      return (s.length === 3 || s.length === 4) ? '' : 'O CVV tem 3 dígitos (4 na Amex)';
+    }
+  };
+
+  function conferirCartao(mostrar){
+    var tudoOk = true;
+    Object.keys(REGRA_CC).forEach(function(id){
+      var i = el(id);
+      if (!i) return;
+      var msg = REGRA_CC[id](i.value);
+      /* Digitando só limpa; saindo do campo mostra. Acusar a cada tecla
+         briga com quem está no meio do número do cartão. */
+      if (mostrar || !msg) erro(i, msg);
+      var f = i.closest('.field');
+      if (f) f.toggleAttribute('data-ok', String(i.value || '').trim().length > 0 && !msg);
+      if (msg) tudoOk = false;
+    });
+    return tudoOk;
+  }
+
+  /* Máscaras. O espaço de 4 em 4 no número existe porque é assim que o
+     cartão está impresso, e conferir 16 dígitos corridos na tela do
+     celular é onde a pessoa desiste. */
+  (function mascarasCartao(){
+    var n = el('ccNum'), v = el('ccVal'), c = el('ccCvv');
+    if (!n || !v || !c) return;
+    n.addEventListener('input', function(){
+      n.value = soDigito(n.value).slice(0, 19).replace(/(.{4})/g, '$1 ').trim();
+    });
+    v.addEventListener('input', function(){
+      var s = soDigito(v.value).slice(0, 4);
+      v.value = s.length > 2 ? s.slice(0, 2) + '/' + s.slice(2) : s;
+    });
+    c.addEventListener('input', function(){ c.value = soDigito(c.value).slice(0, 4); });
+
+    Object.keys(REGRA_CC).forEach(function(id){
+      var i = el(id);
+      if (!i) return;
+      i.addEventListener('blur',  function(){ conferirCartao(true); });
+      i.addEventListener('input', function(){ erro(i, ''); });
+    });
+  })();
+
+  /* ---------- Parcelas ----------
+     A tabela NUNCA é calculada aqui. Ela vem do simulador do Asaas, pela
+     conta dele, com a taxa e a regra de juros dela. Percentual chutado
+     nesta página faria a diferença sair do bolso dele em toda venda. */
+  function queryParcelas(){
+    var p = ['kit=' + encodeURIComponent(kitId)];
+    if (bumpAtivo) p.push('bump=1');
+    if (cupomAtivo && cupomAtivo.codigo) p.push('cupom=' + encodeURIComponent(cupomAtivo.codigo));
+    var cep = soDigito(el('cep').value);
+    if (cep.length === 8) p.push('cep=' + cep);
+    if (envioEscolhido && envioEscolhido.id) p.push('envio=' + encodeURIComponent(envioEscolhido.id));
+    return p.join('&');
+  }
+
+  function dicaParcela(){
+    var dica = el('ccParDica'), sel = el('ccPar');
+    if (!dica || !sel) return;
+    var achada = null;
+    CARTAO.opcoes.forEach(function(o){ if (String(o.parcelas) === sel.value) achada = o; });
+    /* O total aparece a partir de 2x. É a informação que a pessoa
+       realmente quer conferir antes de confirmar, e deixá-la implícita em
+       "12x de R$ 10,82" obriga ela a fazer a conta de cabeça. */
+    dica.textContent = (achada && achada.parcelas > 1) ? 'total de ' + brl(achada.total) : '';
+  }
+
+  function pintarParcelas(){
+    var sel = el('ccPar');
+    if (!sel) return;
+    var escolhidaAntes = sel.value;
+    sel.replaceChildren();
+
+    /* Sem resposta do simulador sobra o à vista, e só. Inventar 3x aqui
+       seria inventar o valor da parcela. */
+    var lista = CARTAO.opcoes.length
+      ? CARTAO.opcoes
+      : [{ parcelas: 1, valorParcela: totalAtual, total: totalAtual }];
+
+    lista.forEach(function(o){
+      var op = d.createElement('option');
+      op.value = String(o.parcelas);
+      op.textContent = o.parcelas === 1
+        ? '1x de ' + brl(o.total) + ' — à vista'
+        : o.parcelas + 'x de ' + brl(o.valorParcela);
+      sel.appendChild(op);
+    });
+
+    if (escolhidaAntes && sel.querySelector('option[value="' + escolhidaAntes + '"]')) {
+      sel.value = escolhidaAntes;
+    }
+    dicaParcela();
+  }
+
+  function aplicarModoCartao(){
+    var proprio = el('cardProprio'), hospedado = el('cardHospedado');
+    if (!proprio || !hospedado) return;
+    proprio.hidden = !CARTAO.ligado;
+    hospedado.hidden = CARTAO.ligado;
+  }
+
+  function buscarParcelas(){
+    var q = queryParcelas();
+    if (q === CARTAO.ultimaQuery) return;   // mesmo pedido, mesma tabela
+    CARTAO.ultimaQuery = q;
+
+    fetch('/api/parcelas?' + q)
+      .then(function(r){ return r.json(); })
+      .then(function(j){
+        CARTAO.ligado = j.transparente === true;
+        CARTAO.opcoes = j.opcoes || [];
+        aplicarModoCartao();
+        pintarParcelas();
+      })
+      .catch(function(){
+        /* Deixa a query em branco pra tentar de novo no próximo clique, e
+           segue no modo hospedado: a loja continua vendendo como ontem. */
+        CARTAO.ultimaQuery = '';
+      });
+  }
+
+  (function(){
+    var sel = el('ccPar');
+    if (sel) sel.addEventListener('change', dicaParcela);
+  })();
 
   /* ---------- Validação ---------- */
   /* ---------- Uma regra por campo ----------
@@ -1839,8 +2114,18 @@ img,svg{display:block;max-width:100%}
     ok = erro(el('bairro'), el('bairro').value.trim() ? '' : 'Falta o bairro') && ok;
     ok = erro(el('cidade'), el('cidade').value.trim() ? '' : 'Falta a cidade') && ok;
 
+    /* O cartao e conferido SO quando ele e o metodo escolhido e os campos
+       estao realmente na tela. No Pix, no boleto, ou com o transparente
+       desligado, estes campos nem existem pro cliente — exigir aqui
+       travaria o checkout num erro invisivel. */
+    if (d.querySelector('.pay input:checked').value === 'card'
+        && typeof CARTAO !== 'undefined' && CARTAO && CARTAO.ligado) {
+      ok = conferirCartao(true) && ok;
+    }
+
     if (!ok) {
-      d.querySelector('[aria-invalid="true"]').focus();
+      var primeiro = d.querySelector('[aria-invalid="true"]');
+      if (primeiro) primeiro.focus();
       return;
     }
 
@@ -1912,6 +2197,27 @@ img,svg{display:block;max-width:100%}
           catch(e){ return null; }
         })(),
         metodo: d.querySelector('.pay input:checked').value,
+        /* O cartao vai no corpo do POST e acaba ali: o servidor repassa pro
+           Asaas e nao guarda em lugar nenhum. Nada disto entra em
+           localStorage, em cookie, no carrinho ou em log.
+
+           Sai como null quando nao e cartao, ou quando o transparente esta
+           desligado — e nesse caso o servidor devolve a pagina do Asaas,
+           como sempre fez. */
+        cartao: (function(){
+          if (d.querySelector('.pay input:checked').value !== 'card') return null;
+          if (typeof CARTAO === 'undefined' || !CARTAO || !CARTAO.ligado) return null;
+          return {
+            numero:   soDigito(el('ccNum').value),
+            nome:     el('ccNome').value.trim(),
+            validade: el('ccVal').value.trim(),
+            cvv:      soDigito(el('ccCvv').value)
+          };
+        })(),
+        parcelas: (function(){
+          var sel = el('ccPar');
+          return sel && sel.value ? Number(sel.value) : 1;
+        })(),
         // O servidor cota de novo e confere este id antes de cobrar: sem
         // isso daria pra escolher o barato na tela e postar pelo caro.
         envio: envioEscolhido ? envioEscolhido.id : null,
@@ -1946,6 +2252,43 @@ img,svg{display:block;max-width:100%}
     .then(function(r){ return r.json().then(function(j){ return { ok: r.ok, j: j }; }); })
     .then(function(res){
       if (!res.ok || !res.j.ok) throw new Error(res.j.erro || 'Falha ao criar o pedido');
+
+      /* ---------- Cartão cobrado aqui mesmo ----------
+         Vem ANTES do redirectUrl porque no transparente ele volta null: a
+         venda já aconteceu nesta resposta, e mandar a pessoa pra página do
+         gateway desfaria o motivo de tudo isto existir. */
+
+      /* 3DS primeiro. Quando o emissor exige o desafio, sem passar por ele
+         a transação não se completa — e o dinheiro fica preso sem venda.
+         É uma URL do banco DELA, não a página de cobrança do Asaas. */
+      if (res.j.desafio3ds) {
+        if (!/^https:\/\//i.test(String(res.j.desafio3ds))) {
+          throw new Error('Endereço de autenticação inválido. Tente outro método.');
+        }
+        location.href = res.j.desafio3ds;
+        return;
+      }
+
+      if (res.j.transparente) {
+        if (res.j.pago) {
+          /* A conversão paga dispara no obrigado.html, igual ao caminho
+             antigo do cartão. Um lugar só pra isso, pra mesma venda nunca
+             contar duas vezes. */
+          location.href = 'obrigado.html?ref=' + encodeURIComponent(res.j.referencia || '');
+          return;
+        }
+        /* Cobrança criada e ainda não confirmada. O Asaas tem
+           AWAITING_RISK_ANALYSIS exatamente pra isto.
+
+           Aqui não cabe nem "aprovado" nem "falhou": o dinheiro pode entrar
+           em alguns minutos, e as duas frases erradas custam caro — uma
+           promete o que não aconteceu, a outra faz a pessoa pagar de novo. */
+        travar(false);
+        alert('Recebemos os dados e o pagamento está em análise pelo banco. '
+            + 'Você recebe um e-mail assim que for aprovado. '
+            + 'Não pague de novo: o pedido ' + (res.j.referencia || '') + ' já está registrado.');
+        return;
+      }
 
       // Cartão e boleto: página do gateway. Pix: QR aqui mesmo.
       // Só navega para https. Um "javascript:" vindo do gateway executaria

@@ -93,8 +93,22 @@ export default async (req) => {
       null
 
     const gateway = obterGateway()
+    /*
+     * O cartao passa por aqui e NAO FICA.
+     *
+     * `corpo.cartao` entra direto no gateway e morre com esta invocacao:
+     * nao vai pro carrinho, nao vai pro despacho, nao vai pro log, nao vai
+     * pra Utmify e nao vai pro Meta. Nenhuma das chamadas abaixo recebe o
+     * objeto. O unico lugar que ele chega e o adaptador do Asaas, que o
+     * monta no formato da API deles e manda.
+     *
+     * Quando a variavel CARTAO_TRANSPARENTE nao esta ligada, o adaptador
+     * ignora o campo e o cartao segue pra pagina hospedada, como sempre.
+     */
     const cobranca = await gateway.criarCobranca({
       pedido, cliente, referencia, origem: corpo.origem, ip: ipCliente,
+      cartao: corpo.cartao || null,
+      parcelas: corpo.parcelas,
     })
 
     /*

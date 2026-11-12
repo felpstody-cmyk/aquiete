@@ -33,10 +33,34 @@ function config() {
   return { chave, base }
 }
 
+/**
+ * `segundos` desiste da chamada no nosso relogio em vez de no do Netlify.
+ *
+ * Isso existe por causa do cartao. A doc do Asaas manda usar "timeout
+ * minimo de 60 segundos" na requisicao que processa cartao, e a funcao do
+ * Netlify e morta em 26. Sem um limite nosso, uma autorizacao lenta
+ * levaria a funcao junto: o processo morre no meio, ninguem sabe se a
+ * cobranca passou, e o cliente aperta de novo. A doc avisa onde isso vai
+ * dar — "uma nova tentativa sem verificacao pode gerar uma cobranca
+ * duplicada".
+ *
+ * Desistindo ANTES disso ainda sobra tempo, dentro da mesma invocacao,
+ * pra perguntar ao Asaas o que aconteceu com aquela referencia e
+ * responder uma coisa certa pra tela.
+ *
+ * O erro leva `asaas` junto: o codigo de recusa decide a frase que o
+ * cliente le, e cartao recusado nao e a mesma coisa que integracao
+ * quebrada.
+ */
 async function chamar(caminho, opcoes = {}) {
   const { chave, base } = config()
+  const { segundos, ...resto } = opcoes
+
   const resposta = await fetch(base + caminho, {
-    ...opcoes,
+    ...resto,
+    ...(segundos && typeof AbortSignal?.timeout === 'function'
+      ? { signal: AbortSignal.timeout(segundos * 1000) }
+      : {}),
     headers: {
       'Content-Type': 'application/json',
       access_token: chave,
@@ -46,8 +70,15 @@ async function chamar(caminho, opcoes = {}) {
 
   const corpo = await resposta.json().catch(() => ({}))
   if (!resposta.ok) {
-    const detalhe = corpo?.errors?.[0]?.description || resposta.statusText
-    throw new ErroDeGateway(`Asaas ${resposta.status}: ${detalhe}`)
+    const primeiro = corpo?.errors?.[0]
+    const detalhe = primeiro?.description || resposta.statusText
+    const erro = new ErroDeGateway(`Asaas ${resposta.status}: ${detalhe}`)
+    erro.asaas = {
+      status: resposta.status,
+      codigo: String(primeiro?.code || ''),
+      descricao: String(primeiro?.description || ''),
+    }
+    throw erro
   }
   return corpo
 }
@@ -237,7 +268,198 @@ async function criarPixEstatico({ pedido, referencia }) {
   }
 }
 
-export async function criarCobranca({ pedido, cliente, referencia }) {
+/**
+ * O cartao digitado no NOSSO site, em vez da pagina do Asaas.
+ *
+ * Desligado por padrao de proposito. Enquanto `CARTAO_TRANSPARENTE` nao
+ * for "1" no Netlify, cartao continua indo pra pagina hospedada exatamente
+ * como sempre foi — entao subir este codigo nao muda nada pra quem esta
+ * comprando agora. Ligar e desligar e uma variavel, sem deploy.
+ */
+const TRANSPARENTE = () => process.env.CARTAO_TRANSPARENTE === '1'
+
+/** So digito. O Asaas recusa numero com espaco ou ponto. */
+const so = (v) => String(v ?? '').replace(/\D/g, '')
+
+/**
+ * Os dois objetos de cartao, montados do jeito que a doc pede.
+ *
+ * `creditCardHolderInfo` nao e burocracia: e o que o antifraude do Asaas
+ * usa. Todos os campos obrigatorios dele (name, email, cpfCnpj,
+ * postalCode, addressNumber, phone) ja eram coletados pelo checkout, entao
+ * o cliente nao digita nada a mais fora o cartao.
+ *
+ * `remoteIp` e o IP de QUEM COMPRA. A doc e explicita: "Informe em
+ * remoteIp o IP do dispositivo do pagador, nao o IP do servidor da sua
+ * aplicacao." Mandar o nosso faria todo pedido parecer vir do mesmo lugar.
+ */
+function dadosDoCartao({ cartao, cliente, ip }) {
+  const validade = String(cartao.validade || '')
+  const [mes, ano] = validade.includes('/')
+    ? validade.split('/').map((x) => x.trim())
+    : [validade.slice(0, 2), validade.slice(2)]
+
+  return {
+    creditCard: {
+      holderName: String(cartao.nome || '').trim(),
+      number: so(cartao.numero),
+      expiryMonth: so(mes).padStart(2, '0').slice(0, 2),
+      // Ano com 4 digitos, como a doc pede. "30" vira "2030".
+      expiryYear: so(ano).length === 2 ? `20${so(ano)}` : so(ano).slice(0, 4),
+      ccv: so(cartao.cvv),
+    },
+    creditCardHolderInfo: {
+      name: cliente.nome,
+      email: cliente.email,
+      cpfCnpj: so(cliente.cpf),
+      postalCode: so(cliente.cep),
+      addressNumber: String(cliente.numero || '').trim() || 'S/N',
+      phone: so(cliente.telefone),
+      ...(cliente.complemento ? { addressComplement: cliente.complemento } : {}),
+    },
+    ...(ip ? { remoteIp: String(ip) } : {}),
+  }
+}
+
+/**
+ * Frase pro cliente quando o cartao nao passa, e o resgate do timeout.
+ *
+ * Duas coisas acontecem aqui. A primeira e traduzir: "Asaas 400:
+ * invalid_creditCard" nao e texto de tela de pagamento.
+ *
+ * A segunda e o caso que da medo. Se a nossa chamada estourou o relogio
+ * (AbortError), nao sabemos se a cobranca passou ou nao — e a doc avisa
+ * que "uma nova tentativa sem verificacao pode gerar uma cobranca
+ * duplicada". Entao, antes de responder qualquer coisa, pergunta pela
+ * referencia: se o pagamento ja esta la, a venda ACONTECEU e nao pode ser
+ * tratada como falha.
+ */
+async function erroDeCartao(e, referencia) {
+  const abortou = e?.name === 'AbortError' || e?.name === 'TimeoutError'
+
+  if (abortou) {
+    const s = await situacaoDoPedido(referencia).catch(() => null)
+    if (s?.encontrado) {
+      const pronto = new Error('demorou mas entrou')
+      pronto.pagamentoJaExiste = true
+      return pronto
+    }
+    return new ErroDeGateway(
+      'O banco do seu cartao demorou demais pra responder e a compra NAO foi '
+      + 'cobrada. Tente de novo ou pague no Pix, que cai na hora.',
+      504,
+    )
+  }
+
+  const codigo = e?.asaas?.codigo || ''
+  const descricao = e?.asaas?.descricao || ''
+
+  // Recusa: a doc diz que "a cobranca nao e persistida" e volta HTTP 400.
+  // Nao existe pedido fantasma pra limpar depois.
+  if (e?.asaas?.status === 400) {
+    const erro = new ErroDeGateway(
+      descricao || 'Nao conseguimos aprovar esse cartao. Confira os dados, '
+        + 'tente outro cartao ou pague no Pix.',
+      400,
+    )
+    erro.recusado = true
+    erro.codigoGateway = codigo
+    return erro
+  }
+
+  return e
+}
+
+/**
+ * Trava do parcelamento. Existe porque a doc do Asaas e AMBIGUA aqui.
+ *
+ * Em `POST /v3/payments`, `value` e descrito so como "Valor da cobranca",
+ * e a doc nunca diz se, com `installmentCount`, ele passa a ser o valor da
+ * PARCELA ou continua sendo o TOTAL. (Em `POST /v3/installments`, que e
+ * outro endpoint, `value` e explicitamente "Valor de cada parcela".)
+ *
+ * Mandamos `totalValue`, que a doc descreve sem ambiguidade: "Informe o
+ * valor total de uma cobranca que sera parcelada (...) o calculo por
+ * parcela sera automatico". Mas "a doc parece dizer" nao e garantia boa o
+ * suficiente pro caminho do dinheiro: se `value` vencesse, uma compra de
+ * R$ 129,90 em 3x viraria R$ 389,70 no cartao do cliente.
+ *
+ * Entao a gente CONFERE o que voltou. O Asaas devolve a primeira parcela,
+ * com o valor dela e a quantidade. Parcela x quantidade tem que dar o
+ * total do pedido, com dois centavos de folga pro arredondamento que a doc
+ * diz jogar na ultima parcela.
+ *
+ * Se nao der, a cobranca ja existe e esta errada: estorna e manda a pessoa
+ * pro Pix. Cliente nenhum vai descobrir isso pela fatura.
+ */
+async function conferirParcelamento(cobranca, vezes, totalEsperado) {
+  const quantas = Number(cobranca?.installmentCount) || vezes
+
+  /*
+   * Qual campo e a parcela depende da FORMA da resposta, e confundir as
+   * duas e o pior engano possivel aqui:
+   *
+   *   objeto de cobranca -> `value` e o valor de UMA parcela
+   *   objeto de plano    -> `paymentValue` e a parcela e `value` e o total
+   *
+   * Numa resposta de cobranca, aceitar `value == total` significaria dar
+   * OK pra cada uma das 3 parcelas sair pelo valor cheio: R$ 389,70 numa
+   * compra de R$ 129,90. Entao a regra e uma so, e vale nas duas formas:
+   * parcela x quantidade tem que dar o total do pedido.
+   */
+  const parcela = Number.isFinite(Number(cobranca?.paymentValue))
+    ? Number(cobranca.paymentValue)
+    : Number(cobranca?.value)
+
+  // Sem numero pra conferir nao se inventa veredito: deixa passar e o
+  // console registra. Barrar aqui derrubaria venda boa por falta de campo.
+  if (!Number.isFinite(parcela)) {
+    console.error('[asaas] parcelamento sem valor pra conferir:', JSON.stringify({
+      id: cobranca?.id, installmentCount: cobranca?.installmentCount,
+    }))
+    return
+  }
+
+  const somou = parcela * quantas
+
+  /*
+   * A folga e assimetrica, e tem que ser.
+   *
+   * A doc diz que a diferenca de arredondamento vai pra ULTIMA parcela.
+   * O Asaas devolve a PRIMEIRA, entao `parcela x quantas` fica um pouco
+   * ABAIXO do total: R$ 129,90 em 12x da 12 x 10,82 = R$ 129,84, seis
+   * centavos a menos. Com folga simetrica de dois centavos, todo
+   * parcelamento longo seria estornado por engano — venda boa recusada
+   * pela trava que existe pra proteger a venda.
+   *
+   * Pra baixo: ate um centavo por parcela, que e o maximo que o
+   * arredondamento pode empurrar pra ultima.
+   * Pra cima: dois centavos, e nada mais. E aqui que mora o perigo real
+   * (parcela cheia vezes 3 = R$ 389,70), e aquilo fica a trezentos
+   * centavos de distancia de qualquer folga razoavel.
+   */
+  const folgaAbaixo = 0.02 + quantas * 0.01
+  if (somou <= totalEsperado + 0.02 && somou >= totalEsperado - folgaAbaixo) return
+
+  console.error(
+    `[asaas] PARCELAMENTO FORA: ${vezes}x, esperado ${totalEsperado}, `
+    + `voltou parcela=${parcela} installmentCount=${quantas} (soma ${somou})`,
+  )
+
+  // Estorna antes de contar pra alguem. Se o estorno falhar, o erro sobe
+  // do mesmo jeito: melhor ele conferir uma cobranca na mao do que o
+  // cliente levar um valor errado sem ninguem saber.
+  await chamar(`/payments/${encodeURIComponent(cobranca.id)}/refund`, { method: 'POST' })
+    .catch((e) => console.error('[asaas] estorno do parcelamento falhou:', e.message))
+
+  throw new ErroDeGateway(
+    'Nao conseguimos fechar o parcelamento com segurança e nada foi cobrado. '
+    + 'Pague no Pix ou escolha cartao em 1x.',
+    502,
+  )
+}
+
+export async function criarCobranca({ pedido, cliente, referencia, ip, cartao, parcelas }) {
   /*
    * Pix tenta o QR estático primeiro, e CAI no caminho antigo se falhar.
    *
@@ -256,9 +478,23 @@ export async function criarCobranca({ pedido, cliente, referencia }) {
 
   const customerId = await acharOuCriarCliente(cliente)
 
-  const cobranca = await chamar('/payments', {
-    method: 'POST',
-    body: JSON.stringify({
+  /*
+   * Cartao transparente: a pessoa digitou o cartao na NOSSA pagina.
+   *
+   * Isto so vale quando tem numero de cartao na mao E a variavel esta
+   * ligada. Sem um dos dois, `corpo` sai identico ao de antes e a
+   * cobranca volta com `invoiceUrl` — o caminho de sempre.
+   *
+   * O teto de 12 parcelas nao e capricho: a doc do Asaas permite 21 em
+   * Visa e Mastercard mas so 12 nas outras bandeiras, e nos nao sabemos a
+   * bandeira antes de tentar. 12 passa em todas.
+   */
+  const transparente = TRANSPARENTE() && pedido.metodo === 'card' && Boolean(cartao?.numero)
+  const vezes = transparente
+    ? Math.max(1, Math.min(12, Math.trunc(Number(parcelas)) || 1))
+    : 1
+
+  const corpo = {
       customer: customerId,
       billingType: BILLING[pedido.metodo],
       value: pedido.total,
@@ -288,8 +524,53 @@ export async function criarCobranca({ pedido, cliente, referencia }) {
         successUrl: `https://aquieteagora.com.br/obrigado.html?ref=${encodeURIComponent(referencia)}`,
         autoRedirect: true,
       },
-    }),
-  })
+      ...(transparente ? dadosDoCartao({ cartao, cliente, ip }) : {}),
+      // `totalValue` e nao `value` pro parcelamento: ver conferirParcelamento,
+      // que explica a ambiguidade da doc e confere o retorno por causa dela.
+      ...(transparente && vezes > 1
+        ? { installmentCount: vezes, totalValue: pedido.total }
+        : {}),
+  }
+
+  let cobranca
+  try {
+    cobranca = await chamar('/payments', {
+      method: 'POST',
+      body: JSON.stringify(corpo),
+      // 18s. A funcao do Netlify e morta em 26, e se der timeout ainda
+      // precisa sobrar tempo, DENTRO da mesma invocacao, pra consultar a
+      // referencia e saber se a cobranca entrou. Boleto e o caminho antigo
+      // seguem sem relogio nosso, como sempre foi.
+      ...(transparente ? { segundos: 18 } : {}),
+    })
+  } catch (e) {
+    if (!transparente) throw e
+
+    const tratado = await erroDeCartao(e, referencia)
+
+    // Estourou o relogio mas a cobranca ESTA no Asaas. Isto e venda feita,
+    // nao falha: tratar como erro aqui faria a pessoa pagar de novo.
+    if (tratado?.pagamentoJaExiste) {
+      return {
+        id: null,
+        metodo: 'card',
+        total: pedido.total,
+        redirectUrl: null,
+        invoiceUrl: null,
+        pix: null,
+        transparente: true,
+        parcelas: vezes,
+        pago: true,
+        status: 'CONFIRMED',
+        desafio3ds: null,
+      }
+    }
+    throw tratado
+  }
+
+  if (transparente && vezes > 1) {
+    await conferirParcelamento(cobranca, vezes, pedido.total)
+  }
 
   // Pix: buscamos o QR para exibir sem tirar o cliente da página.
   // Uma segunda tentativa cobre o caso de a chave Pix da conta ainda estar
@@ -312,18 +593,45 @@ export async function criarCobranca({ pedido, cliente, referencia }) {
     pix = { payload: qr.payload, qrBase64: qr.encodedImage }
   }
 
+  // Cartao aprovado no cartao transparente: so estes contam como dinheiro
+  // dentro. AUTHORIZED de proposito NAO entra — ali o valor esta apenas
+  // reservado no limite, e ninguem pagou nada ainda.
+  const PAGO = new Set(['CONFIRMED', 'RECEIVED', 'RECEIVED_IN_CASH'])
+
   return {
     id: cobranca.id,
     metodo: pedido.metodo,
     total: pedido.total,
     // Cartão e boleto vão para a página do Asaas: os dados sensíveis
     // ficam lá, e você não entra no escopo pesado de PCI-DSS
-    redirectUrl: pedido.metodo === 'pix'
+    //
+    // No transparente isto vira null: a venda ja aconteceu nesta resposta,
+    // e mandar pro invoiceUrl jogaria a pessoa exatamente na pagina que a
+    // gente esta tirando do caminho.
+    redirectUrl: (pedido.metodo === 'pix' || transparente)
       ? null
       : (cobranca.bankSlipUrl || cobranca.invoiceUrl || null),
     // Sempre devolvido: o e-mail de "Pix gerado" usa isto como plano B
     // para quem fechou a pagina antes de pagar.
     invoiceUrl: cobranca.invoiceUrl || null,
     pix,
+    ...(transparente ? {
+      transparente: true,
+      parcelas: vezes,
+      pago: PAGO.has(String(cobranca.status || '').toUpperCase()),
+      status: cobranca.status || '',
+      /*
+       * 3DS. Nao pedimos o desafio (nao mandamos `threeDSecure`), mas o
+       * EMISSOR pode exigir de todo jeito — a doc diz que este campo e
+       * "retornado apenas quando o desafio de autenticacao e exigido pelo
+       * emissor do cartao". Quando vier, a pessoa TEM que passar por essa
+       * URL ou a transacao nao se completa, e engolir isso aqui seria
+       * perder a venda com o dinheiro preso.
+       *
+       * E uma URL do banco dela, nao a pagina de cobranca do Asaas: nao
+       * tem nome nem CNPJ de ninguem nela.
+       */
+      desafio3ds: cobranca.threeDSecureChallengeUrl || null,
+    } : {}),
   }
 }

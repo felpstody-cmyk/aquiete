@@ -51,7 +51,20 @@ function num(v) {
 }
 
 export default async (req) => {
-  const vazio = { total: null, opcoes: [] }
+  /*
+   * `transparente` viaja junto de proposito.
+   *
+   * A pagina nao enxerga variavel de ambiente, e sem este campo ela teria
+   * que adivinhar se mostra os campos de cartao ou o texto antigo de
+   * "voce digita na proxima tela". Adivinhando errado, a pessoa digitaria
+   * o cartao aqui e seria jogada pra pagina do Asaas pra digitar DE NOVO.
+   *
+   * Com o campo vindo daqui, a variavel CARTAO_TRANSPARENTE e a unica
+   * fonte da verdade pros dois lados, e virar a chave no Netlify muda a
+   * tela sem deploy nenhum.
+   */
+  const ligado = process.env.CARTAO_TRANSPARENTE === '1'
+  const vazio = { total: null, opcoes: [], transparente: ligado }
   try {
     const url = new URL(req.url)
     const q = url.searchParams
@@ -93,7 +106,7 @@ export default async (req) => {
       }
     }).filter(Boolean)
 
-    const corpo = { total: pedido.total, opcoes }
+    const corpo = { total: pedido.total, opcoes, transparente: ligado }
 
     /*
      * A resposta crua so pra mim, com o token do painel. Ela carrega
