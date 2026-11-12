@@ -494,10 +494,11 @@ export async function criarCobranca({ pedido, cliente, referencia, ip, cartao, p
     ? Math.max(1, Math.min(12, Math.trunc(Number(parcelas)) || 1))
     : 1
 
+  const parcelado = transparente && vezes > 1
+
   const corpo = {
       customer: customerId,
       billingType: BILLING[pedido.metodo],
-      value: pedido.total,
       /*
        * O Pix vence HOJE. A pessoa tem até a meia-noite pra pagar.
        *
@@ -525,11 +526,33 @@ export async function criarCobranca({ pedido, cliente, referencia, ip, cartao, p
         autoRedirect: true,
       },
       ...(transparente ? dadosDoCartao({ cartao, cliente, ip }) : {}),
-      // `totalValue` e nao `value` pro parcelamento: ver conferirParcelamento,
-      // que explica a ambiguidade da doc e confere o retorno por causa dela.
-      ...(transparente && vezes > 1
+      /*
+       * `value` e os campos de parcelamento sao MUTUAMENTE EXCLUSIVOS.
+       *
+       * A doc do Asaas e explicita nas duas pontas. Pra cobranca de uma
+       * parcela: "Do not use `installmentCount`, `installmentValue`, or
+       * `totalValue` in one-off payments" e "For a payment in a single
+       * installment, send only the `value` field". E os dois exemplos
+       * oficiais de cobranca parcelada nao trazem `value` nenhum: mandam
+       * `installmentCount` com `totalValue` (ou com `installmentValue`,
+       * nunca os dois juntos — enviar os dois esta listado como erro
+       * comum deles).
+       *
+       * Mandar `value` junto do parcelamento era exatamente a combinacao
+       * que a doc nao descreve, e por isso nao da pra saber se ele seria
+       * lido como o total ou como o valor da parcela. Na leitura errada,
+       * R$ 129,90 em 3x viraria R$ 389,70 no cartao do cliente.
+       *
+       * `totalValue` e nao `installmentValue` porque com ele o Asaas
+       * calcula a parcela e, pela doc, "when `totalValue` cannot be
+       * divided evenly, the difference will be applied to the last
+       * installment" — o total cobrado fecha exato. Com parcela fixa,
+       * R$ 129,90 em 12x daria 12 x 10,82 = R$ 129,84, e o pedido
+       * fecharia seis centavos abaixo do que o painel registrou.
+       */
+      ...(parcelado
         ? { installmentCount: vezes, totalValue: pedido.total }
-        : {}),
+        : { value: pedido.total }),
   }
 
   let cobranca
