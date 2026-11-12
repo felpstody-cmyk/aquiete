@@ -559,10 +559,24 @@ p.centro{margin:0}
     <p class="centro"><span class="olho">Quem já usa</span></p>
     <h2 class="sec-h centro">Quem já carrega no bolso</h2>
 
-    <!-- Depoimento em video de cliente real. O `src` mora no data-src e o
+    <!-- VIDEO DESLIGADO EM 12/11/2026 — TESTE DO FELIPE.
+         Motivo: uma visitante ficou 10 min na pagina e saiu no momento em
+         que chegou no video. Esta rodando sem ele pra ver se a saida
+         muda. PRA LIGAR DE VOLTA: apagar esta linha de abertura de
+         comentario e a de fechamento logo depois do </figure>. O CSS e o
+         JS continuam no lugar; o JS tem guarda (`if (!fig...) return`) e
+         simplesmente nao roda enquanto a figure estiver comentada. Os
+         marcos video:viu / video:meio / video:fim param de ser enviados
+         pro /api/evento nesse periodo, o que ja serve de marcador de
+         quando o teste comecou.
+
+         Comentario original:
+         Depoimento em video de cliente real. O `src` mora no data-src e o
          preload e "none": sem o JS abaixo, nenhum byte de video sai do
          servidor. A capa e um quadro do proprio video, entao quem nunca
-         rola ate aqui paga 38 KB de imagem em vez de 3,3 MB. -->
+         rola ate aqui paga 38 KB de imagem em vez de 3,3 MB.
+    -->
+    <!-- ABRE-TESTE-SEM-VIDEO
     <figure class="vdepo" id="vdepo">
       <video id="vdepoV" class="vdepo__v" data-src="video/depoimento-real.mp4"
              poster="img/depoimento-capa.webp" width="720" height="1280"
@@ -574,6 +588,7 @@ p.centro{margin:0}
       </button>
       <figcaption class="vdepo__quem">Depoimento gravado por uma cliente</figcaption>
     </figure>
+    FECHA-TESTE-SEM-VIDEO -->
 
     <div class="depos">
       <article class="depo">
