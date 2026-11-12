@@ -442,9 +442,53 @@ async function conferirParcelamento(cobranca, vezes, totalEsperado) {
   if (somou <= totalEsperado + 0.02 && somou >= totalEsperado - folgaAbaixo) return
 
   console.error(
-    `[asaas] PARCELAMENTO FORA: ${vezes}x, esperado ${totalEsperado}, `
+    `[asaas] parcelamento suspeito: ${vezes}x, esperado ${totalEsperado}, `
     + `voltou parcela=${parcela} installmentCount=${quantas} (soma ${somou})`,
   )
+
+  /*
+   * SUSPEITO AINDA NAO E CULPADO. Antes de estornar, pergunta pra fonte.
+   *
+   * A leitura de cima depende de adivinhar o que significa o `value` que
+   * voltou, e existe um jeito dela errar POR SEGURANCA DEMAIS: se o Asaas
+   * devolvesse o total (129,90) num campo que eu li como parcela, a conta
+   * daria 389,70 e um pedido PERFEITO seria estornado. Pedido perdido por
+   * zelo e tao ruim quanto cobranca errada.
+   *
+   * O plano de parcelamento tem id proprio (`installment` na resposta, que
+   * a doc descreve como "installment plan identifier"). Somando as
+   * cobrancas dele, nao sobra interpretacao: ou o total bate, ou nao bate.
+   *
+   * So estorna quem reprova nas DUAS leituras. E se a consulta nao
+   * responder, estorna mesmo assim: nessa altura a duvida e entre perder
+   * um pedido e cobrar o triplo de alguem, e cobrar o triplo gera
+   * contestacao, Procon e cliente que nunca mais volta.
+   */
+  const plano = cobranca?.installment
+  if (plano) {
+    const lista = await chamar(
+      `/payments?installment=${encodeURIComponent(plano)}&limit=100`,
+    ).catch((e) => {
+      console.error('[asaas] nao deu pra somar o plano:', e.message)
+      return null
+    })
+
+    const parcelas = lista?.data || []
+    const somaReal = parcelas.reduce((t, p) => t + (Number(p.value) || 0), 0)
+
+    if (parcelas.length && Math.abs(somaReal - totalEsperado) <= 0.05) {
+      console.log(
+        `[asaas] parcelamento OK na conferencia: ${parcelas.length} parcelas `
+        + `somam ${somaReal.toFixed(2)}, esperado ${totalEsperado}`,
+      )
+      return
+    }
+
+    console.error(
+      `[asaas] PARCELAMENTO CONFIRMADO ERRADO: ${parcelas.length} parcelas `
+      + `somam ${somaReal.toFixed(2)}, esperado ${totalEsperado}`,
+    )
+  }
 
   // Estorna antes de contar pra alguem. Se o estorno falhar, o erro sobe
   // do mesmo jeito: melhor ele conferir uma cobranca na mao do que o
