@@ -105,6 +105,50 @@ export async function situacaoDoPedido(referencia) {
 }
 
 /**
+ * Simulacao de parcelamento, feita NA CONTA DELE.
+ *
+ * Existe por um motivo so: a tabela de parcelas do checkout transparente
+ * nao pode ser calculada por nos. Quem diz quanto o cliente paga em 3x e
+ * o Asaas, com as taxas e a configuracao de repasse de juros desta conta
+ * — exatamente o que a pagina hospedada diria. Juros inventado aqui
+ * dentro viraria diferenca no extrato dele.
+ *
+ * `POST /v3/payments/simulate` NAO cria nada. A doc e explicita: "A
+ * resposta representa apenas o resultado da simulacao para os parametros
+ * enviados e nao substitui a criacao da cobranca."
+ *
+ * Uma chamada por quantidade de parcelas, em paralelo. A que falhar sai
+ * da lista em vez de derrubar as outras: menos opcoes de parcela e ruim,
+ * checkout fora do ar e pior.
+ */
+export async function simularParcelas(valor, ate = 12) {
+  const alvo = Number(valor)
+  if (!Number.isFinite(alvo) || alvo <= 0) return []
+
+  const vezes = Array.from({ length: Math.max(1, Math.min(21, ate)) }, (_, i) => i + 1)
+  const saida = await Promise.all(vezes.map(async (n) => {
+    try {
+      const r = await chamar('/payments/simulate', {
+        method: 'POST',
+        body: JSON.stringify({
+          value: alvo,
+          billingTypes: ['CREDIT_CARD'],
+          // Sem installmentCount a doc trata como cobranca simples; a
+          // vista e exatamente isso.
+          ...(n > 1 ? { installmentCount: n } : {}),
+        }),
+      })
+      return { parcelas: n, resposta: r }
+    } catch (e) {
+      console.error(`[asaas] simulate ${n}x falhou:`, e.message)
+      return null
+    }
+  }))
+
+  return saida.filter(Boolean)
+}
+
+/**
  * Data de vencimento no formato do Asaas (AAAA-MM-DD), em Brasília.
  *
  * NÃO usa toISOString(). Aquilo devolve a data em UTC, e entre 21h e
