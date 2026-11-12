@@ -2716,14 +2716,25 @@ function renderPedidos(){
   var q = chave(el('busca').value), st = el('fStatus').value, og = el('fOrigem').value;
   var semRastreio = el('fSemRastreio').checked;
 
-  /* A conta sai do periodo inteiro, nao da lista filtrada: senao marcar o
-     filtro mudaria o proprio numero que ele esta olhando. */
-  var faltam = doPeriodo().filter(function(p){ return precisaRastreio(p) && !p.rastreio; }).length;
+  /* "Quem falta mandar rastreio" NAO e pergunta de periodo.
+   *
+   * O periodo abre em "hoje", e pacote postado semana passada continua
+   * devendo codigo. Contando so a janela escolhida em cima, abrir o painel
+   * mostraria "(1)" quando ha doze pessoas esperando — exatamente o erro
+   * que este filtro existe pra evitar.
+   *
+   * Entao a conta olha TODOS os pedidos, e marcar o filtro tambem ignora o
+   * periodo (ver `base` logo abaixo). Assim o numero e a lista falam da
+   * mesma coisa: tudo que ainda deve codigo, de qualquer data. */
+  var faltam = todos().filter(function(p){ return precisaRastreio(p) && !p.rastreio; }).length;
   el('contaSemRastreio').textContent = faltam ? '(' + faltam + ')' : '';
   el('contaSemRastreio').style.color = faltam ? 'var(--brand)' : 'var(--ink-3)';
   el('contaSemRastreio').style.fontWeight = faltam ? '700' : '400';
 
-  var lista = doPeriodo().filter(function(p){
+  // Com o filtro de rastreio ligado a base e TUDO, nao o periodo: senao o
+  // numero do lado diria 12 e a tabela mostraria 1.
+  var base = semRastreio ? todos() : doPeriodo();
+  var lista = base.filter(function(p){
     if (st && p.status !== st) return false;
     if (og && p.origem !== og) return false;
     if (semRastreio && !(precisaRastreio(p) && !p.rastreio)) return false;
