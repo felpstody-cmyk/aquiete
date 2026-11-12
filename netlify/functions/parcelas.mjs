@@ -87,22 +87,51 @@ export default async (req) => {
     const cru = await gateway.simularParcelas(pedido.total, 12)
 
     /*
-     * So entra na lista a parcela que o Asaas confirmou E cujo total bate
-     * com alguma coisa que faca sentido cobrar. `paymentValue` e o que o
-     * cliente paga no fim; quando a conta repassa juros ele vem MAIOR que
-     * o total do pedido, e e esse numero que tem que aparecer na tela.
+     * Onde cada numero mora na resposta, conferido na conta dele em
+     * 12/11/2026 com uma simulacao de R$ 129,90 em 3x:
+     *
+     *   { "value": 129.90,
+     *     "creditCard": { "netValue": 126.21, "feePercentage": 2.49,
+     *                     "operationFee": 0.49,
+     *                     "installment": { "paymentValue": 43.30,
+     *                                      "paymentNetValue": 42.07 } } }
+     *
+     *   value                        o TOTAL que o cliente paga
+     *   creditCard.installment
+     *     .paymentValue              o valor de UMA parcela
+     *     .paymentNetValue           o que sobra pra ele em cada parcela
+     *
+     * O `installment` fica DENTRO de `creditCard`, nao na raiz. Ler ele da
+     * raiz fazia a lista cair no `value` e a parcela passava a ser
+     * calculada aqui, por divisao — 129,90 / 12 da R$ 10,83 e o Asaas diz
+     * R$ 10,82. Um centavo, mas era conta minha aparecendo onde o combinado
+     * e so repassar a deles.
+     *
+     * Parcela que vier sem `paymentValue` SAI DA LISTA em vez de virar
+     * divisao. Mostrar uma opcao a menos e um problema pequeno; mostrar um
+     * valor de parcela que o Asaas nunca disse e um problema grande.
      */
     const opcoes = cru.map(({ parcelas, resposta }) => {
-      const inst = resposta?.installment || {}
-      const totalCliente = num(inst.paymentValue) ?? num(resposta?.value) ?? pedido.total
-      if (!(totalCliente > 0)) return null
+      const cc = resposta?.creditCard || {}
+      const total = num(resposta?.value) ?? pedido.total
+      // Em 1x nao existe `installment`: a parcela e o total.
+      const parcela = parcelas === 1 ? total : num(cc.installment?.paymentValue)
+      if (!(total > 0) || !(parcela > 0)) return null
       return {
         parcelas,
-        total: Number(totalCliente.toFixed(2)),
-        valorParcela: Number((totalCliente / parcelas).toFixed(2)),
-        // Verdadeiro quando a conta repassa o juro pro cliente. O texto da
-        // tela depende disto, entao vem pronto daqui.
-        comJuros: Number(totalCliente.toFixed(2)) > Number(pedido.total.toFixed(2)),
+        total: Number(total.toFixed(2)),
+        valorParcela: Number(parcela.toFixed(2)),
+        /*
+         * Verdadeiro so quando a conta repassa juro pro cliente, ou seja
+         * quando a soma das parcelas passa do total. Na conta dele hoje
+         * isto e sempre falso: ele paga a taxa, o cliente paga o mesmo
+         * valor em qualquer parcelamento.
+         *
+         * A folga existe porque a diferenca de arredondamento vai pra
+         * ultima parcela: 12 x 10,82 = 129,84, que e MENOR que o total e
+         * nao tem nada de juro.
+         */
+        comJuros: Number((parcela * parcelas).toFixed(2)) > Number(total.toFixed(2)) + 0.02,
       }
     }).filter(Boolean)
 
