@@ -42,6 +42,14 @@
   to = "/oferta-2.html"
   status = 200
 
+# Versao 3: pagina refeita do zero, com a estrutura da referencia que ele
+# mandou. Em teste, fora do Google, e nada aponta pra ela. A /oferta segue
+# recebendo os anuncios que ja funcionam.
+[[redirects]]
+  from = "/oferta-3"
+  to = "/oferta-3.html"
+  status = 200
+
 # Advertorial: artigo que informa primeiro e so entao leva pra oferta.
 # Fica fora do bloqueio-geo de proposito enquanto esta em revisao, pra
 # dar pra abrir daqui de Chapeco.
