@@ -33,6 +33,15 @@
   to = "/oferta.html"
   status = 200
 
+# Versão 2 da oferta, em teste. MESMO TEXTO da /oferta — só muda o
+# visual e o movimento. Existe em paralelo de propósito: a /oferta
+# continua recebendo os anúncios que já funcionam, e esta recebe os
+# novos pra dar pra comparar carrinho entre as duas.
+[[redirects]]
+  from = "/oferta-2"
+  to = "/oferta-2.html"
+  status = 200
+
 # Advertorial: artigo que informa primeiro e so entao leva pra oferta.
 # Fica fora do bloqueio-geo de proposito enquanto esta em revisao, pra
 # dar pra abrir daqui de Chapeco.
