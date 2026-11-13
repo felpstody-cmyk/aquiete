@@ -366,84 +366,153 @@ p.centro{margin:0}
 .final .olho::before{background:var(--brand-300)}
 
 
+
 /* =====================================================================
-   CAMADA DE MOVIMENTO — só existe nesta versão da oferta
+   MOVIMENTO — versão 2 da oferta
    ---------------------------------------------------------------------
-   Regra que valeu pra tudo aqui: NENHUMA palavra do texto muda. Isto é
-   só visual. O que entra é CSS, atributos e as gotas decorativas.
+   Vocabulário copiado da referência que ele mandou (eles fazem com GSAP
+   + ScrollTrigger; aqui é tudo próprio, porque a CSP do site não libera
+   cdnjs e esta é a página que recebe o clique pago).
 
-   Sem biblioteca de fora de propósito. O que a referência faz com GSAP
-   (70 KB de CDN) aqui sai em pouco mais de 3 KB próprios, por dois
-   motivos concretos: a CSP do site não libera cdnjs, e esta é a página
-   que recebe o clique pago — peso aqui se paga em clique perdido.
+   NENHUMA PALAVRA MUDA. O que adiciona texto na tela entra por JS e sai
+   `aria-hidden`, então o texto estático continua idêntico ao da /oferta.
 
-   `prefers-reduced-motion` desliga tudo. Quem pediu pro sistema parar
-   de animar continua lendo a página inteira, parada.
+   `prefers-reduced-motion` desliga tudo e a página fica inteira, parada.
    ===================================================================== */
 
-/* ---------- 1. Título do topo, palavra por palavra ---------- */
+/* ---------- barra de leitura ---------- */
+.lendo{position:fixed;top:0;left:0;height:3px;z-index:60;
+  width:var(--w,0%);background:linear-gradient(90deg,var(--brand),var(--accent));
+  transition:width .1s linear;pointer-events:none}
+
+/* ---------- título palavra por palavra ---------- */
 .h1w{display:inline-block;white-space:pre}
 @media (prefers-reduced-motion:no-preference){
-  .h1w{opacity:0;transform:translateY(.45em);filter:blur(7px);
-       animation:h1in .95s cubic-bezier(.16,1,.3,1) both;
-       animation-delay:calc(var(--i,0) * 42ms)}
+  .h1w{opacity:0;transform:translateY(.5em) rotate(2deg);filter:blur(10px);
+    animation:h1in 1s cubic-bezier(.16,1,.3,1) both;
+    animation-delay:calc(var(--i,0) * 50ms)}
   @keyframes h1in{to{opacity:1;transform:none;filter:blur(0)}}
 }
 
-/* ---------- 2. Blocos entrando ao rolar ----------
-   Sem JS nada fica escondido: a classe de partida só é aplicada pelo
-   próprio script, no elemento que ainda está fora da tela. */
+/* ---------- blocos entrando ---------- */
 @media (prefers-reduced-motion:no-preference){
-  .ap{--dy:26px;--dx:0px;--sc:1;
-      opacity:0;transform:translate3d(var(--dx),var(--dy),0) scale(var(--sc));
-      transition:opacity .8s cubic-bezier(.16,1,.3,1) var(--d,0ms),
-                 transform .8s cubic-bezier(.16,1,.3,1) var(--d,0ms)}
-  .ap--esq{--dx:-30px;--dy:0px}
-  .ap--dir{--dx:30px;--dy:0px}
-  .ap--zoom{--dy:0px;--sc:.93}
-  .ap.ap-on{opacity:1;transform:none}
+  .ap{--dy:34px;--dx:0px;--sc:1;--rt:0deg;--bl:6px;
+    opacity:0;filter:blur(var(--bl));
+    transform:translate3d(var(--dx),var(--dy),0) scale(var(--sc)) rotate(var(--rt));
+    transition:opacity .85s cubic-bezier(.16,1,.3,1) var(--d,0ms),
+               transform .85s cubic-bezier(.16,1,.3,1) var(--d,0ms),
+               filter .85s ease var(--d,0ms)}
+  .ap--esq{--dx:-70px;--dy:0px;--rt:-3deg}
+  .ap--dir{--dx:70px;--dy:0px;--rt:3deg}
+  .ap--zoom{--dy:18px;--sc:.9}
+  .ap--sobe{--dy:70px}
+  .ap.ap-on{opacity:1;filter:blur(0);transform:none}
 }
 
-/* ---------- 3. Gotas de fundo ----------
-   A ideia é dele, de setembro: gota caindo no fundo. Encaixa melhor que
-   copiar as cápsulas da referência, porque o produto É em gotas.
-
-   Elas nascem no meio do bloco, pequenas e transparentes, se espalham, e
-   dali em diante sobem com o scroll em velocidades diferentes. Duas
-   camadas de transform por isso: o `span` leva a do scroll, o `svg` leva
-   a de entrada — uma só brigaria com a outra. */
-.gotas{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0}
-.gota{position:absolute;left:var(--x);top:var(--t);display:block;
-      width:var(--w,26px);color:var(--brand-300);opacity:var(--op,.5);
-      transform:translate3d(0,calc(var(--p,0) * var(--dep,1) * -150px),0)
-                rotate(calc(var(--p,0) * var(--rot,60) * 1deg))}
+/* ---------- GOTAS: grandes, coloridas, visíveis ----------
+   O erro da primeira tentativa foi esse: eram pequenas e pálidas demais
+   pra alguém notar. Na referência as cápsulas são GRANDES, coloridas e
+   atravessam a tela. Estas agora têm de 46 a 130 px. */
+.gotas{position:absolute;inset:-6% 0;overflow:hidden;pointer-events:none;z-index:0}
+.gota{position:absolute;left:var(--x);top:var(--t);display:block;width:var(--w);
+  color:var(--c,var(--brand));opacity:var(--op);
+  filter:drop-shadow(0 10px 18px rgba(90,40,34,.18)) blur(var(--bl,0px));
+  transform:translate3d(0,calc(var(--p,0) * var(--dep,1) * -230px),0)
+            rotate(calc(var(--gr,0deg) + var(--p,0) * var(--rot,80) * 1deg))}
 .gota svg{display:block;width:100%;height:auto}
 @media (prefers-reduced-motion:no-preference){
   .gota{will-change:transform}
-  .gota svg{animation:gotaIn 1.3s cubic-bezier(.16,1,.3,1) both;
-            animation-delay:calc(var(--i,0) * 110ms + 350ms)}
+  .gota svg{animation:gotaIn 1.4s cubic-bezier(.16,1,.3,1) both;
+    animation-delay:calc(var(--i,0) * 90ms + 250ms)}
   @keyframes gotaIn{
-    from{opacity:0;transform:scale(.3) rotate(-90deg) translateY(40px)}
+    from{opacity:0;transform:scale(.2) rotate(-140deg) translateY(90px)}
     to{opacity:1;transform:none}
   }
 }
-/* No celular ficam menos e mais discretas: ali elas competem com o texto,
-   e texto ganha sempre nesta página. */
-@media (max-width:700px){
-  .gota{opacity:calc(var(--op,.5) * .55)}
-  .gota--extra{display:none}
-}
+@media (max-width:700px){ .gota{opacity:calc(var(--op) * .8)} .gota--off{display:none} }
 
-/* A seção precisa de contexto pro posicionamento absoluto das gotas, e o
-   conteúdo precisa ficar ACIMA delas. */
 .ultimato,.sec,.topo{position:relative}
 .ultimato > .col,.sec > .col,.topo > .col{position:relative;z-index:1}
 
-/* ---------- 4. Foto do produto com profundidade ---------- */
+/* ---------- nome gigante atrás do produto ---------- */
+/* Clipado pelo proprio bloco do produto, como o nome gigante deles fica
+   cortado pelas bordas da secao.
+   O `position:relative` TEM que ficar fora de media query: sem ele o nome
+   se ancora na coluna inteira e vaza por cima dos cards de preco. Foi
+   exatamente o que apareceu no print da primeira tentativa. */
+.produto{position:relative;overflow:hidden}
+.fantasma{position:absolute;left:50%;top:50%;z-index:0;pointer-events:none;
+  transform:translate(-50%,-50%) translateX(calc(var(--px,0) * 70px));
+  font-family:var(--font-display);font-size:clamp(3.4rem,13vw,8rem);
+  font-weight:700;letter-spacing:-.05em;line-height:.85;white-space:nowrap;
+  color:var(--brand);opacity:.11;user-select:none}
+
+/* ---------- produto com profundidade ---------- */
 @media (prefers-reduced-motion:no-preference){
-  .produto picture,.produto img{will-change:transform}
-  .produto picture{display:block;
-    transform:translate3d(0,calc(var(--py,0) * -26px),0)}
+  .produto picture{display:block;will-change:transform;
+    transform:translate3d(0,calc(var(--py,0) * -60px),0)
+              rotate(calc(var(--py,0) * -2.5deg))}
+}
+
+/* ---------- marquee ----------
+   As palavras são as MESMAS dos selos que já existem no topo: o JS move
+   aquele bloco pra cá e clona pro laço. Nada novo foi escrito. */
+.faixaRola{overflow:hidden;padding:1.4rem 0;background:var(--sand);
+  border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent);
+  mask-image:linear-gradient(90deg,transparent,#000 12%,#000 88%,transparent)}
+.faixaRola__t{display:flex;width:max-content;gap:0;
+  transform:translateX(var(--mx,0px))}
+.faixaRola__t > span{display:inline-flex;align-items:center;gap:1.6rem;
+  padding-right:1.6rem;font-family:var(--font-display);
+  font-size:clamp(1.5rem,5.4vw,3.1rem);font-weight:700;color:var(--ink);
+  letter-spacing:-.02em;white-space:nowrap}
+.faixaRola__t svg{width:.62em;height:auto;color:var(--brand);flex:none}
+
+/* ---------- chips entrando pelos lados ---------- */
+@media (prefers-reduced-motion:no-preference){
+  .regras li,.tabela__l:not(:first-child){
+    opacity:0;transform:translateX(var(--cx,-60px));
+    transition:opacity .8s cubic-bezier(.16,1,.3,1) var(--d,0ms),
+               transform .8s cubic-bezier(.16,1,.3,1) var(--d,0ms)}
+  .regras li.ap-on,.tabela__l.ap-on{opacity:1;transform:none}
+}
+
+/* ---------- selo da garantia ---------- */
+@media (prefers-reduced-motion:no-preference){
+  .garantia__selo{transform:rotate(var(--selo,-18deg)) scale(var(--seloS,.7));
+    opacity:var(--seloO,0);
+    transition:transform 1s cubic-bezier(.16,1,.3,1),opacity .8s ease}
+  .garantia__selo.ap-on{--selo:0deg;--seloS:1;--seloO:1}
+}
+
+/* ---------- depoimentos deslizando ---------- */
+.depos.desliza{display:flex;gap:1rem;overflow-x:auto;scroll-snap-type:x mandatory;
+  -webkit-overflow-scrolling:touch;scrollbar-width:none;
+  padding-bottom:.4rem;margin-bottom:.2rem}
+.depos.desliza::-webkit-scrollbar{display:none}
+.depos.desliza > .depo{flex:0 0 min(86%,30rem);scroll-snap-align:center}
+.setas{display:flex;gap:.5rem;justify-content:center;margin-top:.9rem}
+.setas button{width:2.4rem;height:2.4rem;border-radius:50%;cursor:pointer;
+  border:1.5px solid var(--line);background:var(--surface);color:var(--ink-2);
+  display:grid;place-items:center;transition:transform .2s,border-color .2s,opacity .2s}
+.setas button:hover:not(:disabled){transform:scale(1.08);border-color:var(--brand-300)}
+.setas button:disabled{opacity:.32;cursor:default}
+.setas svg{width:1rem;height:1rem}
+
+/* ---------- FAQ com altura animada ---------- */
+.faq details{overflow:hidden}
+.faq details .resp{overflow:hidden}
+@media (prefers-reduced-motion:no-preference){
+  .faq summary{transition:color .2s}
+  .faq details[open] summary{color:var(--brand-700)}
+}
+
+/* ---------- seções empilhando ---------- */
+@media (min-width:900px) and (prefers-reduced-motion:no-preference){
+  .sec{will-change:transform}
+  .sec.empilha > .col{transform:scale(var(--esc,1));opacity:var(--eop,1);
+    transition:none}
 }
 
 /* Seções aparecem ao rolar. A classe só entra via JS, então sem JS nada some. */
@@ -487,13 +556,6 @@ p.centro{margin:0}
 
 <!-- ================= 1. ULTIMATO ================= -->
 <section class="ultimato">
-<div class="gotas" aria-hidden="true">
-  <span class="gota" style="--x:6%;--t:14%;--w:34px;--dep:1.5;--rot:70;--op:.55;--i:0"><svg viewBox="0 0 24 38" fill="none" aria-hidden="true"><path d="M12 .6c3.6 7.6 11 17.8 11 26a11 11 0 0 1-22 0c0-8.2 7.4-18.4 11-26Z" fill="currentColor"/><ellipse cx="8.1" cy="23.6" rx="2.2" ry="3.5" fill="#fff" fill-opacity=".45" transform="rotate(-12 8.1 23.6)"/></svg></span>
-  <span class="gota" style="--x:88%;--t:9%;--w:22px;--dep:2.1;--rot:-90;--op:.45;--i:1"><svg viewBox="0 0 24 38" fill="none" aria-hidden="true"><path d="M12 .6c3.6 7.6 11 17.8 11 26a11 11 0 0 1-22 0c0-8.2 7.4-18.4 11-26Z" fill="currentColor"/><ellipse cx="8.1" cy="23.6" rx="2.2" ry="3.5" fill="#fff" fill-opacity=".45" transform="rotate(-12 8.1 23.6)"/></svg></span>
-  <span class="gota" style="--x:78%;--t:62%;--w:44px;--dep:1.1;--rot:45;--op:.4;--i:2"><svg viewBox="0 0 24 38" fill="none" aria-hidden="true"><path d="M12 .6c3.6 7.6 11 17.8 11 26a11 11 0 0 1-22 0c0-8.2 7.4-18.4 11-26Z" fill="currentColor"/><ellipse cx="8.1" cy="23.6" rx="2.2" ry="3.5" fill="#fff" fill-opacity=".45" transform="rotate(-12 8.1 23.6)"/></svg></span>
-  <span class="gota gota--extra" style="--x:14%;--t:74%;--w:18px;--dep:2.6;--rot:-60;--op:.5;--i:3"><svg viewBox="0 0 24 38" fill="none" aria-hidden="true"><path d="M12 .6c3.6 7.6 11 17.8 11 26a11 11 0 0 1-22 0c0-8.2 7.4-18.4 11-26Z" fill="currentColor"/><ellipse cx="8.1" cy="23.6" rx="2.2" ry="3.5" fill="#fff" fill-opacity=".45" transform="rotate(-12 8.1 23.6)"/></svg></span>
-  <span class="gota gota--extra" style="--x:46%;--t:4%;--w:14px;--dep:3.0;--rot:120;--op:.35;--i:4"><svg viewBox="0 0 24 38" fill="none" aria-hidden="true"><path d="M12 .6c3.6 7.6 11 17.8 11 26a11 11 0 0 1-22 0c0-8.2 7.4-18.4 11-26Z" fill="currentColor"/><ellipse cx="8.1" cy="23.6" rx="2.2" ry="3.5" fill="#fff" fill-opacity=".45" transform="rotate(-12 8.1 23.6)"/></svg></span>
-</div>
   <div class="col">
     <h1>Fechar essa página não deixa a próxima crise mais leve.</h1>
     <p>No <b>compre 1, leve 2</b> você leva dois frascos por R$ 129,90, com frete grátis. Chega em casa, vai pra bolsa, e da próxima vez que a crise chegar você tem o que fazer.</p>
@@ -508,11 +570,6 @@ p.centro{margin:0}
 
 <!-- ================= 2. OFERTA ================= -->
 <section class="topo" id="oferta">
-<div class="gotas" aria-hidden="true">
-  <span class="gota" style="--x:3%;--t:20%;--w:26px;--dep:1.7;--rot:-70;--op:.4;--i:0"><svg viewBox="0 0 24 38" fill="none" aria-hidden="true"><path d="M12 .6c3.6 7.6 11 17.8 11 26a11 11 0 0 1-22 0c0-8.2 7.4-18.4 11-26Z" fill="currentColor"/><ellipse cx="8.1" cy="23.6" rx="2.2" ry="3.5" fill="#fff" fill-opacity=".45" transform="rotate(-12 8.1 23.6)"/></svg></span>
-  <span class="gota" style="--x:92%;--t:46%;--w:36px;--dep:1.2;--rot:55;--op:.33;--i:1"><svg viewBox="0 0 24 38" fill="none" aria-hidden="true"><path d="M12 .6c3.6 7.6 11 17.8 11 26a11 11 0 0 1-22 0c0-8.2 7.4-18.4 11-26Z" fill="currentColor"/><ellipse cx="8.1" cy="23.6" rx="2.2" ry="3.5" fill="#fff" fill-opacity=".45" transform="rotate(-12 8.1 23.6)"/></svg></span>
-  <span class="gota gota--extra" style="--x:86%;--t:12%;--w:16px;--dep:2.4;--rot:100;--op:.4;--i:2"><svg viewBox="0 0 24 38" fill="none" aria-hidden="true"><path d="M12 .6c3.6 7.6 11 17.8 11 26a11 11 0 0 1-22 0c0-8.2 7.4-18.4 11-26Z" fill="currentColor"/><ellipse cx="8.1" cy="23.6" rx="2.2" ry="3.5" fill="#fff" fill-opacity=".45" transform="rotate(-12 8.1 23.6)"/></svg></span>
-</div>
   <div class="col">
     <span class="topo__olho">Você chegou até aqui por um motivo</span>
     <h2>A próxima crise não vai avisar.</h2>
@@ -737,10 +794,6 @@ p.centro{margin:0}
 
 <!-- ================= 8. GARANTIA ================= -->
 <section class="sec">
-<div class="gotas" aria-hidden="true">
-  <span class="gota" style="--x:90%;--t:16%;--w:30px;--dep:1.6;--rot:-55;--op:.3;--i:0"><svg viewBox="0 0 24 38" fill="none" aria-hidden="true"><path d="M12 .6c3.6 7.6 11 17.8 11 26a11 11 0 0 1-22 0c0-8.2 7.4-18.4 11-26Z" fill="currentColor"/><ellipse cx="8.1" cy="23.6" rx="2.2" ry="3.5" fill="#fff" fill-opacity=".45" transform="rotate(-12 8.1 23.6)"/></svg></span>
-  <span class="gota gota--extra" style="--x:5%;--t:58%;--w:20px;--dep:2.2;--rot:80;--op:.33;--i:1"><svg viewBox="0 0 24 38" fill="none" aria-hidden="true"><path d="M12 .6c3.6 7.6 11 17.8 11 26a11 11 0 0 1-22 0c0-8.2 7.4-18.4 11-26Z" fill="currentColor"/><ellipse cx="8.1" cy="23.6" rx="2.2" ry="3.5" fill="#fff" fill-opacity=".45" transform="rotate(-12 8.1 23.6)"/></svg></span>
-</div>
   <div class="col">
     <p class="centro" style="margin-bottom:.4rem"><span class="olho">Garantia</span></p>
     <div class="garantia">
@@ -1357,165 +1410,439 @@ try { if (!aqEmTeste()) {
 </script>
 <script>
 /* =====================================================================
-   MOVIMENTO DESTA VERSÃO DA OFERTA
+   MOVIMENTO — versão 2 da oferta
    ---------------------------------------------------------------------
-   Substitui o observador simples da /oferta, que revelava a coluna
-   inteira de uma vez. Aqui cada bloco entra na sua vez, as gotas
-   acompanham a rolagem e a foto do produto ganha profundidade.
+   Tudo que aparece na tela e tem texto é CLONE do que já existe, criado
+   aqui e marcado aria-hidden. Assim o texto estático da página continua
+   idêntico ao da /oferta (dá pra provar com diff palavra por palavra) e
+   o leitor de tela lê cada coisa uma vez só.
 
-   Três regras que valeram pra tudo:
-
-   1. Sem JS, ou sem IntersectionObserver, NADA fica escondido. A classe
-      de partida é posta por este script e só no que já está fora da
-      tela — a primeira tela nunca aparece vazia.
-   2. `prefers-reduced-motion` desliga tudo, e a página continua inteira.
-   3. Rolagem passa por requestAnimationFrame. Esta é a página que recebe
-      o clique pago; travar a rolagem aqui custa venda.
+   `prefers-reduced-motion` desliga tudo: a página fica inteira, parada.
    ===================================================================== */
 (function(){
   var d = document;
   var parado = window.matchMedia
     && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var temIO = 'IntersectionObserver' in window;
 
-  /* ---------- 1. Título do topo, palavra por palavra ----------
-     Quebra em <span> por palavra. O texto final é exatamente o mesmo:
-     só o que envolve cada palavra muda. */
+  var GOTA_SVG = '<svg viewBox="0 0 24 38" fill="none" aria-hidden="true">'
+    + '<path d="M12 .6c3.6 7.6 11 17.8 11 26a11 11 0 0 1-22 0c0-8.2 7.4-18.4 11-26Z" fill="currentColor"/>'
+    + '<ellipse cx="8.1" cy="23.6" rx="2.2" ry="3.5" fill="#fff" fill-opacity=".5" transform="rotate(-12 8.1 23.6)"/>'
+    + '</svg>';
+
+  /* ================= 1. Barra de leitura ================= */
+  (function(){
+    if (parado) return;
+    var b = d.createElement('div');
+    b.className = 'lendo';
+    b.setAttribute('aria-hidden', 'true');
+    d.body.appendChild(b);
+    var pedido = false;
+    function pinta(){
+      pedido = false;
+      var alt = d.documentElement.scrollHeight - window.innerHeight;
+      var p = alt > 0 ? (window.scrollY / alt) * 100 : 0;
+      b.style.setProperty('--w', (p < 0 ? 0 : p > 100 ? 100 : p).toFixed(2) + '%');
+    }
+    window.addEventListener('scroll', function(){
+      if (pedido) return; pedido = true; requestAnimationFrame(pinta);
+    }, { passive: true });
+    pinta();
+  })();
+
+  /* ================= 2. Título palavra por palavra ================= */
   (function(){
     if (parado) return;
     var h = d.querySelector('.ultimato h1');
     if (!h) return;
-    var palavras = h.textContent.split(' ');
+    var ws = h.textContent.split(' ');
     var frag = d.createDocumentFragment();
-    palavras.forEach(function(w, i){
+    ws.forEach(function(w, i){
       var sp = d.createElement('span');
       sp.className = 'h1w';
       sp.style.setProperty('--i', i);
-      /* O espaço vai DENTRO do span (com white-space:pre no CSS). Fora
-         dele, o navegador come o espaço entre dois inline-block e as
-         palavras ficam coladas. */
-      sp.textContent = i < palavras.length - 1 ? w + ' ' : w;
+      /* o espaço vai DENTRO do span (white-space:pre no CSS): fora dele o
+         navegador come o espaço entre dois inline-block */
+      sp.textContent = i < ws.length - 1 ? w + ' ' : w;
       frag.appendChild(sp);
     });
     h.textContent = '';
     h.appendChild(frag);
   })();
 
-  /* ---------- 2. Blocos entrando ao rolar ---------- */
-  if (!parado && 'IntersectionObserver' in window) {
-    var io = new IntersectionObserver(function(es){
+  /* ================= 3. Gotas =================
+     Grandes e coloridas de propósito. Na primeira tentativa eram de 14 a
+     44 px e quase transparentes — ninguém via, e ele estava certo em
+     dizer que não tinha efeito nenhum. Agora vão de 46 a 130 px, em duas
+     cores da marca, com desfoque nas do fundo pra dar camada. */
+  var CONJUNTOS = {
+    '.ultimato': [
+      [ '4%',  '12%', '124px', 1.5,  85, .72, '#FFD9D2',          0,   -18],
+      [ '86%', '6%',  '86px',  2.2, -95, .78, '#fff',             0.8,  24],
+      [ '74%', '58%', '130px', 1.0,  55, .32, 'var(--brand-300)', 2.4, -40],
+      [ '16%', '70%', '64px',  2.8, -70, .85, '#fff',             0,    60],
+      [ '48%', '2%',  '46px',  3.2, 130, .42, 'var(--brand-300)', 0,  -120]
+    ],
+    '.topo': [
+      [ '2%',  '16%', '96px',  1.7, -75, .3,  'var(--brand-300)', 1.2,  30],
+      [ '90%', '40%', '120px', 1.1,  60, .24, 'var(--accent)',    2.2, -20],
+      [ '84%', '8%',  '54px',  2.5, 110, .34, 'var(--brand)',     0,    75],
+      [ '10%', '78%', '66px',  2.0, -90, .26, 'var(--accent)',    0,  -55]
+    ],
+    '.sec.areia': [
+      [ '92%', '12%', '88px',  1.6, -65, .22, 'var(--brand-300)', 1.4,  40],
+      [ '3%',  '56%', '62px',  2.3,  90, .26, 'var(--accent)',    0,   -30]
+    ]
+  };
+
+  (function(){
+    Object.keys(CONJUNTOS).forEach(function(sel){
+      var alvos = d.querySelectorAll(sel);
+      Array.prototype.forEach.call(alvos, function(sec, nSec){
+        /* só nas duas primeiras de cada tipo: gota em toda seção vira
+           poluição, e aqui o texto é que tem que ganhar */
+        if (nSec > 1) return;
+        var caixa = d.createElement('div');
+        caixa.className = 'gotas';
+        caixa.setAttribute('aria-hidden', 'true');
+        CONJUNTOS[sel].forEach(function(g, i){
+          var sp = d.createElement('span');
+          sp.className = 'gota' + (i > 2 ? ' gota--off' : '');
+          sp.style.cssText = '--x:' + g[0] + ';--t:' + g[1] + ';--w:' + g[2]
+            + ';--dep:' + g[3] + ';--rot:' + g[4] + ';--op:' + g[5]
+            + ';--c:' + g[6] + ';--bl:' + g[7] + 'px;--gr:' + g[8] + 'deg;--i:' + i;
+          sp.innerHTML = GOTA_SVG;
+          caixa.appendChild(sp);
+        });
+        sec.insertBefore(caixa, sec.firstChild);
+      });
+    });
+  })();
+
+  /* ================= 4. Nome gigante atrás do produto =================
+     É o mesmo recurso que eles usam: a marca enorme e quase transparente
+     por trás do frasco. aria-hidden, então ninguém lê duas vezes. */
+  (function(){
+    var prod = d.querySelector('.produto');
+    if (!prod) return;
+    var g = d.createElement('span');
+    g.className = 'fantasma';
+    g.setAttribute('aria-hidden', 'true');
+    g.textContent = 'aquiete';
+    prod.insertBefore(g, prod.firstChild);
+  })();
+
+  /* ================= 5. Marquee =================
+     As palavras são EXATAMENTE as dos selos que já existem no topo:
+     clonadas daqui, nunca reescritas. Repetir é só pro laço fechar. */
+  (function(){
+    var selos = d.querySelector('.ultimato__selos');
+    /* Ancora na secao dos depoimentos. Antes eu ancorava no #vdepo e o
+       marquee simplesmente nao nascia: aquele bloco e o do video, que foi
+       desligado em 12/11. Pelos depoimentos nao depende disso. */
+    var refer = d.querySelector('.depos');
+    var alvo = refer ? refer.closest('.sec') : d.querySelector('.sec.areia');
+    if (!selos || !alvo || !alvo.parentNode) return;
+
+    var frases = Array.prototype.map.call(selos.children, function(sp){
+      return sp.textContent.trim();
+    }).filter(Boolean);
+    if (!frases.length) return;
+
+    var faixa = d.createElement('div');
+    faixa.className = 'faixaRola';
+    faixa.setAttribute('aria-hidden', 'true');
+    var trilho = d.createElement('div');
+    trilho.className = 'faixaRola__t';
+
+    /* duas voltas: a primeira some pela esquerda enquanto a segunda já
+       está entrando, e o laço nunca mostra buraco */
+    for (var volta = 0; volta < 2; volta++) {
+      frases.forEach(function(t){
+        var sp = d.createElement('span');
+        sp.innerHTML = GOTA_SVG;
+        sp.appendChild(d.createTextNode(t));
+        trilho.appendChild(sp);
+      });
+    }
+    faixa.appendChild(trilho);
+    alvo.parentNode.insertBefore(faixa, alvo.nextSibling);
+
+    if (parado) return;
+
+    /* Anda sozinho e ACELERA com a rolagem, como o deles. O laço fecha
+       em -50% porque o conteúdo está duplicado. */
+    var x = 0, meio = 0, ultimo = 0, extra = 0;
+    function medirMeio(){ meio = trilho.scrollWidth / 2; }
+    medirMeio();
+    window.addEventListener('resize', medirMeio, { passive: true });
+
+    window.addEventListener('scroll', function(){
+      var y = window.scrollY;
+      extra += Math.abs(y - ultimo) * .6;
+      if (extra > 90) extra = 90;
+      ultimo = y;
+    }, { passive: true });
+
+    (function anda(){
+      x -= .55 + extra * .02;
+      extra *= .93;
+      if (meio && -x >= meio) x += meio;
+      trilho.style.setProperty('--mx', x.toFixed(1) + 'px');
+      requestAnimationFrame(anda);
+    })();
+  })();
+
+  /* ================= 6. Entradas ao rolar ================= */
+  var io = null;
+  if (!parado && temIO) {
+    io = new IntersectionObserver(function(es){
       es.forEach(function(e){
         if (!e.isIntersecting) return;
         e.target.classList.add('ap-on');
+        if (e.target.dataset.conta) contar(e.target);
         io.unobserve(e.target);
       });
-    }, { rootMargin: '0px 0px -10% 0px', threshold: .08 });
+    }, { rootMargin: '0px 0px -8% 0px', threshold: .06 });
 
-    /* REDE DE SEGURANCA.
-     *
-     * O efeito e enfeite; o texto e a venda. Se por qualquer motivo o
-     * observador nao disparar pra um bloco — aba em segundo plano no
-     * carregamento, rolagem rapida demais, container com altura zero no
-     * momento do calculo, navegador se comportando diferente — aquele
-     * trecho ficaria INVISIVEL na pagina. Numa pagina de venda isso e o
-     * pior defeito possivel, e e silencioso: ninguem reclama, so nao
-     * compra.
-     *
-     * Entao passa um rodo: o que ainda estiver escondido depois de 5s
-     * aparece, animacao ou nao. Chegar sem efeito e infinitamente melhor
-     * que nao chegar.
-     */
-    setTimeout(function(){
-      var presos = d.querySelectorAll('.ap:not(.ap-on)');
-      if (!presos.length) return;
-      Array.prototype.forEach.call(presos, function(el){
-        el.style.setProperty('--d', '0ms');
-        el.classList.add('ap-on');
-        io.unobserve(el);
-      });
-    }, 5000);
-
-    function preparar(itens, passo, variante){
+    var preparar = function(itens, passo, variante){
       var n = 0;
       Array.prototype.forEach.call(itens, function(el){
-        /* O que já está na tela no carregamento fica de fora: esconder
-           pra revelar meio segundo depois é pior que não animar. */
-        if (el.getBoundingClientRect().top < window.innerHeight * .92) return;
-        el.classList.add('ap');
+        if (el.getBoundingClientRect().top < window.innerHeight * .9) return;
+        if (variante !== false) el.classList.add('ap');
         if (variante) el.classList.add(variante);
         el.style.setProperty('--d', (n * passo) + 'ms');
         n++;
         io.observe(el);
       });
-    }
+    };
 
-    /* Filhos diretos de cada seção, em cascata. É o que dá a sensação de
-       que a página vai se montando conforme desce. */
     Array.prototype.forEach.call(d.querySelectorAll('.sec > .col'), function(col){
-      preparar(col.children, 70, null);
+      preparar(col.children, 80, 'ap--sobe');
     });
-
-    /* Grupos que ganham cascata própria, porque são vários itens iguais
-       lado a lado e revelar em bloco desperdiça o efeito. */
-    preparar(d.querySelectorAll('.depos .depo'), 110, 'ap--zoom');
-    preparar(d.querySelectorAll('.ancora__l li'), 60, 'ap--esq');
-    preparar(d.querySelectorAll('.qa'), 55, null);
-
-    /* A foto e a lista do produto entram pelos lados opostos. */
+    preparar(d.querySelectorAll('.depos .depo'), 120, 'ap--zoom');
+    preparar(d.querySelectorAll('.ancora__l li'), 70, 'ap--esq');
+    preparar(d.querySelectorAll('.faq details'), 60, 'ap--sobe');
     preparar(d.querySelectorAll('.produto picture'), 0, 'ap--esq');
     preparar(d.querySelectorAll('.produto ul'), 0, 'ap--dir');
+
+    /* chips pelos lados: alternando, como os deles em volta da foto */
+    Array.prototype.forEach.call(d.querySelectorAll('.regras li'), function(li, i){
+      li.style.setProperty('--cx', (i % 2 ? 70 : -70) + 'px');
+      li.style.setProperty('--d', (i * 90) + 'ms');
+      io.observe(li);
+    });
+    Array.prototype.forEach.call(d.querySelectorAll('.tabela__l'), function(l, i){
+      if (i === 0) return;
+      l.style.setProperty('--cx', (i % 2 ? 60 : -60) + 'px');
+      l.style.setProperty('--d', (i * 70) + 'ms');
+      io.observe(l);
+    });
+
+    /* selo da garantia: entra girando e CONTA os dias até 30 */
+    /* O numero NAO e zerado aqui.
+     *
+     * Na primeira versao eu punha '0' na preparacao e so subia pra 30 na
+     * hora da animacao. Resultado pego no teste: quando a animacao nao
+     * rodava, o selo da garantia ficava anunciando "0 DIAS" pro cliente.
+     * Numa pagina de venda isso nao e um efeito que faltou, e uma
+     * informacao errada no lugar mais sensivel da pagina.
+     *
+     * Agora o 30 fica no documento o tempo todo. Quem zera e o proprio
+     * `contar`, no instante em que comeca a contar — entao o pior caso
+     * virou "aparece 30 sem contar", que nao machuca ninguem. */
+    var selo = d.querySelector('.garantia__selo');
+    if (selo) {
+      var num = selo.querySelector('text');
+      if (num) selo.dataset.conta = num.textContent.trim();
+      io.observe(selo);
+    }
+
+    /* REDE DE SEGURANÇA: o efeito é enfeite, o texto é a venda. Se o
+       observador não disparar pra algum bloco, aquele trecho ficaria
+       INVISÍVEL — defeito silencioso numa página de venda: ninguém
+       reclama, só não compra. Depois de 5s, aparece tudo. */
+    setTimeout(function(){
+      Array.prototype.forEach.call(
+        d.querySelectorAll('.ap:not(.ap-on),.regras li:not(.ap-on),.tabela__l:not(.ap-on)'),
+        function(el){ el.style.setProperty('--d', '0ms'); el.classList.add('ap-on'); }
+      );
+      var sl = d.querySelector('.garantia__selo');
+      if (sl && !sl.classList.contains('ap-on')) { sl.classList.add('ap-on'); contar(sl); }
+    }, 5000);
   }
 
-  /* ---------- 3. Gotas e foto acompanhando a rolagem ----------
-     Um único número por bloco (`--p`, de 0 a 1) move todas as gotas
-     dele. Cada gota tem profundidade própria no CSS, então o mesmo
-     número produz velocidades diferentes — é isso que dá camada. */
+  /* Números subindo. Termina SEMPRE no valor original, que é lido do
+     próprio elemento antes de começar — nunca de um número meu. */
+  function contar(el){
+    var alvo = Number(el.dataset.conta);
+    if (!alvo || el.dataset.contou) return;
+    el.dataset.contou = '1';
+    var num = el.querySelector('text') || el;
+
+    /* Trava final: aconteca o que acontecer com o requestAnimationFrame
+     * (aba em segundo plano, navegador segurando quadro), 1,6s depois o
+     * numero certo esta na tela. O valor vem do proprio documento, nunca
+     * de um numero escrito por mim aqui. */
+    var trava = setTimeout(function(){ num.textContent = el.dataset.conta; }, 1600);
+
+    num.textContent = '0';
+    var t0 = 0;
+    function passo(t){
+      if (!t0) t0 = t;
+      var k = Math.min(1, (t - t0) / 1100);
+      var suave = 1 - Math.pow(1 - k, 3);
+      num.textContent = String(Math.round(alvo * suave));
+      if (k < 1) { requestAnimationFrame(passo); return; }
+      clearTimeout(trava);
+      num.textContent = el.dataset.conta;
+    }
+    requestAnimationFrame(passo);
+  }
+
+  /* ================= 7. Depoimentos deslizando =================
+     Como os deles: desliza de lado, com setas. As setas nascem aqui e
+     não têm texto visível, só rótulo de acessibilidade. */
+  (function(){
+    var caixa = d.querySelector('.depos');
+    if (!caixa) return;
+    var cards = caixa.querySelectorAll('.depo');
+    if (cards.length < 2) return;
+    caixa.classList.add('desliza');
+
+    var setas = d.createElement('div');
+    setas.className = 'setas';
+    function seta(dir, rotulo, cam){
+      var b = d.createElement('button');
+      b.type = 'button';
+      b.setAttribute('aria-label', rotulo);
+      b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+        + 'stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" '
+        + 'aria-hidden="true"><path d="' + cam + '"/></svg>';
+      b.addEventListener('click', function(){
+        var w = cards[0].getBoundingClientRect().width + 16;
+        caixa.scrollBy({ left: dir * w, behavior: parado ? 'auto' : 'smooth' });
+      });
+      return b;
+    }
+    var bE = seta(-1, 'Depoimento anterior', 'm15 18-6-6 6-6');
+    var bD = seta(1, 'Próximo depoimento', 'm9 18 6-6-6-6');
+    setas.appendChild(bE); setas.appendChild(bD);
+    caixa.parentNode.insertBefore(setas, caixa.nextSibling);
+
+    function atualiza(){
+      var max = caixa.scrollWidth - caixa.clientWidth - 2;
+      bE.disabled = caixa.scrollLeft <= 2;
+      bD.disabled = caixa.scrollLeft >= max;
+    }
+    caixa.addEventListener('scroll', function(){
+      requestAnimationFrame(atualiza);
+    }, { passive: true });
+    window.addEventListener('resize', atualiza, { passive: true });
+    atualiza();
+  })();
+
+  /* ================= 8. FAQ com altura animada ================= */
+  (function(){
+    var itens = Array.prototype.slice.call(d.querySelectorAll('.faq details'));
+    if (!itens.length || parado) return;
+
+    function fecha(det){
+      var r = det.querySelector('.resp');
+      if (!r) { det.open = false; return; }
+      r.style.height = r.scrollHeight + 'px';
+      requestAnimationFrame(function(){
+        r.style.transition = 'height .3s ease';
+        r.style.height = '0px';
+      });
+      setTimeout(function(){
+        det.open = false;
+        r.style.transition = ''; r.style.height = '';
+      }, 300);
+    }
+
+    itens.forEach(function(det){
+      var sum = det.querySelector('summary');
+      var r = det.querySelector('.resp');
+      if (!sum || !r) return;
+      sum.addEventListener('click', function(ev){
+        ev.preventDefault();
+        if (det.open) { fecha(det); return; }
+        /* uma aberta por vez, igual ao deles */
+        itens.forEach(function(o){ if (o !== det && o.open) fecha(o); });
+        det.open = true;
+        var alvo = r.scrollHeight;
+        r.style.height = '0px';
+        requestAnimationFrame(function(){
+          r.style.transition = 'height .42s cubic-bezier(.16,1,.3,1)';
+          r.style.height = alvo + 'px';
+        });
+        setTimeout(function(){ r.style.transition = ''; r.style.height = ''; }, 440);
+      });
+    });
+  })();
+
+  /* ================= 9. Rolagem: gotas, foto, nome, empilhar ========== */
   if (!parado) {
-    var caixas = [];
+    var caixasG = [];
     Array.prototype.forEach.call(d.querySelectorAll('.gotas'), function(g){
-      if (g.parentElement) caixas.push({ el: g, sec: g.parentElement });
+      if (g.parentElement) caixasG.push({ el: g, sec: g.parentElement });
     });
     var fotos = d.querySelectorAll('.produto picture');
+    var fantasmas = d.querySelectorAll('.fantasma');
+    var empilhar = window.matchMedia('(min-width:900px)').matches
+      ? d.querySelectorAll('.sec') : [];
+    var pedido2 = false;
 
-    if (caixas.length || fotos.length) {
-      var pedido = false;
-
-      function medir(){
-        pedido = false;
-        var h = window.innerHeight;
-
-        caixas.forEach(function(c){
-          var r = c.sec.getBoundingClientRect();
-          /* 0 quando o topo do bloco encosta na base da tela, 1 quando a
-             base dele sai pelo topo. Fora disso não gasta trabalho. */
-          if (r.bottom < -200 || r.top > h + 200) return;
-          var p = (h - r.top) / (h + r.height);
-          if (p < 0) p = 0; else if (p > 1) p = 1;
-          c.el.style.setProperty('--p', p.toFixed(4));
-        });
-
-        Array.prototype.forEach.call(fotos, function(f){
-          var r = f.getBoundingClientRect();
-          if (r.bottom < 0 || r.top > h) return;
-          var p = (h - r.top) / (h + r.height);
-          if (p < 0) p = 0; else if (p > 1) p = 1;
-          /* Centrado em zero: a foto sobe e desce em torno do lugar dela
-             em vez de nascer deslocada. */
-          f.style.setProperty('--py', (p - .5).toFixed(4));
-        });
-      }
-
-      window.addEventListener('scroll', function(){
-        if (pedido) return;
-        pedido = true;
-        requestAnimationFrame(medir);
-      }, { passive: true });
-      window.addEventListener('resize', function(){
-        if (pedido) return;
-        pedido = true;
-        requestAnimationFrame(medir);
-      }, { passive: true });
-      medir();
+    function prog(r, h){
+      var p = (h - r.top) / (h + r.height);
+      return p < 0 ? 0 : p > 1 ? 1 : p;
     }
+
+    function medir(){
+      pedido2 = false;
+      var h = window.innerHeight;
+
+      caixasG.forEach(function(c){
+        var r = c.sec.getBoundingClientRect();
+        if (r.bottom < -300 || r.top > h + 300) return;
+        c.el.style.setProperty('--p', prog(r, h).toFixed(4));
+      });
+
+      Array.prototype.forEach.call(fotos, function(f){
+        var r = f.getBoundingClientRect();
+        if (r.bottom < -200 || r.top > h + 200) return;
+        f.style.setProperty('--py', (prog(r, h) - .5).toFixed(4));
+      });
+
+      Array.prototype.forEach.call(fantasmas, function(f){
+        var r = f.getBoundingClientRect();
+        if (r.bottom < -300 || r.top > h + 300) return;
+        f.style.setProperty('--px', (prog(r, h) - .5).toFixed(4));
+      });
+
+      /* seções empilhando: a de cima encolhe e apaga conforme a de baixo
+         sobe. Só no desktop — no celular isso briga com a leitura. */
+      Array.prototype.forEach.call(empilhar, function(sec){
+        var r = sec.getBoundingClientRect();
+        if (r.bottom > 0 && r.bottom < h * .6) {
+          var k = r.bottom / (h * .6);
+          sec.classList.add('empilha');
+          sec.style.setProperty('--esc', (0.94 + k * 0.06).toFixed(4));
+          sec.style.setProperty('--eop', (0.45 + k * 0.55).toFixed(4));
+        } else if (sec.classList.contains('empilha')) {
+          sec.style.setProperty('--esc', '1');
+          sec.style.setProperty('--eop', '1');
+        }
+      });
+    }
+
+    function pedir(){
+      if (pedido2) return; pedido2 = true; requestAnimationFrame(medir);
+    }
+    window.addEventListener('scroll', pedir, { passive: true });
+    window.addEventListener('resize', pedir, { passive: true });
+    medir();
   }
 })();
 </script>
