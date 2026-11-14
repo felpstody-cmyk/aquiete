@@ -11,7 +11,7 @@
  * Para testar, coloque "sandbox" na mão — e lembre de tirar depois.
  */
 
-import { ErroDeGateway } from './index.mjs'
+import { ErroDeGateway, MAX_PARCELAS } from './index.mjs'
 // diaBR porque o vencimento tem que ser o dia de BRASILIA, nao o de UTC.
 // metricas.mjs nao importa nada no topo, entao isto nao faz ciclo.
 import { diaBR } from '../metricas.mjs'
@@ -152,7 +152,7 @@ export async function situacaoDoPedido(referencia) {
  * da lista em vez de derrubar as outras: menos opcoes de parcela e ruim,
  * checkout fora do ar e pior.
  */
-export async function simularParcelas(valor, ate = 12) {
+export async function simularParcelas(valor, ate = MAX_PARCELAS) {
   const alvo = Number(valor)
   if (!Number.isFinite(alvo) || alvo <= 0) return []
 
@@ -529,13 +529,13 @@ export async function criarCobranca({ pedido, cliente, referencia, ip, cartao, p
    * ligada. Sem um dos dois, `corpo` sai identico ao de antes e a
    * cobranca volta com `invoiceUrl` — o caminho de sempre.
    *
-   * O teto de 12 parcelas nao e capricho: a doc do Asaas permite 21 em
-   * Visa e Mastercard mas so 12 nas outras bandeiras, e nos nao sabemos a
-   * bandeira antes de tentar. 12 passa em todas.
+   * O teto vem de MAX_PARCELAS, e o motivo dele e caixa, nao bandeira:
+   * no parcelado o dinheiro entra uma parcela por mes. (A doc do Asaas
+   * permitiria 21 em Visa e Mastercard e 12 nas outras.)
    */
   const transparente = TRANSPARENTE() && pedido.metodo === 'card' && Boolean(cartao?.numero)
   const vezes = transparente
-    ? Math.max(1, Math.min(12, Math.trunc(Number(parcelas)) || 1))
+    ? Math.max(1, Math.min(MAX_PARCELAS, Math.trunc(Number(parcelas)) || 1))
     : 1
 
   const parcelado = transparente && vezes > 1

@@ -26,7 +26,7 @@
 
 import { montarPedido } from './_lib/catalogo.mjs'
 import { conferir } from './_lib/melhorenvio.mjs'
-import { obterGateway } from './_lib/gateways/index.mjs'
+import { obterGateway, MAX_PARCELAS } from './_lib/gateways/index.mjs'
 
 const json = (dados, status = 200, publico = true) =>
   new Response(JSON.stringify(dados), {
@@ -84,7 +84,7 @@ export default async (req) => {
       q.get('kit'), 'card', q.get('cupom') || null, cep, envio, q.get('bump') === '1',
     )
 
-    const cru = await gateway.simularParcelas(pedido.total, 12)
+    const cru = await gateway.simularParcelas(pedido.total, MAX_PARCELAS)
 
     /*
      * Onde cada numero mora na resposta, conferido na conta dele em

@@ -76,6 +76,22 @@ export function obterGateway() {
   return adaptador
 }
 
+/**
+ * Ate quantas vezes o cartao pode ser parcelado.
+ *
+ * NAO e preferencia de tela: e caixa. No parcelado o Asaas libera parcela
+ * por parcela, uma por mes. Uma venda de R$ 129,90 em 12x entrega R$ 10,82
+ * por mes durante um ano — o frasco sai hoje e o dinheiro chega ate
+ * novembro do ano que vem. Com o estoque e a midia pagos a vista, isso
+ * quebra o caixa mesmo com a venda indo bem.
+ *
+ * Em 2x o atraso e de um mes e meio, que e pouco.
+ *
+ * O teto vale no SERVIDOR, nao so no seletor: o checkout manda o numero
+ * de parcelas e esse numero nao pode ser confiado.
+ */
+export const MAX_PARCELAS = 2
+
 export class ErroDeGateway extends Error {
   constructor(msg, status = 502) { super(msg); this.name = 'ErroDeGateway'; this.status = status }
 }
