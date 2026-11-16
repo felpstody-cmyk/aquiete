@@ -327,7 +327,7 @@ function montarPayload(d, servico) {
  * cai, e seguro de chamar duas vezes: o Asaas reenvia o webhook quando
  * não recebe 200 na hora, e etiqueta duplicada é dinheiro duplicado.
  */
-export async function despachar(referencia) {
+export async function despachar(referencia, { forcar = false } = {}) {
   if (!referencia) return { ok: false, motivo: 'sem referência' }
 
   if (!despachoConfigurado()) {
@@ -343,8 +343,22 @@ export async function despachar(referencia) {
     return { ok: false, motivo: 'pedido não encontrado' }
   }
 
-  // Já foi. Esta é a trava que impede etiqueta duplicada.
-  if (d.me?.id) return { ok: true, repetido: true, id: d.me.id }
+  /*
+   * Já foi. Esta é a trava que impede etiqueta duplicada, e ela fica.
+   *
+   * `forcar` existe pro caso em que o envio deixou de existir do lado do
+   * Melhor Envio — item apagado do carrinho sem querer, por exemplo. Aí o
+   * nosso registro aponta pra um envio que nao esta mais la, e sem uma
+   * saida o pedido fica preso pra sempre: o sistema ve `me.id`, responde
+   * "repetido" e nao faz nada.
+   *
+   * So chega aqui pelo painel, com token, e com o nome do cliente na
+   * frente de quem clicou. Nunca por rotina automatica.
+   */
+  if (d.me?.id && !forcar) return { ok: true, repetido: true, id: d.me.id }
+  if (d.me?.id && forcar) {
+    console.log('[envio] REFAZENDO despacho de', referencia, '— antigo:', d.me.id)
+  }
 
   // Outra execução do webhook está nisso agora. Dois minutos é mais que
   // o tempo das três chamadas, e menos que o reenvio do Asaas.

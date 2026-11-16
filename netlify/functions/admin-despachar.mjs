@@ -54,11 +54,16 @@ export default async (req) => {
     }, 400)
   }
 
+  // `forcar` refaz um envio que já tinha sido criado. Serve pro caso do
+  // item apagado do carrinho do Melhor Envio: o registro aponta pra um
+  // envio que não existe mais, e sem isto o pedido fica preso.
+  const forcar = corpo.forcar === true
+
   // Já existe despacho guardado (venda nova que falhou): não remonta nada,
   // só tenta de novo. Remontar sobrescreveria o serviço que o cliente
   // escolheu pelo que o painel achar que é.
   const guardado = await lerDespacho(referencia)
-  if (guardado?.me?.id) {
+  if (guardado?.me?.id && !forcar) {
     return json({ ok: true, repetido: true, id: guardado.me.id, me: guardado.me })
   }
 
@@ -90,7 +95,7 @@ export default async (req) => {
     })
   }
 
-  const r = await despachar(referencia)
+  const r = await despachar(referencia, { forcar })
   if (!r.ok) return json({ erro: r.motivo || 'Não foi possível criar o envio' }, 502)
   return json(r)
 }
