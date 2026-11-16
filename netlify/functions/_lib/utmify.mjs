@@ -168,7 +168,12 @@ export async function registrarPedidoUtmify({
     // pagamento lá na frente ainda encontra o payload e reenvia os dois
     // estados. E é isto que garante o mesmo createdAt nas atualizações.
     const store = await loja()
-    await store.setJSON(String(referencia), { payload, em: Date.now() })
+    // `taxaBase` fica guardada pra o frete poder ser somado depois SEM
+    // risco de somar duas vezes: a conta e sempre refeita do zero a
+    // partir dela. Ver aplicarCustos.
+    await store.setJSON(String(referencia), {
+      payload, em: Date.now(), taxaBase: taxa, freteEmCentavos: 0,
+    })
 
     const r = await postar(payload)
     if (!r.ok) console.log('[utmify] pedido não entrou:', r.motivo)
@@ -184,6 +189,86 @@ export async function registrarPedidoUtmify({
  * leitura a resposta de "qual campanha vendeu" so existia no site deles,
  * e no nosso painel a venda aparecia sem origem nenhuma.
  */
+/**
+ * Refaz o bloco `commission` a partir dos custos conhecidos.
+ *
+ * A Utmify nao tem campo de frete — conferido na documentacao deles: o
+ * pedido aceita orderId, platform, paymentMethod, status, createdAt,
+ * approvedDate, refundedAt, customer, products, trackingParameters,
+ * commission e isTest, e mais nada. Entao o frete entra no unico lugar
+ * que desconta do que sobra pro vendedor, o `gatewayFeeInCents`.
+ *
+ * O painel dela vai chamar isso de "Taxas", que e rotulo errado. O
+ * numero do lucro fica certo, que e o que ele pediu.
+ *
+ * A conta e refeita SEMPRE do zero, a partir da taxa original guardada.
+ * Somar no valor que ja esta la daria errado na segunda chamada — e
+ * chamada repetida acontece: o despacho pode rodar de novo, e a
+ * atualizacao de "pago" tambem reescreve o pedido.
+ */
+function aplicarCustos(payload, { taxaBase = null, freteEmCentavos = 0 } = {}) {
+  const c = { ...(payload.commission || {}) }
+  const total = Number(c.totalPriceInCents) || 0
+
+  // Pedido criado antes desta mudanca nao tem taxaBase guardada: ali o
+  // que esta no payload ainda e so a taxa do gateway, entao serve.
+  const base = taxaBase === null ? (Number(c.gatewayFeeInCents) || 0) : Number(taxaBase) || 0
+  const frete = Number(freteEmCentavos) || 0
+
+  c.gatewayFeeInCents = Math.max(0, base + frete)
+  const sobra = total - c.gatewayFeeInCents
+  if (sobra <= 0) {
+    console.log('[utmify] custo passou do total em', payload.orderId,
+      '— total', total, 'custos', c.gatewayFeeInCents)
+  }
+  c.userCommissionInCents = Math.max(0, sobra)
+  return { ...payload, commission: c }
+}
+
+/**
+ * O frete REAL daquele pedido, assim que a etiqueta entra no carrinho.
+ *
+ * Nao e estimativa: e o `price` que o Melhor Envio devolveu. Entra aqui
+ * porque so neste momento o valor existe — na hora da venda ninguem
+ * sabe ainda quanto a etiqueta vai custar.
+ */
+export async function registrarFreteUtmify(referencia, fretePago) {
+  try {
+    if (!referencia) return
+    const frete = centavos(fretePago)
+    if (!(frete > 0)) return
+
+    const store = await loja()
+    const guardado = await store.get(String(referencia), { type: 'json' }).catch(() => null)
+    if (!guardado?.payload) {
+      console.log('[utmify] sem payload guardado pro frete de', referencia)
+      return
+    }
+    if (Number(guardado.freteEmCentavos) === frete) return   // ja esta la
+
+    const idade = (Date.now() - Number(guardado.em || 0)) / 86_400_000
+    if (idade > DIAS_PEDIDO) {
+      console.log('[utmify] frete de %s fora da janela de %d dias', referencia, DIAS_PEDIDO)
+      return
+    }
+
+    const payload = aplicarCustos(guardado.payload, {
+      taxaBase: guardado.taxaBase ?? null,
+      freteEmCentavos: frete,
+    })
+
+    const r = await postar(payload)
+    if (!r.ok) { console.log('[utmify] frete nao entrou:', r.motivo); return }
+
+    await store.setJSON(String(referencia), {
+      ...guardado, payload, freteEmCentavos: frete,
+    })
+    console.log('[utmify] frete de R$', (frete / 100).toFixed(2), 'somado em', referencia)
+  } catch (e) {
+    console.log('[utmify] registrarFrete falhou:', e.message)
+  }
+}
+
 export async function lerRastreios() {
   const fora = {}
   try {
@@ -230,7 +315,17 @@ async function atualizar(referencia, estado, quandoMs, limiteDias) {
     }
 
     const quando = dataUtc(quandoMs || Date.now())
-    const payload = { ...guardado.payload, status: estado }
+    // Reaplica os custos: sem isto, se o "pago" chegasse depois do
+    // despacho, ele reescreveria o pedido com a comissao velha e o frete
+    // sumiria. Como a conta e refeita do zero, chamar de novo nao soma
+    // nada duas vezes.
+    const payload = {
+      ...aplicarCustos(guardado.payload, {
+        taxaBase: guardado.taxaBase ?? null,
+        freteEmCentavos: guardado.freteEmCentavos || 0,
+      }),
+      status: estado,
+    }
     if (estado === 'paid') payload.approvedDate = quando
     if (estado === 'refunded' || estado === 'chargedback') {
       // Quem estorna pagou antes: sem a data de aprovação a Utmify não

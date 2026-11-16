@@ -36,6 +36,7 @@
  */
 
 import { KITS, kitDaQuantidade } from './catalogo.mjs'
+import { registrarFreteUtmify } from './utmify.mjs'
 import { chamar, cotar, configurado, soDigitos } from './melhorenvio.mjs'
 import { ufDoCep, ehRecusaDeDce, vetar } from './dce.mjs'
 
@@ -443,6 +444,22 @@ export async function despachar(referencia, { forcar = false } = {}) {
     // A etiqueta é gravada ANTES de comprar. Se o checkout falhar no meio,
     // o envio já existe no carrinho e a próxima tentativa não cria outro.
     await store.setJSON(String(referencia), { ...d, me, tentandoEm: null, erro: null, erroEm: null })
+
+    /*
+     * O frete vai pra Utmify AGORA, porque é agora que ele existe.
+     *
+     * Na hora da venda ninguém sabe quanto a etiqueta vai custar, e sem
+     * esse número o lucro que a Utmify mostra ignora a maior despesa da
+     * operação — em 19 dias foram R$ 580 de frete fora da conta, o
+     * bastante pra ela mostrar lucro onde havia prejuízo.
+     *
+     * `me.preco` é o que o Melhor Envio cobrou, não estimativa. Nunca
+     * derruba o despacho: medição é o último da fila.
+     */
+    if (me.preco) {
+      await registrarFreteUtmify(referencia, me.preco).catch((e) =>
+        console.log('[envio] frete não foi pra Utmify:', e.message))
+    }
 
     if (MODO() !== 'completo') {
       console.log('[envio] %s no carrinho do Melhor Envio (%s)', referencia, servicoNome)
