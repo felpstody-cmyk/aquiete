@@ -43,10 +43,35 @@ const AGENTE = 'Aquiete (contato@aquieteagora.com.br)'
  *
  * Cuidado ao mexer: cada serviço tirado daqui pode deixar algum CEP sem
  * NENHUMA opção, e aí o checkout não fecha naquele endereço.
+ *
+ * A AZUL CARGO (15 e 16) saiu em 17/11/2026 por outro motivo: documento.
+ * A etiqueta sai com o CNPJ do MEI no remetente e "Nota Fiscal: NÃO",
+ * e o balcão da Azul só aceita Declaração de Conteúdo em envio não
+ * comercial de CPF pra CPF. Saindo de CNPJ eles exigem nota, e MEI que
+ * vende mercadoria não emite NF-e sem inscrição estadual. Ou seja: toda
+ * etiqueta da Azul daqui é etiqueta paga que não dá pra postar. Pegou
+ * o pedido do Paulo (AQ-261113-D8YLW) no balcão, depois de paga.
+ *
+ * Custo de cortar: quase nada. Em cinco CEPs espalhados pelo país a Azul
+ * nunca foi a mais barata (4a em SP, 6a em Manaus, 3a em Florianópolis,
+ * 4a em BH), e das 49 etiquetas geradas até aqui só 4 caíram nela.
  */
 const SERVICOS_FORA = new Map([
   ['31', 'Loggi Express'],
+  ['15', 'Azul Cargo Express Expresso'],
+  ['16', 'Azul Cargo Express e-commerce'],
 ])
+
+/**
+ * Pro despacho: o serviço que o cliente pagou também passa por aqui.
+ *
+ * Sem isto, um pedido antigo que escolheu um serviço hoje cortado volta
+ * pra ele na hora de refazer o envio, porque a fila do despacho põe o
+ * serviço pago na frente de tudo. Foi o que travou o reenvio da Marisul
+ * (AQ-261110-ADXBA) em 17/11/2026: forçar o despacho gerava outra
+ * etiqueta da Azul, a mesma que o balcão tinha acabado de recusar.
+ */
+export const cortado = (id) => SERVICOS_FORA.has(String(id))
 
 export const soDigitos = (v) => String(v ?? '').replace(/\D/g, '')
 

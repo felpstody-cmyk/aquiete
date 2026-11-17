@@ -37,7 +37,7 @@
 
 import { KITS, kitDaQuantidade } from './catalogo.mjs'
 import { registrarFreteUtmify } from './utmify.mjs'
-import { chamar, cotar, configurado, soDigitos } from './melhorenvio.mjs'
+import { chamar, cotar, configurado, soDigitos, cortado } from './melhorenvio.mjs'
 import { ufDoCep, ehRecusaDeDce, vetar } from './dce.mjs'
 
 let getStore = null
@@ -389,7 +389,20 @@ export async function despachar(referencia, { forcar = false } = {}) {
      * descendo até uma aceitar.
      */
     const fila = []
-    if (d.servico) fila.push({ id: d.servico, nome: d.servicoNome || '' })
+    /*
+     * O serviço que o cliente pagou vai na frente — mas não se ele já
+     * saiu da cotação. Serviço cortado foi cortado por um motivo que
+     * não muda com o tempo (a Azul não aceita nossa Declaração de
+     * Conteúdo, a Loggi Express obriga segunda viagem), e refazer o
+     * envio nele só geraria outra etiqueta impossível de postar. Ver
+     * SERVICOS_FORA em melhorenvio.mjs.
+     */
+    if (d.servico && !cortado(d.servico)) {
+      fila.push({ id: d.servico, nome: d.servicoNome || '' })
+    } else if (d.servico) {
+      console.log('[envio] %s pagou %s, que saiu da cotação — vai na próxima da lista',
+        referencia, d.servicoNome || d.servico)
+    }
 
     // Cota sempre, mesmo quando já há serviço escolhido: a cotação não
     // é o que vai ser usado, é a reserva pra caso o escolhido recuse.
